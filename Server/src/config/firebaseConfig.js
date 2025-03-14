@@ -2,6 +2,9 @@ import admin from "firebase-admin";
 import { createRequire } from "module";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithCustomToken } from "firebase/auth";
+import dotenv from "dotenv"
+
+dotenv.config(); // Load environment variables from.env file
 
 const require = createRequire(import.meta.url);
 const serviceAccount = require("./firebase.json");
@@ -13,10 +16,11 @@ admin.initializeApp({
 
 // Firebase Client SDK Config
 const firebaseConfig = {
-  apiKey: "AIzaSyDv0D4PmCm2xztSIPWV3t_uuoExUXwH6LU", // Replace with your Firebase API Key
-  authDomain: "devhubs-project.firebaseapp.com",
-  projectId: "devhubs-project",
+  apiKey: process.env.FIREBASE_API_KEY, // Replace with your Firebase API Key
+  authDomain: process.env.AUTH_DOMAIN,
+  projectId: process.env.PROJECT_ID,
 };
+
 
 // Initialize Firebase Client SDK
 const clientApp = initializeApp(firebaseConfig);
