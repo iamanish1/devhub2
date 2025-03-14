@@ -2,6 +2,8 @@ import admin from "../config/firebaseConfig.js";
 import user from "../Model/UserModel.js";
 import jwt from "jsonwebtoken";
 
+// thid id my name 
+
 const JWT_SECRET = process.env.JWT_SECRET;
 console.log(JWT_SECRET);
 
