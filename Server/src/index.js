@@ -13,15 +13,11 @@ app.use(cookieParser());
 dotenv.config();
 
 const CorsOption = {
-    origin: process.env.CLIENT_URL,
-    credentials: true,
-  }
-  
+  origin: process.env.CLIENT_URL,
+  credentials: true,
+}
   console.log("Frontend_Uri: " + process.env.CLIENT_URL);
-  
-  app.use(cors(CorsOption));
-  app.use(cors({ origin: "http://localhost:8000", credentials: true }));
-
+app.use(cors(CorsOption)) ; 
 
   // Import routes
 app.use("/api", userRoute) ; 

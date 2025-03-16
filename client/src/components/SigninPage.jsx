@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { FaGithub } from "react-icons/fa";
 import { useState } from "react";
-import axios from "axios" ;
+import axios from "axios";
 
 const CreateAccount = () => {
   const [formData, setformData] = useState({
@@ -11,15 +11,42 @@ const CreateAccount = () => {
     usertype: "", // Now a single string, not an array
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setformData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
-    // Send form data to the server for registration
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    const Acoount_Creation_API = "http://localhost:8000/api/user";
+    console.log("This is account creation API:", Acoount_Creation_API);
+    console.log("Form Data before sending:", formData);
+
+    try {
+      const response = await axios.post(Acoount_Creation_API,{
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        usertype: formData.usertype, // Assuming usertype is a single string.
+      }, {
+        withCredentials: true,
+      });
+      console.log("Registration successful:", response.data);
+      setSuccess(true);
+    } catch (err) {
+      console.error("Registration failed:", err);
+      setError(err.response?.data?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,7 +121,10 @@ const CreateAccount = () => {
             </section>
 
             <section className="flex justify-center gap-[2vmin] mt-[4vmin]">
-              <button className="bg-[#00A8E8] text-white rounded-full h-[6vmin] w-[60vmin]">
+              <button
+                className="bg-[#00A8E8] text-white rounded-full h-[6vmin] w-[60vmin]"
+                onClick={handleSubmit}
+              >
                 Create Account
               </button>
             </section>
