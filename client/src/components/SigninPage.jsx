@@ -43,6 +43,9 @@ const CreateAccount = () => {
       });
       console.log("Registration successful:", response.data);
       setSuccess(true);
+      if (response.data.token) {
+        localStorage.setItem("authToken", response.data.token);
+      }  
       navigate("/loginaccount");
     } catch (err) {
       console.error("Registration failed:", err);

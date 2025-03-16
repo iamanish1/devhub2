@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"
+import axios from "axios";
 
 // Create Auth Context
 const AuthContext = createContext();
@@ -9,12 +9,12 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  
-  const API_URL = "http://localhost:8000/api"; // Change this if needed
+
+  const API_URL = "http://localhost:8000/api"; // Update if needed
 
   // ✅ Logout function
   const logout = useCallback(() => {
-    console.log("Logging out...");
+    console.log("🔴 Logging out...");
     localStorage.removeItem("token");
     setUser(null);
     navigate("/loginaccount");
@@ -25,47 +25,64 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      console.log("No token found, staying on login.");
+      console.log("❌ No token found in localStorage.");
+      setUser(null);
       setLoading(false);
       return;
     }
 
     try {
-      console.log("Fetching user...");
+      console.log("🔍 Fetching user with token:", token);
       const res = await axios.get(`${API_URL}/getuser`, {
-        headers: { authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true, // ✅ Ensure this is included if required
       });
 
-      console.log("User fetched:", res.data.user);
+      console.log("✅ User fetched successfully:", res.data);
       setUser(res.data.user);
     } catch (error) {
-      console.log("Error fetching user:", error.response?.data || error.message);
-      logout();
+      console.error("❌ Error fetching user:", error.response?.data || error.message);
+      setUser(null); // ✅ Ensure user is reset on error
+
+      if (error.response?.status === 401) {
+        console.log("🔴 Token expired or invalid, logging out...");
+        logout();
+      }
     }
 
-    setLoading(false);
+    setLoading(false); // Ensure this is set after everything is done
   }, [logout]);
 
-  // ✅ Login function
+  // ✅ Login function with proper redirection
   const login = async (email, password) => {
     try {
-      console.log("Logging in...");
-      const res = await axios.post(`${API_URL}/login`, { email, password });
+      console.log("🔵 Logging in...");
+      const res = await axios.post(
+        `${API_URL}/login`,
+        { email, password },
+        { withCredentials: true } // ✅ Ensure backend sets cookies
+      );
 
-      console.log("Login response:", res.data);
+      console.log("🟢 Login Response:", res.data);
 
       if (res.data.token) {
         localStorage.setItem("token", res.data.token);
-        console.log("Token stored:", localStorage.getItem("token"));
+        console.log("✅ Token stored:", localStorage.getItem("token"));
+
+        // Wait until the user is fetched before navigating
         await fetchUser();
-        navigate("/dashboard");
+
+        // Only redirect after user is fetched and state is updated
+        console.log("➡️ Redirecting to dashboard...");
+        navigate("/dashboard", { replace: true });
+
         return { success: true };
       } else {
-        console.log("No token received from backend!");
+        console.log("❌ No token received from backend!");
         return { success: false, message: "Invalid response from server" };
       }
     } catch (error) {
-      console.log("Login error:", error.response?.data || error.message);
+      console.log("❌ Login error:", error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.message || "Login failed",

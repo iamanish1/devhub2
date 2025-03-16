@@ -14,33 +14,57 @@ const SingupPage = ()=>{
   const handelChange = (e)=>{
     setformdata({...formdata, [e.target.name] : e.target.value });
   };
-  const handleSubmit = async (e)=>{
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const Login_Api = "http://localhost:8000/api/login"
-      const response = await axios.post(Login_Api, {
-        email: formdata.email,
-        password: formdata.password,
-      }, {
-        withCredentials: true,
-      });
-      console.log("Login successful:", response.data);
-        localStorage.setItem("token", response.data.token); // Store token in localStorage
+    setLoading(true);
+    setError(null); // Clear previous errors
   
-        navigate("/dashboard"); // Redirect to dashboard after successful login
+    try {
+      const Login_Api = "http://localhost:8000/api/login";
+      const response = await axios.post(
+        Login_Api,
+        {
+          email: formdata.email,
+          password: formdata.password,
+        },
+        {
+          withCredentials: true, // Ensures cookies are sent if needed
+        }
+      );
+  
+      console.log("✅ Login successful:", response.data);
+  
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token); // Store token
+        console.log("🔑 Token stored:", localStorage.getItem("token"));
+  
+        // Fetch user data here if necessary (if state is not updated elsewhere)
+        // await fetchUser();
+  
+        // Ensure loading is stopped before navigating
+        setLoading(false); 
+  
+        // Adding a small delay to allow state updates
+        setTimeout(() => {
+          console.log("➡️ Redirecting to dashboard...");
+          navigate("/dashboard", { replace: true });
+        }, 300); // 300ms delay to ensure state has been updated before navigating
+      } else {
+        console.log("⚠️ No token received. Login might have failed.");
+        setError("Invalid response from server");
         setLoading(false);
-      
+      }
     } catch (error) {
-      setLoading(true);
-      setError(error.response.data.message);
+      console.error("❌ Login failed:", error.response?.data?.message || error.message);
+      setError(error.response?.data?.message || "Invalid email or password");
+      setLoading(false); // Ensure loading stops if an error occurs
+  
       setTimeout(() => {
         setError(null);
-        setLoading(false);
-      }, 5000);
-      
+      }, 5000); // Reset error message after 5 seconds
     }
-   
   };
+  
     return (
         <>
             {/* Create account page For account creation  */}
