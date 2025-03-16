@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+/* eslint-disable no-unused-vars */
+import { Link, useNavigate } from "react-router-dom";
 import { FaGithub } from "react-icons/fa";
 import { useState } from "react";
 import axios from "axios";
@@ -14,6 +15,7 @@ const CreateAccount = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -41,6 +43,7 @@ const CreateAccount = () => {
       });
       console.log("Registration successful:", response.data);
       setSuccess(true);
+      navigate("/loginaccount");
     } catch (err) {
       console.error("Registration failed:", err);
       setError(err.response?.data?.message || "Something went wrong");
