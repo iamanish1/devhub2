@@ -1,7 +1,46 @@
-import { Link } from "react-router-dom";
+/* eslint-disable no-unused-vars */
+import { Link, useNavigate } from "react-router-dom";
 import { FaGithub } from "react-icons/fa";
-
+import { useState  , } from "react";
+import axios from "axios";
 const SingupPage = ()=>{
+  const [formdata , setformdata] = useState({
+    email: "",
+    password: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate(); // To redirect users after login
+  const handelChange = (e)=>{
+    setformdata({...formdata, [e.target.name] : e.target.value });
+  };
+  const handleSubmit = async (e)=>{
+    e.preventDefault();
+    try {
+      const Login_Api = "http://localhost:8000/api/login"
+      const response = await axios.post(Login_Api, {
+        email: formdata.email,
+        password: formdata.password,
+      }, {
+        withCredentials: true,
+      });
+      console.log("Login successful:", response.data);
+        localStorage.setItem("token", response.data.token); // Store token in localStorage
+  
+        navigate("/dashboard"); // Redirect to dashboard after successful login
+        setLoading(false);
+      
+    } catch (error) {
+      setLoading(true);
+      setError(error.response.data.message);
+      setTimeout(() => {
+        setError(null);
+        setLoading(false);
+      }, 5000);
+      
+    }
+   
+  };
     return (
         <>
             {/* Create account page For account creation  */}
@@ -13,6 +52,7 @@ const SingupPage = ()=>{
           <section className="flex justify-center mt-[3vmin]">
             <h1 className="text-white text-[2.8vmin] font-semibold">Login Account</h1>
           </section>
+          <form onSubmit={handleSubmit}>
           <section className="mt-[7vmin]">
             <div className="flex flex-col gap-[1.4vmin] ml-[2vmin] mr-[2vmin]">
               <label className="text-white">Email :</label>
@@ -20,6 +60,9 @@ const SingupPage = ()=>{
                 type="text"
                 placeholder=" Enter your email"
                 className="text-white border border-[#EAEAEA] h-[6vmin] mb-[0.9vmin]"
+                name="email"
+                value={formdata.email}
+                onChange={handelChange}
               />
             </div>
             <div className="flex flex-col mt-[1.4vmin] gap-[1.4vmin] ml-[2vmin] mr-[2vmin]">
@@ -28,6 +71,9 @@ const SingupPage = ()=>{
                 type="password"
                 placeholder=" Enter your password"
                 className="text-white border border-[#EAEAEA] h-[6vmin] mb-[0.9vmin]"
+                name="password"
+                value={formdata.password}
+                onChange={handelChange}
               />
             </div>
           </section>
@@ -36,6 +82,7 @@ const SingupPage = ()=>{
               Login Account
             </button>
           </section>
+          </form>
           <section className="mt-[1.5vmin] flex justify-center">
             <h1 className="text-white underline">
               Dont Have a Account?
