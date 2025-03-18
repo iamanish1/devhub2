@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
   // Login function
   const loginUser = async(token) => {
     localStorage.setItem("token", token);
-    await fetchUser();
+      await fetchUser();
     navigate("/dashboard"); // Redirect after login ✅
   };
 

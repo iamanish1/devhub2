@@ -2,12 +2,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
-  const { user, setUser } = useAuth(); //  Get auth state
+  const { user, setUser , logoutUser } = useAuth(); //  Get auth state
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("token"); //  Remove token
     setUser(null); //  Reset user state
+    logoutUser() ; 
     navigate("/"); // Redirect to login
   };
 
