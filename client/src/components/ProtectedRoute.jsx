@@ -7,7 +7,7 @@ const ProtectedRoute = () => {
 
     if (loading) return <div>Loading...</div>; // Prevent flickering while checking auth
 
-    return user ? <Outlet /> : <Navigate to="/loginaccount" />;
+    return user ? <Outlet /> : <Navigate to="/loginaccount" replace={true} />;
 };
 
 export default ProtectedRoute;

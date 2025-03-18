@@ -6,13 +6,14 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // Ensure loading state
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   // Fetch user details from backend
   const fetchUser = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
+      setUser(null);
       setLoading(false);
       return;
     }
@@ -24,7 +25,7 @@ export const AuthProvider = ({ children }) => {
       setUser(res.data);
     } catch (error) {
       console.error("Session expired:", error);
-      logoutUser();
+      logoutUser(); // Force logout if session expires
     } finally {
       setLoading(false);
     }
@@ -35,18 +36,25 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
+  // Ensure proper redirection after loading
+  useEffect(() => {
+    if (!loading && !user && window.location.pathname !== "/") {
+      navigate("/loginaccount", { replace: true });
+    }
+  }, [user, loading]);
+
   // Login function
-  const loginUser = async(token) => {
+  const loginUser = async (token) => {
     localStorage.setItem("token", token);
-      await fetchUser();
-    navigate("/dashboard"); // Redirect after login ✅
+    await fetchUser();
+    navigate("/dashboard", { replace: true });
   };
 
-  // Logout function (removes token and redirects to /loginaccount)
+  // Logout function (redirects to home instead of login page)
   const logoutUser = () => {
     localStorage.removeItem("token");
     setUser(null);
-    navigate("/loginaccount"); // Redirect to login page
+    navigate("/", { replace: true }); // ✅ Redirect to home instead of login
   };
 
   // Axios Interceptor (auto logout if token expires)
@@ -71,6 +79,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = ()=> useContext(AuthContext)
-
+export const useAuth = () => useContext(AuthContext);
 export default AuthContext;
