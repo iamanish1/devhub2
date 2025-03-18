@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaGithub } from "react-icons/fa";
 import { useState } from "react";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 const SingupPage = () => {
   const [formdata, setformdata] = useState({
     email: "",
@@ -11,6 +12,7 @@ const SingupPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate(); // To redirect users after login
+  const { loginUser } = useAuth(); 
   const handelChange = (e) => {
     setformdata({ ...formdata, [e.target.name]: e.target.value });
   };
@@ -20,47 +22,36 @@ const SingupPage = () => {
     setError(null); // Clear previous errors
 
     try {
-      const Login_Api = "http://localhost:8000/api/login";
-      const response = await axios.post(
-        Login_Api,
-        {
-          email: formdata.email,
-          password: formdata.password,
-        },
-        {
-          withCredentials: true,
+        const Login_Api = "http://localhost:8000/api/login";
+        const response = await axios.post(
+            Login_Api,
+            {
+                email: formdata.email,
+                password: formdata.password,
+            },
+            {
+                withCredentials: true,
+            }
+        );
+
+        console.log("✅ Login successful:", response.data);
+
+        if (response.data.token) {
+            console.log("🔑 Token stored:", response.data.token);
+            
+            // ✅ Call loginUser to update user state immediately
+            await loginUser(response.data.token);
+        } else {
+            console.log("⚠️ No token received. Login might have failed.");
+            setError("Invalid response from server");
+            setLoading(false);
         }
-      );
-
-      console.log("✅ Login successful:", response.data);
-
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token); // Store token
-        console.log("🔑 Token stored:", localStorage.getItem("token"));
-
-        // Call loginUser to update state
-      
-
-        // ✅ **Force Navigation After a Short Delay**
-        setTimeout(() => {
-          console.log("➡️ Redirecting to dashboard...");
-          navigate("/dashboard", { replace: true });
-        }, 200); // Small delay to allow state updates
-      } else {
-        console.log("⚠️ No token received. Login might have failed.");
-        setError("Invalid response from server");
-        setLoading(false);
-      }
     } catch (error) {
-      console.error(
-        "❌ Login failed:",
-        error.response?.data?.message || error.message
-      );
-      setError(error.response?.data?.message || "Invalid email or password");
-      setLoading(false);
+        console.error("❌ Login failed:", error.response?.data?.message || error.message);
+        setError(error.response?.data?.message || "Invalid email or password");
+        setLoading(false);
     }
-  };
-
+};
   return (
     <>
       {/* Create account page For account creation  */}
