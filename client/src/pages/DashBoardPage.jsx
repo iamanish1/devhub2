@@ -1,17 +1,8 @@
 import Navbar from "../components/NavBar";
 import ProjectCard from "../components/ProjectCard";
-import AuthContext from "../context/AuthContext";
-import { useContext } from "react";
 const DashboardPage = () => {
-  const { user, loading } = useContext(AuthContext);
+  
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return <div>Please log in to continue.</div>;
-  }
   return (
     <>
       {/* Nav-bar */}

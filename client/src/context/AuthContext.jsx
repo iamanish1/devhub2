@@ -1,102 +1,71 @@
-import { createContext, useState, useEffect, useCallback } from "react";
+import { createContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// Create Auth Context
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Ensure loading state
   const navigate = useNavigate();
 
-  const API_URL = "http://localhost:8000/api"; // Update if needed
-
-  // ✅ Logout function
-  const logout = useCallback(() => {
-    console.log("🔴 Logging out...");
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/loginaccount");
-  }, [navigate]);
-
-  // ✅ Fetch user function
-  const fetchUser = useCallback(async () => {
+  // Fetch user details from backend
+  const fetchUser = async () => {
     const token = localStorage.getItem("token");
-
     if (!token) {
-      console.log("❌ No token found in localStorage.");
-      setUser(null);
       setLoading(false);
       return;
     }
 
     try {
-      console.log("🔍 Fetching user with token:", token);
-      const res = await axios.get(`${API_URL}/getuser`, {
+      const res = await axios.get("http://localhost:8000/api/getuser", {
         headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true, // ✅ Ensure this is included if required
       });
-
-      console.log("✅ User fetched successfully:", res.data);
-      setUser(res.data.user);
+      setUser(res.data);
     } catch (error) {
-      console.error("❌ Error fetching user:", error.response?.data || error.message);
-      setUser(null); // ✅ Ensure user is reset on error
-
-      if (error.response?.status === 401) {
-        console.log("🔴 Token expired or invalid, logging out...");
-        logout();
-      }
-    }
-
-    setLoading(false); // Ensure this is set after everything is done
-  }, [logout]);
-
-  // ✅ Login function with proper redirection
-  const login = async (email, password) => {
-    try {
-      console.log("🔵 Logging in...");
-      const res = await axios.post(
-        `${API_URL}/login`,
-        { email, password },
-        { withCredentials: true } // ✅ Ensure backend sets cookies
-      );
-
-      console.log("🟢 Login Response:", res.data);
-
-      if (res.data.token) {
-        localStorage.setItem("token", res.data.token);
-        console.log("✅ Token stored:", localStorage.getItem("token"));
-
-        // Wait until the user is fetched before navigating
-        await fetchUser();
-
-        // Only redirect after user is fetched and state is updated
-        console.log("➡️ Redirecting to dashboard...");
-        navigate("/dashboard", { replace: true });
-
-        return { success: true };
-      } else {
-        console.log("❌ No token received from backend!");
-        return { success: false, message: "Invalid response from server" };
-      }
-    } catch (error) {
-      console.log("❌ Login error:", error.response?.data || error.message);
-      return {
-        success: false,
-        message: error.response?.data?.message || "Login failed",
-      };
+      console.error("Session expired:", error);
+      logoutUser();
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ✅ Run fetchUser on app load
+  // Auto-fetch user on page load
   useEffect(() => {
     fetchUser();
-  }, [fetchUser]);
+  }, []);
+
+  // Login function
+  const loginUser = (token) => {
+    localStorage.setItem("token", token);
+    fetchUser();
+    navigate("/dashboard"); // Redirect after login ✅
+  };
+
+  // Logout function (removes token and redirects to /loginaccount)
+  const logoutUser = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    navigate("/loginaccount"); // Redirect to login page
+  };
+
+  // Axios Interceptor (auto logout if token expires)
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          logoutUser();
+          alert("Session expired. Please log in again.");
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, loginUser, logoutUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

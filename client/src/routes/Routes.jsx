@@ -7,26 +7,25 @@ import DashboardPage from "../pages/DashBoardPage";
 import SingupPage from "../components/SignupPage";
 import BidingPage from "../pages/BidingPage";
 import BidingProporsalPage from "../pages/BidingProporsalPage";
-import {AuthProvider} from "../context/AuthContext.jsx";
-import ProtectedRoute from "../components/ProtectedRoute.jsx";
+import ProtectedRoute from "../components/ProtectedRoute";
+
 
 const AppRoutes = () => {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/loginaccount" element={<SingupPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/createaccount" element={<Authenticationpage />} />
-
-        <Route element={<ProtectedRoute />}>
-          <Route path="/listproject" element={<ProjectListingPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/bidingPage" element={<BidingPage />} />
-          <Route path="/bidingproposal" element={<BidingProporsalPage />} />
-        </Route>
-      </Routes>
-    </AuthProvider>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/loginaccount" element={<SingupPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/createaccount" element={<Authenticationpage />} />
+      
+      <Route element={<ProtectedRoute />}>
+      <Route path="/listproject" element={<ProjectListingPage />} />
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/bidingPage" element={<BidingPage />} />
+      <Route path="/bidingproposal" element={<BidingProporsalPage />} />
+      </Route>
+      
+    </Routes>
   );
 };
 
