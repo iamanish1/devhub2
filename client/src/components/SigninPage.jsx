@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaGithub } from "react-icons/fa";
 import { useState } from "react";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+import { auth, githubProvider, signInWithPopup } from "../Config/firebase";
 
 const CreateAccount = () => {
   const [formData, setformData] = useState({
@@ -11,11 +13,12 @@ const CreateAccount = () => {
     password: "",
     usertype: "", // Now a single string, not an array
   });
-
+  const { loginUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -54,6 +57,45 @@ const CreateAccount = () => {
       setLoading(false);
     }
   };
+
+  const handleGitHubSignup = async () => {
+    try {
+        // Sign in with GitHub via Firebase
+        const result = await signInWithPopup(auth, githubProvider);
+        const user = result.user;
+
+        // Get Firebase Authentication Token
+        const firebasetoken = await user.getIdToken();
+
+        console.log("Firebase Token:", firebasetoken); // Debugging
+
+        // Send Token & User Details to Backend for Signup
+        const response = await fetch("http://localhost:8000/api/github/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                firebasetoken,
+                email: user.email,
+                username: user.displayName, // GitHub username
+                profilePic: user.photoURL,  // GitHub avatar
+            }),
+        });
+
+        const data = await response.json();
+        console.log("Backend Response:", data); // Debugging
+
+        if (data.token) {
+            alert("GitHub Account Created Successfully!");
+            loginUser(data.token); // ✅ Store token & redirect user
+        } else {
+            console.error("GitHub Signup Failed:", data);
+            setError("GitHub signup failed. Please try again.");
+        }
+    } catch (error) {
+        console.error("GitHub Signup Error:", error);
+        setError("GitHub signup failed. Try again.");
+    }
+};
 
   return (
     <>
@@ -146,7 +188,8 @@ const CreateAccount = () => {
           </section>
           <div className="h-[0.3vmin] w-[73vmin] bg-white mt-[1.5vmin]"></div>
           <section className="mt-[4vmin] flex items-center justify-center mb-[3vmin]">
-            <button className="bg-[#00A8E8] text-white rounded-full h-[6vmin] w-[60vmin] flex flex-row justify-center items-center gap-[2vmin]">
+            <button className="bg-[#00A8E8] text-white rounded-full h-[6vmin] w-[60vmin] flex flex-row justify-center items-center gap-[2vmin]"
+            onClick={handleGitHubSignup}>
               <FaGithub className="text-[3vmin]" /> GitHub Account
             </button>
           </section>

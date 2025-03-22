@@ -31,7 +31,7 @@ const githubAuthentication = async (req, res) => {
         username: username || `user_${uid}`, // Fallback to a UID-based username
         email: email || "no-email@example.com", // Default email if none provided
         githubId: uid,
-        usertype: "fresher developer",
+        usertype: "Fresher Developer",
       });
       await existingUser.save();
     }
