@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 
 const ProjectListingSchema = new mongoose.Schema({
+    _id: {
+        type: mongoose.Schema.Types.ObjectId,
+        auto: true
+    },
     project_Title : {
         type : String,
         required : true
