@@ -70,7 +70,7 @@ const CreateAccount = () => {
         console.log("Firebase Token:", firebasetoken); // Debugging
 
         // Send Token & User Details to Backend for Signup
-        const response = await fetch("http://localhost:8000/api/github/signup", {
+        const response = await fetch("http://localhost:8000/api/github/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
