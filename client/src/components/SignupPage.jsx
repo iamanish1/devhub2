@@ -1,26 +1,28 @@
-/* eslint-disable no-unused-vars */
 import { Link, useNavigate } from "react-router-dom";
-import { FaGithub } from "react-icons/fa";
+import { FaGithub, FaEnvelope, FaLock, FaSignInAlt } from "react-icons/fa";
 import { useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { auth, githubProvider, signInWithPopup } from "../Config/firebase";
-const SingupPage = () => {
+
+const LoginPage = () => {
   const [formdata, setformdata] = useState({
     email: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const navigate = useNavigate(); // To redirect users after login
+  const navigate = useNavigate();
   const { loginUser } = useAuth();
+
   const handelChange = (e) => {
     setformdata({ ...formdata, [e.target.name]: e.target.value });
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null); // Clear previous errors
+    setError(null);
 
     try {
       const Login_Api = "http://localhost:8000/api/login";
@@ -35,23 +37,13 @@ const SingupPage = () => {
         }
       );
 
-      console.log("✅ Login successful:", response.data);
-
       if (response.data.token) {
-        console.log("🔑 Token stored:", response.data.token);
-
-        // ✅ Call loginUser to update user state immediately
         await loginUser(response.data.token);
       } else {
-        console.log("⚠️ No token received. Login might have failed.");
         setError("Invalid response from server");
         setLoading(false);
       }
     } catch (error) {
-      console.error(
-        "❌ Login failed:",
-        error.response?.data?.message || error.message
-      );
       setError(error.response?.data?.message || "Invalid email or password");
       setLoading(false);
     }
@@ -59,16 +51,10 @@ const SingupPage = () => {
 
   const handleGitHubLogin = async () => {
     try {
-      // Sign in with GitHub via Firebase
       const result = await signInWithPopup(auth, githubProvider);
       const user = result.user;
-
-      // Get Firebase Authentication Token
       const firebasetoken = await user.getIdToken();
 
-      console.log("Firebase Token:", firebasetoken); // Debugging
-
-      // Send Token to Backend for Verification
       const response = await fetch("http://localhost:8000/api/github/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,88 +62,147 @@ const SingupPage = () => {
       });
 
       const data = await response.json();
-      console.log("Backend Response:", data); // Debugging
 
       if (data.token) {
         alert("GitHub Login Successful!");
-
-        // ✅ Use loginUser from AuthContext instead of manual redirection
-        loginUser(data.token); // This updates user state & redirects properly
+        loginUser(data.token);
       } else {
-        console.error("GitHub Login Failed:", data);
         setError("GitHub login failed. Please try again.");
       }
     } catch (error) {
-      console.error("GitHub Authentication Error:", error);
       setError("GitHub authentication failed. Try again.");
     }
   };
+
   return (
-    <>
-      {/* Create account page For account creation  */}
-      <div className="flex items-center justify-center min-h-screen w-full">
-        <main
-          className="h-[85vmin] w-[80vmin] bg-[#121212] 
-        border border-[#EAEAEA] flex flex-col"
-        >
-          <section className="flex justify-center mt-[3vmin]">
-            <h1 className="text-white text-[2.8vmin] font-semibold">
-              Login Account
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+      <div className="relative w-full max-w-md">
+        {/* Animated background elements */}
+        <div className="absolute -top-20 -right-20 w-40 h-40 bg-cyan-500 rounded-full filter blur-3xl opacity-10 animate-pulse"></div>
+        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-500 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
+        
+        <div className="relative bg-gray-900 border border-cyan-500/30 rounded-2xl shadow-xl shadow-cyan-500/5 backdrop-blur-sm p-8">
+          {/* Header with animated icon */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-cyan-500/10 rounded-full border border-cyan-500/30">
+                <FaSignInAlt className="text-3xl text-cyan-400" />
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+              Welcome Back
             </h1>
-          </section>
-          <form onSubmit={handleSubmit}>
-            <section className="mt-[7vmin]">
-              <div className="flex flex-col gap-[1.4vmin] ml-[2vmin] mr-[2vmin]">
-                <label className="text-white">Email :</label>
+            <p className="text-gray-400 mt-2 text-sm">Sign in to access your account</p>
+          </div>
+
+          {/* Error message */}
+          {error && (
+            <div className="mb-6 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email field */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                <FaEnvelope className="text-cyan-400" /> Email Address
+              </label>
+              <div className="relative group">
                 <input
-                  type="text"
-                  placeholder=" Enter your email"
-                  className="text-white border border-[#EAEAEA] h-[6vmin] mb-[0.9vmin]"
+                  type="email"
                   name="email"
                   value={formdata.email}
                   onChange={handelChange}
+                  required
+                  placeholder="Enter your email"
+                  className="w-full bg-gray-800/50 border border-gray-700 focus:border-cyan-500 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-colors"
                 />
               </div>
-              <div className="flex flex-col mt-[1.4vmin] gap-[1.4vmin] ml-[2vmin] mr-[2vmin]">
-                <label className="text-white">Password :</label>
+            </div>
+
+            {/* Password field */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                  <FaLock className="text-cyan-400" /> Password
+                </label>
+                <a href="#" className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
+                  Forgot password?
+                </a>
+              </div>
+              <div className="relative">
                 <input
                   type="password"
-                  placeholder=" Enter your password"
-                  className="text-white border border-[#EAEAEA] h-[6vmin] mb-[0.9vmin]"
                   name="password"
                   value={formdata.password}
                   onChange={handelChange}
+                  required
+                  placeholder="Enter your password"
+                  className="w-full bg-gray-800/50 border border-gray-700 focus:border-cyan-500 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-colors"
                 />
               </div>
-            </section>
-            <section className="flex justify-center gap-[2vmin] mt-[6vmin]">
-              <button className="bg-[#00A8E8] text-white rounded-full h-[6vmin] w-[60vmin]">
-                Login Account
-              </button>
-            </section>
-          </form>
-          <section className="mt-[1.5vmin] flex justify-center">
-            <h1 className="text-white underline">
-              Dont Have a Account?
-              <Link to="/createaccount">
-                <span>Account</span>
-              </Link>
-            </h1>
-          </section>
-          <div className="h-[0.3vmin] w-[73vmin] bg-white mt-[3vmin] ml-[2.5vmin]"></div>
-          <section className="mt-[4vmin] flex items-center justify-center">
+            </div>
+
+            {/* Remember me checkbox */}
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-700 bg-gray-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-gray-900"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400">
+                Remember me
+              </label>
+            </div>
+
+            {/* Submit button */}
             <button
-              className="bg-[#00A8E8] text-white rounded-full h-[6vmin] w-[60vmin] flex flex-row justify-center
-            items-center gap-[2vmin]"
-              onClick={handleGitHubLogin}
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium py-3 px-4 rounded-lg hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-50 transform transition-all duration-150 hover:translate-y-[-2px] flex justify-center items-center"
             >
-              <FaGithub className="text-[3vmin]" /> Git Hub Account
+              {loading ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                "Sign In"
+              )}
             </button>
-          </section>
-        </main>
+          </form>
+
+          {/* Divider */}
+          <div className="relative flex items-center justify-center mt-8 mb-6">
+            <div className="flex-grow border-t border-gray-700"></div>
+            <span className="mx-4 text-sm text-gray-400">or continue with</span>
+            <div className="flex-grow border-t border-gray-700"></div>
+          </div>
+
+          {/* GitHub Button */}
+          <button
+            onClick={handleGitHubLogin}
+            className="w-full bg-gray-800 text-white border border-gray-700 hover:border-gray-600 font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition-all flex items-center justify-center gap-3"
+          >
+            <FaGithub className="text-xl" /> Sign in with GitHub
+          </button>
+
+          {/* Sign up link */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-400 text-sm">
+              Don't have an account?{" "}
+              <Link to="/createaccount" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 
-export default SingupPage; // export this component to use it in other files.
+export default LoginPage;
