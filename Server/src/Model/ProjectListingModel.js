@@ -9,6 +9,10 @@ const ProjectListingSchema = new mongoose.Schema({
         type : String,
         required : true
     },
+    project_duration : {
+      type : Number,
+      required : true ,
+    },
     Project_Bid_Amount : {
          type : Number ,
          required : true, 
@@ -26,7 +30,7 @@ const ProjectListingSchema = new mongoose.Schema({
         type : String,
         required : true
     },
-    Project_Domain : {
+    Project_tech_stack : {
         type : String,
         required : true,
     },
@@ -38,10 +42,6 @@ const ProjectListingSchema = new mongoose.Schema({
         type : String,
         required : true
     }, 
-    Project_Duration : {
-        type : String,
-        required : true
-    },
     Project_gitHub_link : {
         type : String,
         required : true,

@@ -1,9 +1,9 @@
 import express from 'express';
-import ProjectListing from '../controller/ProjectListingController.js';
+import ListProject from '../controller/ListProjectController.js';
+
 
 const projectRoutes = express.Router() ; 
 
-projectRoutes.post("/listproject", ProjectListing) ; 
-
+projectRoutes.post("/listproject",  ListProject )
 
 export default projectRoutes;
