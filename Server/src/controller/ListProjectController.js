@@ -66,3 +66,19 @@ const ListProject = async (req, res) => {
 };
 
 export default ListProject; 
+
+
+
+export const getProject = async (req, res)=>{
+    try {
+        const project = await ProjectListing.find();
+        res.status(200).json({
+            message: "Project fetched successfully",
+            project,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error.message,
+        });
+    }
+}

@@ -1,4 +1,40 @@
 import mongoose from "mongoose";
+const TechStackEnum = [
+    "MERN Stack",
+    "MEAN Stack",
+    "MEVN Stack",
+    "Next.js",
+    "NestJS",
+    "Django",
+    "Flask",
+    "Spring Boot",
+    "ASP.NET",
+    "React Native",
+    "Flutter",
+    "Swift",
+    "Kotlin",
+    "TensorFlow",
+    "PyTorch",
+    "Apache Spark",
+    "Solidity",
+    "Rust",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "GCP",
+    "MySQL",
+    "MongoDB",
+    "PostgreSQL",
+    "Firebase",
+    "Redis",
+    "Unity",
+    "Unreal Engine",
+    "IoT",
+    "C++",
+    "Go",
+    "Cybersecurity",
+    "Other"
+  ];
 
 const ProjectListingSchema = new mongoose.Schema({
     _id: {
@@ -33,6 +69,7 @@ const ProjectListingSchema = new mongoose.Schema({
     Project_tech_stack : {
         type : String,
         required : true,
+        enum : TechStackEnum,
     },
     Project_Features : {
         type : String,
