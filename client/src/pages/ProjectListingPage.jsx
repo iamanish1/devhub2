@@ -1,19 +1,22 @@
 import Navbar from "../components/NavBar";
 import { useState } from "react";
-
+import axios from "axios";
 const ProjectListingPage = () => {
   const [formData, setFormData] = useState({
-    title: "",
-    bidAmount: "",
-    contributors: "",
-    totalBids: "",
-    description: "",
-    techStack: "",
-    features: "",
-    lookingFor: "",
-    duration: "",
-    githubLink: ""
+    project_Title: "",
+    project_duration: "",
+    Project_Bid_Amount: "",
+    Project_Contributor: "",
+    Project_Number_Of_Bids: "",
+    Project_Description: "",
+    Project_tech_stack: "",
+    Project_Features: "",
+    Project_looking: "",
+    Project_gitHub_link: "",
+    Project_cover_photo: "",
   });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const [coverImage, setCoverImage] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -27,9 +30,9 @@ const ProjectListingPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevData => ({
+    setFormData((prevData) => ({
       ...prevData,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -45,11 +48,44 @@ const ProjectListingPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Form submitted:", formData, coverImage);
-    // Add your submission logic here
+    setLoading(true);
+    setError(null);
+
+    try {
+      const projectApi = "http://localhost:8000/api/project/listproject";
+
+      const data = new FormData();
+      data.append("project_Title", formData.project_Title);
+      data.append("Project_Bid_Amount", formData.Project_Bid_Amount);
+      data.append("Project_Contributor", formData.Project_Contributor);
+      data.append("Project_Number_Of_Bids", formData.Project_Number_Of_Bids);
+      data.append("Project_Description", formData.Project_Description);
+      data.append("Project_tech_stack", formData.Project_tech_stack);
+      data.append("Project_Features", formData.Project_Features);
+      data.append("Project_looking", formData.Project_looking);
+      data.append("project_duration", formData.project_duration);
+      data.append("Project_gitHub_link", formData.Project_gitHub_link);
+      data.append("Project_cover_photo", formData.Project_cover_photo);
+
+      const response = await axios.post(projectApi, data, {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Project submitted:", response.data);
+    } catch (error) {
+      console.error(error);
+      setError(
+        error.response?.data?.message ||
+          "An error occurred while submitting the form. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,19 +102,25 @@ const ProjectListingPage = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-center text-white">
               <span className="text-[#00A8E8]">List</span> Your Project
             </h1>
-            <p className="text-gray-400 text-center mt-2">Share your vision and find the perfect team</p>
+            <p className="text-gray-400 text-center mt-2">
+              Share your vision and find the perfect team
+            </p>
           </div>
 
           {/* Progress Indicator */}
           <div className="px-6 pt-6">
             <div className="flex justify-between mb-2">
-              <span className="text-sm text-gray-400">Step {currentStep} of {totalSteps}</span>
-              <span className="text-sm text-[#00A8E8]">{Math.round((currentStep/totalSteps) * 100)}% Complete</span>
+              <span className="text-sm text-gray-400">
+                Step {currentStep} of {totalSteps}
+              </span>
+              <span className="text-sm text-[#00A8E8]">
+                {Math.round((currentStep / totalSteps) * 100)}% Complete
+              </span>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2.5">
-              <div 
-                className="bg-gradient-to-r from-[#0062E6] to-[#00A8E8] h-2.5 rounded-full transition-all duration-300 ease-in-out" 
-                style={{ width: `${(currentStep/totalSteps) * 100}%` }}
+              <div
+                className="bg-gradient-to-r from-[#0062E6] to-[#00A8E8] h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               ></div>
             </div>
           </div>
@@ -88,14 +130,18 @@ const ProjectListingPage = () => {
             {/* Step 1: Basic Info */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-fadeIn">
-                <h2 className="text-xl font-semibold text-[#00A8E8] mb-4">Project Basics</h2>
-                
+                <h2 className="text-xl font-semibold text-[#00A8E8] mb-4">
+                  Project Basics
+                </h2>
+
                 <div className="form-group">
-                  <label className="block text-gray-300 mb-2">Project Title</label>
+                  <label className="block text-gray-300 mb-2">
+                    Project Title
+                  </label>
                   <input
                     type="text"
-                    name="title"
-                    value={formData.title}
+                    name="project_Title"
+                    value={formData.project_Title}
                     onChange={handleChange}
                     className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                     placeholder="Enter a catchy title for your project..."
@@ -104,23 +150,25 @@ const ProjectListingPage = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="form-group">
-                    <label className="block text-gray-300 mb-2">Bid Amount ($)</label>
+                    <label className="block text-gray-300 mb-2">
+                      Bid Amount ($)
+                    </label>
                     <input
                       type="text"
-                      name="bidAmount"
-                      value={formData.bidAmount}
+                      name="Project_Bid_Amount"
+                      value={formData.Project_Bid_Amount}
                       onChange={handleChange}
                       className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                       placeholder="Enter your project budget..."
                     />
                   </div>
-                  
+
                   <div className="form-group">
                     <label className="block text-gray-300 mb-2">Duration</label>
                     <input
                       type="date"
-                      name="duration"
-                      value={formData.duration}
+                      name="project_duration"
+                      value={formData.project_duration}
                       onChange={handleChange}
                       className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                     />
@@ -129,23 +177,27 @@ const ProjectListingPage = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="form-group">
-                    <label className="block text-gray-300 mb-2">Number of Contributors</label>
+                    <label className="block text-gray-300 mb-2">
+                      Number of Contributors
+                    </label>
                     <input
                       type="number"
-                      name="contributors"
-                      value={formData.contributors}
+                      name="Project_Contributor"
+                      value={formData.Project_Contributor}
                       onChange={handleChange}
                       className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                       placeholder="How many people do you need?"
                     />
                   </div>
-                  
+
                   <div className="form-group">
-                    <label className="block text-gray-300 mb-2">Number of Total Bids</label>
+                    <label className="block text-gray-300 mb-2">
+                      Number of Total Bids
+                    </label>
                     <input
                       type="number"
-                      name="totalBids"
-                      value={formData.totalBids}
+                      name="Project_Number_Of_Bids"
+                      value={formData.Project_Number_Of_Bids}
                       onChange={handleChange}
                       className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                       placeholder="Maximum bids to accept..."
@@ -154,10 +206,12 @@ const ProjectListingPage = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="block text-gray-300 mb-2">Technology Stack</label>
+                  <label className="block text-gray-300 mb-2">
+                    Technology Stack
+                  </label>
                   <select
-                    name="techStack"
-                    value={formData.techStack}
+                    name="Project_tech_stack"
+                    value={formData.Project_tech_stack}
                     onChange={handleChange}
                     className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                   >
@@ -205,38 +259,48 @@ const ProjectListingPage = () => {
             {/* Step 2: Project Details */}
             {currentStep === 2 && (
               <div className="space-y-6 animate-fadeIn">
-                <h2 className="text-xl font-semibold text-[#00A8E8] mb-4">Project Details</h2>
-                
+                <h2 className="text-xl font-semibold text-[#00A8E8] mb-4">
+                  Project Details
+                </h2>
+
                 <div className="form-group">
-                  <label className="block text-gray-300 mb-2">Project Description</label>
+                  <label className="block text-gray-300 mb-2">
+                    Project Description
+                  </label>
                   <textarea
-                    name="description"
-                    value={formData.description}
+                    name="Project_Description"
+                    value={formData.Project_Description}
                     onChange={handleChange}
                     className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                     placeholder="Provide a detailed overview of your project..."
                     rows="5"
                   ></textarea>
                 </div>
-                
+
                 <div className="form-group">
-                  <label className="block text-gray-300 mb-2">Project Features</label>
+                  <label className="block text-gray-300 mb-2">
+                    Project Features
+                  </label>
                   <textarea
-                    name="features"
-                    value={formData.features}
+                    name="Project_Features"
+                    value={formData.Project_Features}
                     onChange={handleChange}
                     className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                     placeholder="List the key features of your project..."
                     rows="4"
                   ></textarea>
-                  <p className="text-xs text-gray-400 mt-1">Tip: Use bullet points for better readability</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Tip: Use bullet points for better readability
+                  </p>
                 </div>
-                
+
                 <div className="form-group">
-                  <label className="block text-gray-300 mb-2">What kind of people are you looking for?</label>
+                  <label className="block text-gray-300 mb-2">
+                    What kind of people are you looking for?
+                  </label>
                   <textarea
-                    name="lookingFor"
-                    value={formData.lookingFor}
+                    name="Project_looking"
+                    value={formData.Project_looking}
                     onChange={handleChange}
                     className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                     placeholder="Describe the ideal contributors for your project..."
@@ -249,53 +313,94 @@ const ProjectListingPage = () => {
             {/* Step 3: Additional Information */}
             {currentStep === 3 && (
               <div className="space-y-6 animate-fadeIn">
-                <h2 className="text-xl font-semibold text-[#00A8E8] mb-4">Additional Information</h2>
-                
+                <h2 className="text-xl font-semibold text-[#00A8E8] mb-4">
+                  Additional Information
+                </h2>
+
                 <div className="form-group">
-                  <label className="block text-gray-300 mb-2">GitHub Repository Link</label>
+                  <label className="block text-gray-300 mb-2">
+                    GitHub Repository Link
+                  </label>
                   <input
                     type="url"
-                    name="githubLink"
-                    value={formData.githubLink}
+                    name="Project_gitHub_link"
+                    value={formData.Project_gitHub_link}
                     onChange={handleChange}
                     className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                     placeholder="https://github.com/yourusername/your-repo"
                   />
                 </div>
-                
+
                 <div className="form-group">
-                  <label className="block text-gray-300 mb-2">Upload Cover Image</label>
+                  <label className="block text-gray-300 mb-2">
+                    Upload Cover Image
+                  </label>
                   <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-[#00A8E8] transition-colors">
                     <input
                       type="file"
-                      onChange={handleFileChange}
+                      onChange={(e) => {
+                        handleChange(e);
+                        handleFileChange(e);
+                      }}
                       className="hidden"
                       id="cover-image"
                       accept="image/*"
+                      name="Project_cover_photo"
                     />
+
                     <label htmlFor="cover-image" className="cursor-pointer">
                       <div className="flex flex-col items-center justify-center">
-                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        <svg
+                          className="w-12 h-12 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          ></path>
                         </svg>
                         <p className="mt-2 text-sm text-gray-400">
-                          {coverImage ? coverImage.name : "Click to upload or drag and drop"}
+                          {coverImage
+                            ? coverImage.name
+                            : "Click to upload or drag and drop"}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">PNG, JPG or GIF (Max. 2MB)</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG or GIF (Max. 2MB)
+                        </p>
                       </div>
                     </label>
                   </div>
                 </div>
-                
+
                 <div className="form-group">
                   <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700">
                     <h3 className="font-medium mb-2 flex items-center">
-                      <svg className="w-5 h-5 mr-2 text-[#00A8E8]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      <svg
+                        className="w-5 h-5 mr-2 text-[#00A8E8]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        ></path>
                       </svg>
                       Important Information
                     </h3>
-                    <p className="text-sm text-gray-400">By submitting this project, you agree to our terms and conditions. Your project will be reviewed before going live.</p>
+                    <p className="text-sm text-gray-400">
+                      By submitting this project, you agree to our terms and
+                      conditions. Your project will be reviewed before going
+                      live.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -309,8 +414,19 @@ const ProjectListingPage = () => {
                   onClick={prevStep}
                   className="px-6 py-2 bg-[#2A2A2A] text-white rounded-lg hover:bg-[#333] transition-colors flex items-center"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 19l-7-7 7-7"
+                    ></path>
                   </svg>
                   Back
                 </button>
@@ -325,8 +441,19 @@ const ProjectListingPage = () => {
                   className="px-6 py-2 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white rounded-lg hover:from-[#00A8E8] hover:to-[#0062E6] transition-all shadow-lg shadow-blue-500/20 flex items-center"
                 >
                   Next
-                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                  <svg
+                    className="w-4 h-4 ml-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 5l7 7-7 7"
+                    ></path>
                   </svg>
                 </button>
               ) : (
@@ -335,8 +462,19 @@ const ProjectListingPage = () => {
                   className="px-6 py-2 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white rounded-lg hover:from-[#00A8E8] hover:to-[#0062E6] transition-all shadow-lg shadow-blue-500/20 flex items-center"
                 >
                   Submit Project
-                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  <svg
+                    className="w-4 h-4 ml-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M5 13l4 4L19 7"
+                    ></path>
                   </svg>
                 </button>
               )}

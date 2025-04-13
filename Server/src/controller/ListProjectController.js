@@ -16,7 +16,7 @@ const ListProject = async (req, res) => {
     } = req.body;
 
     if (
-      (!project_Title ||
+      !project_Title ||
       !project_duration ||
       !Project_Bid_Amount ||
       !Project_Contributor ||
@@ -25,8 +25,7 @@ const ListProject = async (req, res) => {
       !Project_tech_stack ||
       !Project_Features ||
       !Project_looking ||
-      !Project_gitHub_link ||
-      !Project_cover_photo)
+      !Project_gitHub_link      
     ) {
       return res.status(400).json({
         message: "All fields are required",

@@ -46,7 +46,7 @@ const ProjectListingSchema = new mongoose.Schema({
         required : true
     },
     project_duration : {
-      type : Number,
+      type : Date ,
       required : true ,
     },
     Project_Bid_Amount : {

@@ -71,6 +71,7 @@ const LoginPage = () => {
       }
     } catch (error) {
       setError("GitHub authentication failed. Try again.");
+      console.error("GitHub login error:", error);
     }
   };
 
