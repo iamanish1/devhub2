@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import Navbar from "../components/NavBar";
 import { useState } from "react";
 import axios from "axios";
@@ -76,7 +77,23 @@ const ProjectListingPage = () => {
         },
       });
 
+       setFormData({
+      project_Title: "",
+      Project_Bid_Amount: "",
+      Project_Contributor: "",
+      Project_Number_Of_Bids: "",
+      Project_Description: "",
+      Project_tech_stack: "",
+      Project_Features: "",
+      Project_looking: "",
+      project_duration: "",
+      Project_gitHub_link: "",
+      Project_cover_photo: null,
+    });
+
+
       console.log("Project submitted:", response.data);
+
     } catch (error) {
       console.error(error);
       setError(
