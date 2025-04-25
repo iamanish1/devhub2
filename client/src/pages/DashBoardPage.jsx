@@ -1,14 +1,35 @@
+/* eslint-disable no-unused-vars */
 import Navbar from "../components/NavBar";
 import ProjectCard from "../components/ProjectCard";
-import { useState } from "react";
+import { useState , useEffect} from "react";
+import axios from "axios";
 
 const DashboardPage = () => {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const toggleMobileFilter = () => {
     setMobileFilterOpen(!mobileFilterOpen);
   };
-
+useEffect(()=>{
+  const fetchProjects = async ()=>{
+    try {
+       const response = await axios.get("http://localhost:8000/api/project/getlistproject");
+        setProjects(response.data.projects);
+        setLoading(false);
+        console.log("Projects fetched successfully:", response.data.project);
+    } catch (error) {
+      setError(
+        error.response?.data?.message || "An error occurred while fetching projects."
+      ) ; 
+      setLoading(false);
+    }
+  }
+  console.log("Fetching projects...");
+  fetchProjects();
+},[])
   return (
     <div className="min-h-screen bg-[#121212] text-white flex flex-col">
       {/* Nav-bar */}
