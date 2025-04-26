@@ -6,7 +6,7 @@ import { memo } from "react";
 const ProjectCard = memo( ({ project }) => {
   if (!project || Object.keys(project).length === 0) {
     return <div className="text-gray-400">No project data available</div>;
-  }
+  } 
 
   const [showFull, setShowFull] = useState(false);
 
