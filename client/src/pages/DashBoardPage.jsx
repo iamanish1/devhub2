@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import Navbar from "../components/NavBar";
 import ProjectCard from "../components/ProjectCard";
-import { useState , useEffect} from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
 const DashboardPage = () => {
@@ -13,23 +13,26 @@ const DashboardPage = () => {
   const toggleMobileFilter = () => {
     setMobileFilterOpen(!mobileFilterOpen);
   };
-useEffect(()=>{
-  const fetchProjects = async ()=>{
-    try {
-       const response = await axios.get("http://localhost:8000/api/project/getlistproject");
-        setProjects(response.data.projects);
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/project/getlistproject"
+        );
+        setProjects(response.data.project || []);
         setLoading(false);
-        console.log("Projects fetched successfully:", response.data.project);
-    } catch (error) {
-      setError(
-        error.response?.data?.message || "An error occurred while fetching projects."
-      ) ; 
-      setLoading(false);
-    }
-  }
-  console.log("Fetching projects...");
-  fetchProjects();
-},[])
+        console.log("Projects fetched successfully:", response.data);
+      } catch (error) {
+        setError(
+          error.response?.data?.message ||
+            "An error occurred while fetching projects."
+        );
+        setLoading(false);
+      }
+    };
+    console.log("Fetching projects...");
+    fetchProjects();
+  }, []);
   return (
     <div className="min-h-screen bg-[#121212] text-white flex flex-col">
       {/* Nav-bar */}
@@ -198,15 +201,19 @@ useEffect(()=>{
           </div>
           {/* Project Cards Grid */}
           <div className="project-container overflow-y-auto flex-1 w-full">
-            <div className="flex flex-col gap-6">
-              
-              {/* Single column flex layout */}
-              {Array(9)
-                .fill()
-                .map((_, index) => (
-                  <ProjectCard key={index} />
+            {loading ? (
+              <p>Loading projects...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : projects.length > 0 ? ( // Use 'projects' here
+              <div className="flex flex-col gap-6">
+                {projects.map((project, index) => (
+                  <ProjectCard key={project._id} project={project} /> // Use '_id' as the key
                 ))}
-            </div>
+              </div>
+            ) : (
+              <p className="text-gray-400">No projects found.</p>
+            )}
           </div>
         </main>
       </div>
