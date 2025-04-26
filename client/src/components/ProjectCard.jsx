@@ -1,8 +1,9 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { memo } from "react";
 
-const ProjectCard = ({ project }) => {
+const ProjectCard = memo( ({ project }) => {
   if (!project || Object.keys(project).length === 0) {
     return <div className="text-gray-400">No project data available</div>;
   }
@@ -127,6 +128,6 @@ const ProjectCard = ({ project }) => {
       </div>
     </div>
   );
-};
+});
 
 export default ProjectCard;
