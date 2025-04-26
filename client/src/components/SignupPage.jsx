@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { Link, useNavigate } from "react-router-dom";
 import { FaGithub, FaEnvelope, FaLock, FaSignInAlt } from "react-icons/fa";
 import { useState } from "react";
@@ -76,7 +77,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 p-20">
       <div className="relative w-full max-w-md">
         {/* Animated background elements */}
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-cyan-500 rounded-full filter blur-3xl opacity-10 animate-pulse"></div>
