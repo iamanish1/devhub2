@@ -17,7 +17,20 @@ const ProjectCard = ({ project }) => {
     words.length > wordLimit
       ? words.slice(0, wordLimit).join(" ") + "..."
       : project.Project_Description || "No description available.";
+  // Calculate project duration in months
+  const calculateDurationInMonths = (storedDate) => {
+    const currentDate = new Date(); // Current date
+    const projectDate = new Date(storedDate); // Stored project date
 
+    const yearsDifference =
+      projectDate.getFullYear() - currentDate.getFullYear();
+    const monthsDifference = projectDate.getMonth() - currentDate.getMonth();
+
+    // Total months difference
+    return yearsDifference * 12 + monthsDifference;
+  };
+
+  const projectDurationInMonths = calculateDurationInMonths(project.project_duration);
   return (
     <div className="max-w-3xl mx-auto my-4">
       <div className="relative bg-gray-900 text-white rounded-xl overflow-hidden border border-cyan-500 shadow-lg shadow-cyan-500/20 transition-all duration-300 hover:shadow-cyan-500/40">
@@ -89,7 +102,9 @@ const ProjectCard = ({ project }) => {
                 Duration
               </h3>
               <p className="text-xl font-bold text-white">
-                {project.project_duration || "N/A"} months
+                {projectDurationInMonths > 0
+                  ? `${projectDurationInMonths} months`
+                  : "Project has ended"}
               </p>
             </div>
             <div className="bg-gray-800/50 p-4 rounded-lg">
