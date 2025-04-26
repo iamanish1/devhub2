@@ -17,10 +17,11 @@ const BidingPage = () => {
     const fetchProject = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8000/api/project/listproject/${_id}`
+          `http://localhost:8000/api/project/getlistproject/${_id}`
         );
         setProject(response.data);
         setLoading(false);
+        console.log("_id:", _id);
         console.log(response.data);
       } catch (error) {
         setError(

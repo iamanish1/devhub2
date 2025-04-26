@@ -20,7 +20,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route path="/listproject" element={<ProjectListingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/bidingPage" element={<BidingPage />} />
+        <Route path="/bidingPage/:_id" element={<BidingPage />} />
         <Route path="/bidingproposal" element={<BidingProporsalPage />} />
       </Route>
     </Routes>

@@ -25,7 +25,7 @@ const ListProject = async (req, res) => {
       !Project_tech_stack ||
       !Project_Features ||
       !Project_looking ||
-      !Project_gitHub_link      
+      !Project_gitHub_link
     ) {
       return res.status(400).json({
         message: "All fields are required",
@@ -64,29 +64,27 @@ const ListProject = async (req, res) => {
   }
 };
 
-export default ListProject; 
+export default ListProject;
 
-
-
-export const getProject = async (req, res)=>{
-    try {
-        const project = await ProjectListing.find();
-        res.status(200).json({
-            message: "Project fetched successfully",
-            project,
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-        });
-    }
-}
+export const getProject = async (req, res) => {
+  try {
+    const project = await ProjectListing.find();
+    res.status(200).json({
+      message: "Project fetched successfully",
+      project,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
 
 // Fetch a project by ID
 export const getProjectById = async (req, res) => {
   try {
-    const { id } = req.params; // Extract project ID from request parameters
-    const project = await ProjectListing.findById(id);
+    const { _id } = req.params; // Extract project ID from request parameters
+    const project = await ProjectListing.findById(_id);
 
     if (!project) {
       return res.status(404).json({
@@ -102,5 +100,5 @@ export const getProjectById = async (req, res) => {
     res.status(500).json({
       message: error.message,
     });
-  } 
-}
+  }
+};

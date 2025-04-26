@@ -119,7 +119,7 @@ const ProjectCard = memo( ({ project }) => {
           </div>
 
           {/* CTA button */}
-          <Link to="/bidingPage" className="block">
+          <Link to={`/bidingPage/${project._id}`} className="block">
             <button className="w-full py-3 px-6 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:translate-y-[-2px] hover:shadow-lg hover:shadow-cyan-500/50 focus:outline-none">
               Bid Now
             </button>
