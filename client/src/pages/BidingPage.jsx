@@ -6,7 +6,7 @@ import axios from "axios";
 
 const BidingPage = () => {
   const { _id } = useParams();
-  const [project, setProject] = useState(null);
+  const [project, setProject] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeLeft, setTimeLeft] = useState(48 * 60 * 60); // 48 hours in seconds
@@ -19,10 +19,10 @@ const BidingPage = () => {
         const response = await axios.get(
           `http://localhost:8000/api/project/getlistproject/${_id}`
         );
-        setProject(response.data);
+        setProject(response.data.project);
         setLoading(false);
         console.log("_id:", _id);
-        console.log(response.data);
+        console.log(response.data.project);
       } catch (error) {
         setError(
           error.response?.data?.message || "Failed to fetch project data."
@@ -100,14 +100,14 @@ const BidingPage = () => {
           {/* Project Image with Overlay */}
           <div className="relative group overflow-hidden rounded-xl shadow-lg mb-6">
             <img
-              src="https://techvidvan.com/tutorials/wp-content/uploads/2021/12/python-chatbot-project-nltk-ai.webp"
+              src={project.Project_cover_photo || "/api/placeholder/800/400"}
               alt="AI Chatbot System"
               className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-80"></div>
             <div className="absolute bottom-0 left-0 p-4">
               <h1 className="text-3xl font-bold text-white tracking-wide">
-                AI Chatbot System
+                {project.project_Title}
               </h1>
               <div className="flex items-center mt-2">
                 <div className="flex -space-x-2">
@@ -136,7 +136,9 @@ const BidingPage = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-[#252525] p-4 rounded-lg border border-blue-500/30 shadow-lg hover:shadow-blue-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Starting Bid</p>
-              <p className="text-2xl font-bold text-white">₹500</p>
+              <p className="text-2xl font-bold text-white">
+                ₹{project.Project_Bid_Amount}
+              </p>
             </div>
             <div className="bg-[#252525] p-4 rounded-lg border border-green-500/30 shadow-lg hover:shadow-green-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Current Bid</p>
@@ -144,11 +146,15 @@ const BidingPage = () => {
             </div>
             <div className="bg-[#252525] p-4 rounded-lg border border-purple-500/30 shadow-lg hover:shadow-purple-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Contributors</p>
-              <p className="text-2xl font-bold text-white">3</p>
+              <p className="text-2xl font-bold text-white">
+                {project.Project_Contributor}
+              </p>
             </div>
             <div className="bg-[#252525] p-4 rounded-lg border border-yellow-500/30 shadow-lg hover:shadow-yellow-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Total Bids</p>
-              <p className="text-2xl font-bold text-white">10</p>
+              <p className="text-2xl font-bold text-white">
+                {project.Project_Number_Of_Bids}
+              </p>
             </div>
           </div>
 
@@ -162,34 +168,26 @@ const BidingPage = () => {
               <div>
                 <h3 className="text-lg font-semibold text-white">Overview</h3>
                 <p className="text-gray-300 mt-1">
-                  Bug Hunt Arena is a platform where developers submit projects
-                  for testing, and testers compete to find and report bugs. Our
-                  AI-powered system validates bug reports, assigns points based
-                  on severity, and ranks testers on a leaderboard.
+                  {project.Project_Description}
                 </p>
               </div>
-
               <div>
                 <h3 className="text-lg font-semibold text-white">Tech Stack</h3>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="px-3 py-1 bg-blue-900/50 text-blue-300 rounded-full text-sm">
-                    React
-                  </span>
-                  <span className="px-3 py-1 bg-blue-900/50 text-blue-300 rounded-full text-sm">
-                    Tailwind CSS
-                  </span>
-                  <span className="px-3 py-1 bg-green-900/50 text-green-300 rounded-full text-sm">
-                    Node.js
-                  </span>
-                  <span className="px-3 py-1 bg-green-900/50 text-green-300 rounded-full text-sm">
-                    MongoDB
-                  </span>
-                  <span className="px-3 py-1 bg-purple-900/50 text-purple-300 rounded-full text-sm">
-                    Judge0
-                  </span>
-                  <span className="px-3 py-1 bg-orange-900/50 text-orange-300 rounded-full text-sm">
-                    Firebase
-                  </span>
+                  {project.Project_tech_stack ? (
+                    project.Project_tech_stack.split(",").map((tech, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1 bg-blue-900/50 text-blue-300 rounded-full text-sm"
+                      >
+                        {tech.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-400">
+                      No tech stack available
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -197,195 +195,75 @@ const BidingPage = () => {
                 <h3 className="text-lg font-semibold text-white">
                   Key Features
                 </h3>
-                <ul className="mt-2 space-y-2">
-                  <li className="flex items-start">
-                    <svg
-                      className="h-6 w-6 text-green-400 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div>
-                      <span className="font-medium text-white">
-                        AI-Verified Bug Reports:
-                      </span>
-                      <span className="text-gray-300">
-                        {" "}
-                        AI assists in validating and categorizing reported bugs.
-                      </span>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg
-                      className="h-6 w-6 text-green-400 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div>
-                      <span className="font-medium text-white">
-                        Gamification & Leaderboard:
-                      </span>
-                      <span className="text-gray-300">
-                        {" "}
-                        Earn points, rank up, and get rewards for valid bug
-                        discoveries.
-                      </span>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <svg
-                      className="h-6 w-6 text-green-400 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div>
-                      <span className="font-medium text-white">
-                        Live Code Execution:
-                      </span>
-                      <span className="text-gray-300">
-                        {" "}
-                        Inbuilt compiler for testing vulnerabilities in real
-                        time.
-                      </span>
-                    </div>
-                  </li>
+                <ul className="mt-2 space-y-2 list-none">
+                  {project.Project_Features ? (
+                    project.Project_Features.split("\n")
+                      .filter((feature) => feature.trim() !== "") // 🛠️ Filter empty lines
+                      .map((feature, index) => (
+                        <li key={index} className="flex items-start">
+                          <svg
+                            className="h-6 w-6 text-green-400 mr-2"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          <div>
+                            <span className="text-gray-300">
+                              {feature.trim()}
+                            </span>
+                          </div>
+                        </li>
+                      ))
+                  ) : (
+                    <span className="text-gray-400">No features available</span>
+                  )}
                 </ul>
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold text-white">
-                  Looking For
-                </h3>
-                <p className="text-gray-300 mt-1">
-                  Beta testers, contributors, and security experts to refine the
-                  bug detection system and improve AI-assisted validation.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Timeline */}
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-blue-400 mb-4">
-              Project Milestones
-            </h2>
-            <div className="relative">
-              <div className="absolute h-full w-1 bg-gray-700 left-[15px]"></div>
-              <div className="ml-8 space-y-6">
-                <div className="relative">
-                  <div className="absolute -left-8 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                    <svg
-                      className="h-4 w-4 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-medium">Project Start</h3>
-                    <p className="text-gray-400 text-sm">
-                      Core functionality implemented
-                    </p>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="absolute -left-8 w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                    <svg
-                      className="h-4 w-4 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-medium">AI Integration</h3>
-                    <p className="text-gray-400 text-sm">
-                      Bug validation system implemented
-                    </p>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="absolute -left-8 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center animate-pulse">
-                    <svg
-                      className="h-4 w-4 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-medium">
-                      Current Phase: Beta Testing
-                    </h3>
-                    <p className="text-gray-400 text-sm">
-                      Looking for contributors and testers
-                    </p>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="absolute -left-8 w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
-                    <svg
-                      className="h-4 w-4 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-gray-400 font-medium">Public Launch</h3>
-                    <p className="text-gray-500 text-sm">Upcoming</p>
-                  </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Looking For
+                  </h3>
+                  <ul className="mt-2 space-y-2 list-none">
+                    {project.Project_looking ? (
+                      project.Project_looking.split("\n")
+                        .filter((item) => item.trim() !== "") // 🛠️ Filter empty lines
+                        .map((item, index) => (
+                          <li key={index} className="flex items-start">
+                            <svg
+                              className="h-6 w-6 text-green-400 mr-2"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            <div>
+                              <span className="text-gray-300">
+                                {item.trim()}
+                              </span>
+                            </div>
+                          </li>
+                        ))
+                    ) : (
+                      <span className="text-gray-400">
+                        No requirements available
+                      </span>
+                    )}
+                  </ul>
                 </div>
               </div>
             </div>
@@ -406,78 +284,6 @@ const BidingPage = () => {
                 Place a Bid Now
               </button>
             </Link>
-          </div>
-
-          {/* Social Proof Section */}
-          <div className="bg-[#232323] rounded-xl p-6 border border-gray-700/50">
-            <h2 className="text-xl font-bold text-blue-400 mb-4">
-              What Others Say
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700/30">
-                <div className="flex items-center mb-2">
-                  <img
-                    className="h-10 w-10 rounded-full mr-2"
-                    src="/api/placeholder/40/40"
-                    alt="Reviewer"
-                  />
-                  <div>
-                    <p className="text-white font-medium">Alex Developer</p>
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <svg
-                          key={i}
-                          className="h-4 w-4 text-yellow-400"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-300 text-sm italic">
-                  "Innovative approach to bug hunting. The AI validation is a
-                  game-changer!"
-                </p>
-              </div>
-              <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700/30">
-                <div className="flex items-center mb-2">
-                  <img
-                    className="h-10 w-10 rounded-full mr-2"
-                    src="/api/placeholder/40/40"
-                    alt="Reviewer"
-                  />
-                  <div>
-                    <p className="text-white font-medium">Sam Tester</p>
-                    <div className="flex">
-                      {[...Array(4)].map((_, i) => (
-                        <svg
-                          key={i}
-                          className="h-4 w-4 text-yellow-400"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                      <svg
-                        className="h-4 w-4 text-gray-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-300 text-sm italic">
-                  "The gamification elements keep me engaged. Looking forward to
-                  the final release!"
-                </p>
-              </div>
-            </div>
           </div>
         </section>
       </main>
