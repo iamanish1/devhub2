@@ -1,18 +1,18 @@
 import mongooes from 'mongoose'; 
-import { ProjectListingSchema } from './ProjectListingModel.js';
-import { UserSchema } from './UserModel.js';
+import user from './UserModel.js'; // Importing the User model
+import ProjectListing from './ProjectListingModel.js'; // Importing the ProjectListing model
+
 
 
 const BiddingSchema = new mongooes.Schema({
 project_id : {
     type : mongooes.Schema.Types.ObjectId,
-    ref : ProjectListingSchema,
+    ref : ProjectListing,
     required : true
 },
 user_id : {
     type : mongooes.Schema.Types.ObjectId,
-    ref : UserSchema,
-    required : true
+    ref : user,
 },
 bid_amount : {
     type : Number,
