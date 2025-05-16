@@ -87,6 +87,8 @@ const ProjectListingSchema = new mongoose.Schema({
         type : String,
         required : true
     }
+
+    
 });
 
 

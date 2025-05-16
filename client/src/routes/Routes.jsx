@@ -21,7 +21,7 @@ const AppRoutes = () => {
         <Route path="/listproject" element={<ProjectListingPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/bidingPage/:_id" element={<BidingPage />} />
-        <Route path="/bidingproposal" element={<BidingProporsalPage />} />
+        <Route path="/bidingproposal/:_id" element={<BidingProporsalPage />} />
       </Route>
     </Routes>
   );

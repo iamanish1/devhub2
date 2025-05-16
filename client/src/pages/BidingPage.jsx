@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 
 const BidingPage = () => {
-  const { _id } = useParams();
+  const { _id  } = useParams();
+  const {projectId} = useParams() ; 
   const [project, setProject] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -279,7 +280,7 @@ const BidingPage = () => {
               Your expertise in bug hunting can help shape this project. Join
               the team and earn rewards!
             </p>
-            <Link to="/bidingproposal">
+            <Link to={`/bidingproposal/${_id}`}>
               <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30">
                 Place a Bid Now
               </button>
