@@ -12,7 +12,32 @@ const BidingPage = () => {
   const [error, setError] = useState(null);
   const [timeLeft, setTimeLeft] = useState(48 * 60 * 60); // 48 hours in seconds
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [hasBid, setHasBid] = useState(false);
 
+  // Check if the user has already placed a bid
+  useEffect(() => {
+    const checkHasBid = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const res = await axios.get(
+          `http://localhost:8000/api/bid/getBid/${_id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setHasBid(res.data.existingBid ? true : false);
+        console.log("Bid status:", res.data.existingBid);
+      } catch (error) {
+        console.error("Error checking bid status:", error);
+        setError("Failed to check bid status.");
+        setHasBid(false);
+      }
+    };
+    checkHasBid();
+  }, [_id]);
   // Fetch project data based on project ID
   useEffect(() => {
     const fetchProject = async () => {
@@ -284,9 +309,22 @@ const BidingPage = () => {
               Your expertise in bug hunting can help shape this project. Join
               the team and earn rewards!
             </p>
-            <Link to={`/bidingproposal/${_id}`}>
-              <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30">
-                Place a Bid Now
+            <Link to={hasBid ? "#" : `/bidingproposal/${_id}`}>
+              <button
+                className={`px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30 ${
+                  hasBid ? "opacity-60 cursor-not-allowed" : ""
+                }`}
+                onClick={(e) => {
+                  if (hasBid) {
+                    e.preventDefault();
+                    alert(
+                      "You already placed a bid for this project. Wait for the bid completion."
+                    );
+                  }
+                }}
+                disabled={hasBid}
+              >
+                {hasBid ? "You already placed a bid" : "Place a Bid Now"}
               </button>
             </Link>
           </div>

@@ -76,3 +76,29 @@ export const createBid = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getBid = async (req, res) => {
+  try {
+    const { _id } = req.params; // projectId
+    const userID = req.user._id;
+
+   const existingBid = await Bidding.findOne({
+      project_id: _id,
+      user_id: userID,
+    });
+
+    if (!existingBid) {
+      return res.status(404).json({ message: "Bid not found" });
+    }
+
+    res.status(200).json({
+      message: "Bid fetched successfully",
+      existingBid,
+    });
+  }
+  catch (error) {
+    console.error("Error fetching bid:", error);
+    res.status(500).json({ message: error.message });
+  }
+
+}
