@@ -15,6 +15,7 @@ const ProjectListingPage = () => {
     Project_looking: "",
     Project_gitHub_link: "",
     Project_cover_photo: "",
+    project_starting_bid: "",
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -59,7 +60,7 @@ const ProjectListingPage = () => {
 
       const data = new FormData();
       data.append("project_Title", formData.project_Title);
-      data.append("Project_Bid_Amount", formData.Project_Bid_Amount);
+      data.append("project_starting_bid", formData.project_starting_bid);
       data.append("Project_Contributor", formData.Project_Contributor);
       data.append("Project_Number_Of_Bids", formData.Project_Number_Of_Bids);
       data.append("Project_Description", formData.Project_Description);
@@ -89,6 +90,7 @@ const ProjectListingPage = () => {
       project_duration: "",
       Project_gitHub_link: "",
       Project_cover_photo: null,
+      project_starting_bid : "",
     });
 
 
@@ -172,8 +174,8 @@ const ProjectListingPage = () => {
                     </label>
                     <input
                       type="text"
-                      name="Project_Bid_Amount"
-                      value={formData.Project_Bid_Amount}
+                      name="project_starting_bid"
+                      value={formData.project_starting_bid}
                       onChange={handleChange}
                       className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
                       placeholder="Enter your project budget..."

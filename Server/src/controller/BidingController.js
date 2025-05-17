@@ -1,6 +1,7 @@
 import Bidding from "../Model/BiddingModel.js";
 import ProjectListing from "../Model/ProjectListingModel.js";
 import user from "../Model/UserModel.js";
+import mongoose from "mongoose";
 
 export const createBid = async (req, res) => {
   try {
@@ -47,6 +48,28 @@ export const createBid = async (req, res) => {
     });
 
     await newBid.save();
+    // update the data in the project listing
+    const projectObjectId = new mongoose.Types.ObjectId(_id);
+    const totalBids = await Bidding.countDocuments({
+      project_id: projectObjectId,
+    });
+    const allBids = await Bidding.find({ project_id: projectObjectId });
+
+    const uniqueContributors = [
+      ...new Set(allBids.map((b) => b.user_id.toString())),
+    ].length;
+
+    let currentBidAmount = 0;
+    if (allBids.length === 1) {
+      currentBidAmount = allBids[0].bid_amount;
+    } else if (allBids.length > 1) {
+      currentBidAmount = allBids.reduce((sum, b) => sum + b.bid_amount, 0);
+    }
+    await ProjectListing.findByIdAndUpdate(projectObjectId, {
+      Project_Number_Of_Bids: totalBids,
+      Project_Bid_Amount: currentBidAmount,
+    });
+
     res.status(201).json({ message: "Bid created successfully", bid: newBid });
   } catch (error) {
     console.error("Error creating bid:", error);

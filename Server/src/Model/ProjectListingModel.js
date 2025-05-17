@@ -49,9 +49,13 @@ const ProjectListingSchema = new mongoose.Schema({
       type : Date ,
       required : true ,
     },
+    project_starting_bid:{
+        type : Number , 
+        required : true ,
+    }, 
     Project_Bid_Amount : {
          type : Number ,
-         required : true, 
+         default : 0 , 
 
     },
     Project_Contributor : {

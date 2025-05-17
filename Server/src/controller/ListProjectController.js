@@ -13,12 +13,13 @@ const ListProject = async (req, res) => {
       Project_looking,
       Project_gitHub_link,
       Project_cover_photo,
+      project_starting_bid,
     } = req.body;
 
     if (
       !project_Title ||
       !project_duration ||
-      !Project_Bid_Amount ||
+      !project_starting_bid ||
       !Project_Contributor ||
       !Project_Number_Of_Bids ||
       !Project_Description ||
@@ -51,6 +52,7 @@ const ListProject = async (req, res) => {
       Project_looking,
       Project_gitHub_link,
       Project_cover_photo,
+      project_starting_bid,
     });
     await project.save();
     res.status(200).json({

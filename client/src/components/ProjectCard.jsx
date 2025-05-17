@@ -92,10 +92,10 @@ const ProjectCard = memo( ({ project }) => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             <div className="bg-gray-800/50 p-4 rounded-lg">
               <h3 className="text-gray-400 text-xs uppercase font-medium">
-                Budget
+               Starting Bid
               </h3>
               <p className="text-xl font-bold text-white">
-                ₹{project.Project_Bid_Amount || "N/A"}
+                ₹{project.project_starting_bid || "N/A"}
               </p>
             </div>
             <div className="bg-gray-800/50 p-4 rounded-lg">

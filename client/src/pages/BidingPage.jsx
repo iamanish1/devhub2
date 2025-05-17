@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 
 const BidingPage = () => {
-  const { _id  } = useParams();
-  const {projectId} = useParams() ; 
+  const { _id } = useParams();
+  const { projectId } = useParams();
   const [project, setProject] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -138,12 +138,14 @@ const BidingPage = () => {
             <div className="bg-[#252525] p-4 rounded-lg border border-blue-500/30 shadow-lg hover:shadow-blue-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Starting Bid</p>
               <p className="text-2xl font-bold text-white">
-                ₹{project.Project_Bid_Amount}
+                ₹{project.project_starting_bid}
               </p>
             </div>
             <div className="bg-[#252525] p-4 rounded-lg border border-green-500/30 shadow-lg hover:shadow-green-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Current Bid</p>
-              <p className="text-2xl font-bold text-green-400">₹500</p>
+              <p className="text-2xl font-bold text-green-400">
+                ₹{project.Project_Bid_Amount}
+              </p>
             </div>
             <div className="bg-[#252525] p-4 rounded-lg border border-purple-500/30 shadow-lg hover:shadow-purple-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Contributors</p>
