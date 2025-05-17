@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import Navbar from "../components/NavBar";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";

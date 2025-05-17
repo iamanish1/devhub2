@@ -1,7 +1,6 @@
 import Bidding from "../Model/BiddingModel.js";
 import ProjectListing from "../Model/ProjectListingModel.js";
 import user from "../Model/UserModel.js";
-import mongoose from "mongoose";
 
 export const createBid = async (req, res) => {
   try {
