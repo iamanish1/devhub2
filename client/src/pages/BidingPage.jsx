@@ -128,7 +128,9 @@ const BidingPage = () => {
                     alt="Contributor"
                   />
                 </div>
-                <span className="ml-2 text-white text-sm">3 Contributors</span>
+                <span className="ml-2 text-white text-sm">
+                  {project.Project_Contributor} Contributors
+                </span>
               </div>
             </div>
           </div>

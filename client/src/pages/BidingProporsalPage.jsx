@@ -22,6 +22,7 @@ const BidingProporsalPage = () => {
   const [project, setProject] = useState({}); // Assuming you want to store project details
   const [yearsExperience, setYearsExperience] = useState(1);
   const [availableHours, setAvailableHours] = useState(10);
+  const [bidError, setBidError] = useState("");
   const [loading, setloading] = useState(false);
   const [error, setError] = useState("");
 
@@ -44,6 +45,32 @@ const BidingProporsalPage = () => {
     const updatedSkills = [...skills];
     updatedSkills[index].selected = !updatedSkills[index].selected;
     setSkills(updatedSkills);
+  };
+
+  const handleBidAmountChange = (e) => {
+    const value = Number(e.target.value);
+    setBidAmount(value);
+
+    // Determine the minimum required bid
+    let minBid = Number(project.project_starting_bid) || 0;
+    if (
+      project.Project_Bid_Amount &&
+      Number(project.Project_Bid_Amount) > minBid
+    ) {
+      minBid = Number(project.Project_Bid_Amount);
+    }
+
+    if (value <= minBid) {
+      setBidError(
+        `Bid amount must be greater than ${
+          minBid === Number(project.project_starting_bid)
+            ? "the starting bid"
+            : "the current bid"
+        } (₹${minBid})`
+      );
+    } else {
+      setBidError("");
+    }
   };
 
   const handleSumbit = async (e) => {
@@ -122,7 +149,7 @@ const BidingProporsalPage = () => {
                   </h2>
                   <div className="flex items-center text-sm text-gray-400">
                     <span className="mr-3">
-                      Starting bid: ₹{project.Project_Bid_Amount}
+                      Starting bid: ₹{project.project_starting_bid}
                     </span>
                     <span>{project.Project_Contributor} Contributors</span>
                   </div>
@@ -141,16 +168,21 @@ const BidingProporsalPage = () => {
                   <input
                     type="number"
                     value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
+                    onChange={handleBidAmountChange}
                     className="w-full bg-[#252525] border border-gray-700 rounded-lg py-3 px-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Enter your bid amount"
-                    min="500"
+                    min={Number(project.project_starting_bid) + 1 || 500}
                   />
                   <div className="absolute right-3 top-2">
                     <button
                       type="button"
                       onClick={() =>
-                        setBidAmount((prev) => Math.max(500, prev - 100))
+                        setBidAmount((prev) =>
+                          Math.max(
+                            Number(project.Project_Bid_Amount) + 1 || 500,
+                            prev - 100
+                          )
+                        )
                       }
                       className="px-2 py-1 bg-gray-700 rounded-l-md hover:bg-gray-600 transition-colors"
                     >
@@ -165,11 +197,7 @@ const BidingProporsalPage = () => {
                     </button>
                   </div>
                 </div>
-                {bidAmount < 500 && (
-                  <p className="text-red-400 text-sm">
-                    Minimum bid amount is ₹500
-                  </p>
-                )}
+                {bidError && <p className="text-red-400 text-sm">{bidError}</p>}
               </div>
 
               {/* Skills Section */}
@@ -289,6 +317,7 @@ const BidingProporsalPage = () => {
                 <button
                   type="submit"
                   className="flex-1 bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 px-6 rounded-lg hover:from-blue-700 hover:to-blue-900 transition-all transform hover:scale-105 duration-300 shadow-lg hover:shadow-blue-500/30 font-medium"
+                  disabled={!!bidError || loading}
                 >
                   Submit Your Bid
                 </button>
