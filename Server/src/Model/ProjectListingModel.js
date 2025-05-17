@@ -65,6 +65,7 @@ const ProjectListingSchema = new mongoose.Schema({
     Project_Number_Of_Bids : {
         type : Number,
         required : true , 
+        default : 0 ,
     },
     Project_Description : {
         type : String,
