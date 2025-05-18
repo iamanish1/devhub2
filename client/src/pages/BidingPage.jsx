@@ -3,7 +3,8 @@ import Navbar from "../components/NavBar";
 import { Link, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
-
+import { db } from "../Config/firebase";
+import {doc , onSnapshot} from "firebase/firestore";
 const BidingPage = () => {
   const { _id } = useParams();
   const { projectId } = useParams();
@@ -13,6 +14,23 @@ const BidingPage = () => {
   const [timeLeft, setTimeLeft] = useState(48 * 60 * 60); // 48 hours in seconds
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [hasBid, setHasBid] = useState(false);
+
+  // Real-time listener for project data
+  useEffect(()=>{
+    if(!_id) return;
+    const unsub = onSnapshot(doc(db, "project_summaries", _id), (doc) => {
+      const data = doc.data();
+      if (data) {
+        setProject((prevProject) => ({
+          ...prevProject,
+          Project_Bid_Amount: data.current_bid_amount,
+          Project_Number_Of_Bids: data.total_bids,
+          Project_Contributor: data.number_of_contributors,
+        }));
+      }
+    });
+    return () => unsub();
+  },[_id])
 
   // Check if the user has already placed a bid
   useEffect(() => {

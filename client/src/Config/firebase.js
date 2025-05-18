@@ -1,19 +1,20 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GithubAuthProvider } from "firebase/auth";
-
+import { getFirestore } from "firebase/firestore";
 // Your Firebase Config
 const firebaseConfig = {
-  apiKey: "AIzaSyDv0D4PmCm2xztSIPWV3t_uuoExUXwH6LU",
-  authDomain: "devhubs-project.firebaseapp.com",
-  projectId: "devhubs-project",
-  storageBucket: "devhubs-project.firebasestorage.app",
-  messagingSenderId: "659320333811",
-  appId: "1:659320333811:web:32bf805c2ef8d1ac701e86",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const githubProvider = new GithubAuthProvider();
+const db = getFirestore(app);
 
-export { auth, githubProvider, signInWithPopup };
+export { auth, githubProvider, signInWithPopup  , db };
