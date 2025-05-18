@@ -2,7 +2,7 @@ import Bidding from "../Model/BiddingModel.js";
 import ProjectListing from "../Model/ProjectListingModel.js";
 import user from "../Model/UserModel.js";
 import mongoose from "mongoose";
-
+import { firestoreDb } from "../config/firebaseAdmin.js";
 export const createBid = async (req, res) => {
   try {
     const { _id } = req.params; // projectId
@@ -70,6 +70,23 @@ export const createBid = async (req, res) => {
       Project_Bid_Amount: currentBidAmount,
     });
 
+    // sync the data to the firebase fire store
+    await firestoreDb.collection("project_summaries").doc(_id.toString()).set(
+      {
+        total_bids: totalBids,
+        number_of_contributors: uniqueContributors,
+        current_bid_amount: currentBidAmount,
+        updated_at: new Date(),
+      },
+      { merge: true } // This will create the document if it doesn't exist
+    );
+
+    console.log("Firebase Sync Data:", {
+      total_bids: totalBids,
+      number_of_contributors: uniqueContributors,
+      current_bid_amount: currentBidAmount,
+    });
+
     res.status(201).json({ message: "Bid created successfully", bid: newBid });
   } catch (error) {
     console.error("Error creating bid:", error);
@@ -82,7 +99,7 @@ export const getBid = async (req, res) => {
     const { _id } = req.params; // projectId
     const userID = req.user._id;
 
-   const existingBid = await Bidding.findOne({
+    const existingBid = await Bidding.findOne({
       project_id: _id,
       user_id: userID,
     });
@@ -95,10 +112,8 @@ export const getBid = async (req, res) => {
       message: "Bid fetched successfully",
       existingBid,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Error fetching bid:", error);
     res.status(500).json({ message: error.message });
   }
-
-}
+};
