@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { db } from "../Config/firebase";
-import {doc , onSnapshot} from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 const BidingPage = () => {
   const { _id } = useParams();
   const { projectId } = useParams();
@@ -16,10 +16,10 @@ const BidingPage = () => {
   const [hasBid, setHasBid] = useState(false);
 
   // Real-time listener for project data
-  useEffect(()=>{
-    if(!_id) return;
-    const unsub = onSnapshot(doc(db, "project_summaries", _id), (doc) => {
-      const data = doc.data();
+  useEffect(() => {
+    if (!_id) return;
+    const unsub = onSnapshot(doc(db, "project_summaries", _id), (docSnap) => {
+      const data = docSnap.data();
       if (data) {
         setProject((prevProject) => ({
           ...prevProject,
@@ -30,7 +30,7 @@ const BidingPage = () => {
       }
     });
     return () => unsub();
-  },[_id])
+  }, [_id]);
 
   // Check if the user has already placed a bid
   useEffect(() => {

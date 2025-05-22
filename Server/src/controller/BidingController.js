@@ -71,15 +71,18 @@ export const createBid = async (req, res) => {
     });
 
     // sync the data to the firebase fire store
-    await firestoreDb.collection("project_summaries").doc(_id.toString()).set(
-      {
-        total_bids: totalBids,
-        number_of_contributors: uniqueContributors,
-        current_bid_amount: currentBidAmount,
-        updated_at: new Date(),
-      },
-      { merge: true } // This will create the document if it doesn't exist
-    );
+    await firestoreDb
+      .collection("project_summaries")
+      .doc(String(projectObjectId))
+      .set(
+        {
+          current_bid_amount: currentBidAmount,
+          total_bids: totalBids,
+          number_of_contributors: uniqueContributors,
+          updated_at: new Date(),
+        },
+        { merge: true } // This will create the document if it doesn't exist
+      );
 
     console.log("Firebase Sync Data:", {
       total_bids: totalBids,
