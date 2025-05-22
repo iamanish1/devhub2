@@ -25,7 +25,6 @@ const BidingPage = () => {
           ...prevProject,
           Project_Bid_Amount: data.current_bid_amount,
           Project_Number_Of_Bids: data.total_bids,
-          Project_Contributor: data.number_of_contributors,
         }));
       }
     });
