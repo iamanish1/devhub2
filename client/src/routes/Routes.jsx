@@ -8,6 +8,7 @@ import BidingPage from "../pages/BidingPage";
 import BidingProporsalPage from "../pages/BidingProporsalPage";
 import ProtectedRoute from "../components/ProtectedRoute";
 import LoginAccountPage from "../pages/LoginAccountPage";
+import ProfilePage from "../pages/ProfilePage";
 
 const AppRoutes = () => {
   return (
@@ -22,6 +23,7 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/bidingPage/:_id" element={<BidingPage />} />
         <Route path="/bidingproposal/:_id" element={<BidingProporsalPage />} />
+        <Route path="/profile" element={<ProfilePage/>}/>
       </Route>
     </Routes>
   );
