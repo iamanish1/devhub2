@@ -15,7 +15,7 @@ const BidingPage = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [hasBid, setHasBid] = useState(false);
 
-  // Real-time listener for project data
+  // Real-time listener for project data updates
   useEffect(() => {
     if (!_id) return;
     const unsub = onSnapshot(doc(db, "project_summaries", _id), (docSnap) => {
