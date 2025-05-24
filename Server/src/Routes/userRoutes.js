@@ -4,13 +4,14 @@ import { LoginUser } from '../controller/LoginUserController.js';
 import githubAuthentication from '../controller/githubauthController.js';
 import { GetRegisterUser } from '../controller/GetUserDetailController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
-import EditUserProfile from '../controller/EditProfileController.js';
+import {editUserProfile, getUserProfile} from '../controller/EditProfileController.js';
 const userRoute = express.Router() ; 
 
 userRoute.post('/user', authenticateUser); 
 userRoute.post("/login", LoginUser);
 userRoute.post("/github/login", githubAuthentication) ;
 userRoute.get("/getuser",authMiddleware,GetRegisterUser) ;
-userRoute.post("/editprofile",EditUserProfile) ; 
+userRoute.post("/editprofile", authMiddleware,editUserProfile) ; 
+userRoute.get("/profile", authMiddleware, getUserProfile) ; 
 
 export default userRoute ; 

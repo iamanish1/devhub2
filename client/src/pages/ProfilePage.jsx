@@ -1,6 +1,33 @@
 import Navbar from "../components/NavBar";
-
+import axios from "axios";
+import { useState, useEffect } from "react";
+import { data } from "react-router-dom";
 const ProfilePage = () => {
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/api/getuser", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setUserData(response.data);
+        console.log("User Data:", response.data);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
   const user = {
     name: "Your Name",
     username: "yourusername",
@@ -35,6 +62,8 @@ const ProfilePage = () => {
       },
     ],
   };
+
+  console.log("User Data in api :", user);
 
   return (
     <>
@@ -71,8 +100,8 @@ const ProfilePage = () => {
                 </svg>
               )}
             </div>
-            <h2 className="text-2xl font-bold text-white">{user.name}</h2>
-            <span className="text-gray-400 text-sm">@{user.username}</span>
+            <h2 className="text-2xl font-bold text-white">{data.email}</h2>
+            <span className="text-gray-400 text-sm">@{data.username}</span>
             <span className="text-blue-400 text-sm">{user.role}</span>
             <span className="text-gray-400 text-xs">{user.location}</span>
             <span className="text-gray-500 text-xs mb-4">{user.joined}</span>
