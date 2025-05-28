@@ -55,6 +55,10 @@ const UserProfileSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  user_profile_instagram : {
+    type: String,
+    required: true,
+  }, 
   user_profile_location: {
     type: String,
     required: true,
