@@ -1,9 +1,10 @@
 import Navbar from "../components/NavBar";
 import axios from "axios";
 import { useState, useEffect } from "react";
-import { data } from "react-router-dom";
+import { FaGithub, FaTwitter, FaInstagram } from "react-icons/fa";
+
 const ProfilePage = () => {
-  const [userData, setUserData] = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -16,11 +17,9 @@ const ProfilePage = () => {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        setUserData(response.data);
-        console.log("User Data:", response.data);
+        setUser(response.data);
         setError(null);
       } catch (err) {
-        console.error("Error fetching user data:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -28,42 +27,10 @@ const ProfilePage = () => {
     };
     fetchUserData();
   }, []);
-  const user = {
-    name: "Your Name",
-    username: "yourusername",
-    email: "your.email@example.com",
-    role: "Developer",
-    bio: "Passionate about open source, AI, and building cool things. Always learning.",
-    location: "India",
-    joined: "Joined May 2024",
-    avatar: null,
-    stats: {
-      projects: 8,
-      contributions: 42,
-      followers: 120,
-      following: 17,
-    },
-    skills: ["React", "Node.js", "MongoDB", "Firebase", "Tailwind CSS"],
-    links: {
-      github: "https://github.com/yourusername",
-      website: "https://yourwebsite.com",
-      twitter: "https://twitter.com/yourusername",
-    },
-    recentProjects: [
-      {
-        name: "AI Chatbot System",
-        date: "May 2024",
-        description: "A smart chatbot using NLP and ML.",
-      },
-      {
-        name: "Bug Tracker App",
-        date: "Apr 2024",
-        description: "A collaborative bug tracking platform.",
-      },
-    ],
-  };
 
-  console.log("User Data in api :", user);
+  if (loading) return <div className="text-white p-8">Loading...</div>;
+  if (error) return <div className="text-red-500 p-8">Error: {error}</div>;
+  if (!user) return <div className="text-white p-8">No user data found.</div>;
 
   return (
     <>
@@ -73,149 +40,84 @@ const ProfilePage = () => {
           {/* Sidebar */}
           <aside className="lg:w-1/3 w-full bg-[#181b23] rounded-2xl shadow-lg border border-blue-500/20 p-8 flex flex-col items-center">
             <div className="h-36 w-36 bg-[#00A8E8] rounded-full flex items-center justify-center shadow-lg overflow-hidden mb-4">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt="User Avatar"
-                  className="h-full w-full object-cover rounded-full"
+              {/* Avatar placeholder */}
+              <svg
+                className="w-20 h-20 text-white opacity-80"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196z"
                 />
-              ) : (
-                <svg
-                  className="w-20 h-20 text-white opacity-80"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white">{data.email}</h2>
-            <span className="text-gray-400 text-sm">@{data.username}</span>
-            <span className="text-blue-400 text-sm">{user.role}</span>
-            <span className="text-gray-400 text-xs">{user.location}</span>
-            <span className="text-gray-500 text-xs mb-4">{user.joined}</span>
-            <div className="flex justify-around w-full mb-6">
-              {[
-                { label: "Followers", value: user.stats.followers },
-                { label: "Following", value: user.stats.following },
-                { label: "Projects", value: user.stats.projects },
-              ].map((item, i) => (
-                <div key={i} className="text-center">
-                  <p className="text-white font-bold text-lg">{item.value}</p>
-                  <p className="text-gray-400 text-xs">{item.label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col gap-2 w-full">
+            <h2 className="text-2xl font-bold text-white">{user.email}</h2>
+            <span className="text-gray-400 text-sm">@{user.username}</span>
+            <span className="text-blue-400 text-sm">{user.usertype}</span>
+            {/* Add more fields as your API grows */}
+            <div className="flex flex-col gap-2 w-full mt-4">
               <a
-                href={user.links.github}
+                href={user.github || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#00A8E8] hover:underline text-sm"
+                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
               >
-                GitHub
+                <FaGithub className="text-lg" />
+                Github
               </a>
               <a
-                href={user.links.website}
+                href={user.twitter || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#00A8E8] hover:underline text-sm"
+                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
               >
-                Website
-              </a>
-              <a
-                href={user.links.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#00A8E8] hover:underline text-sm"
-              >
+                <FaTwitter className="text-lg" />
                 Twitter
               </a>
+              <a
+                href={user.instagram || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
+              >
+                <FaInstagram className="text-lg" />
+                Instagram
+              </a>
             </div>
-            <button className="mt-6 w-full bg-[#00A8E8] hover:bg-[#008fc7] text-white font-medium py-2 rounded-lg shadow-md transition-all">
-              Edit Profile
-            </button>
+            <div>
+              {/* edit profile button */}
+              <button className="mt-6 bg-blue-500 text-white px-[10vmin] py-2 rounded-lg hover:bg-blue-600 transition">
+                Edit Profile
+              </button>
+            </div>
           </aside>
 
           {/* Main Content */}
           <div className="flex-1 bg-[#1a1a1a]/90 rounded-2xl shadow-xl border border-blue-500/20 p-8">
             <section className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Bio</h2>
-              <p className="text-gray-300">{user.bio}</p>
-            </section>
-
-            <section className="mb-6">
-              <h2 className="text-xl font-semibold text-blue-400 mb-2">
-                Skills
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Profile Info
               </h2>
-              <div className="flex flex-wrap gap-3">
-                {user.skills.map((skill, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-blue-500/10 text-blue-300 px-3 py-1 rounded-full text-sm font-medium"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="mb-6">
-              <h2 className="text-xl font-semibold text-blue-400 mb-2">
-                Activity Summary
-              </h2>
-              <div className="flex gap-8">
-                <div>
-                  <span className="block text-white font-bold text-lg">
-                    {user.stats.contributions}
-                  </span>
-                  <span className="text-gray-400 text-xs">Contributions</span>
-                </div>
-                <div>
-                  <span className="block text-white font-bold text-lg">
-                    {user.stats.projects}
-                  </span>
-                  <span className="text-gray-400 text-xs">Projects</span>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-xl font-semibold text-blue-400 mb-4">
-                Recent Projects
-              </h2>
-              <ul className="space-y-3">
-                {user.recentProjects.map((proj, idx) => (
-                  <li
-                    key={idx}
-                    className="bg-[#232323] p-4 rounded-xl border border-blue-500/10"
-                  >
-                    <div className="flex justify-between flex-col md:flex-row md:items-center">
-                      <div>
-                        <h4 className="text-white font-semibold">
-                          {proj.name}
-                        </h4>
-                        <span className="text-gray-500 text-sm">
-                          {proj.date}
-                        </span>
-                      </div>
-                      <p className="text-gray-400 text-sm mt-2 md:mt-0">
-                        {proj.description}
-                      </p>
-                    </div>
-                  </li>
-                ))}
+              <ul className="text-gray-300">
+                <li>
+                  <strong>Email:</strong> {user.email}
+                </li>
+                <li>
+                  <strong>Username:</strong> {user.username}
+                </li>
+                <li>
+                  <strong>Role:</strong> {user.usertype}
+                </li>
+                {/* Add more fields here as your API returns them */}
               </ul>
             </section>
           </div>
