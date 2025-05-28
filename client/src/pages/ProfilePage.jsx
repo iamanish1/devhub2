@@ -2,6 +2,7 @@ import Navbar from "../components/NavBar";
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { FaGithub, FaTwitter, FaInstagram } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
@@ -95,29 +96,67 @@ const ProfilePage = () => {
             </div>
             <div>
               {/* edit profile button */}
-              <button className="mt-6 bg-blue-500 text-white px-[10vmin] py-2 rounded-lg hover:bg-blue-600 transition">
+              <Link to="/editprofile">
+                <button className="mt-6 bg-blue-500 text-white px-[10vmin] py-2 rounded-lg hover:bg-blue-600 transition">
                 Edit Profile
               </button>
+              </Link>
+            
             </div>
           </aside>
 
           {/* Main Content */}
           <div className="flex-1 bg-[#1a1a1a]/90 rounded-2xl shadow-xl border border-blue-500/20 p-8">
             <section className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Profile Info
-              </h2>
-              <ul className="text-gray-300">
-                <li>
-                  <strong>Email:</strong> {user.email}
-                </li>
-                <li>
-                  <strong>Username:</strong> {user.username}
-                </li>
-                <li>
-                  <strong>Role:</strong> {user.usertype}
-                </li>
-                {/* Add more fields here as your API returns them */}
+             <div className="text-2xl font-bold text-blue-500 mb-4">
+              Bio 
+             </div>
+              <p className="text-white text-sm">
+                  {user.bio || "No bio available."}
+                </p>
+            </section>
+            <section>
+              <div className="text-2xl font-bold text-blue-500 mb-4">
+                Skills
+              </div>
+              <ul className="list-disc list-inside text-white text-sm">
+                {user.skills && user.skills.length > 0 ? (
+                  user.skills.map((skill, index) => (
+                    <li key={index} className="mb-2">
+                      {skill}
+                    </li>
+                  ))
+                ) : (
+                  <li>No skills listed.</li>
+                )}
+              </ul>
+            </section>
+            {/* Activity summary section */}
+            <section className="mt-6">
+              <div className="text-2xl font-bold text-blue-500 mb-4">
+                Activity Summary
+              </div>
+              <p className="text-white text-sm">
+                {/* Placeholder for activity summary */}
+                {user.activitySummary || "No activity summary available."}
+              </p>
+
+            </section>
+            {/* Recent project section */}
+            <section className="mt-6">
+              <div className="text-2xl font-bold text-blue-500 mb-4">
+                Recent Projects
+              </div>
+              <ul className="list-disc list-inside text-white text-sm">
+                {user.recentProjects && user.recentProjects.length > 0 ? (
+                  user.recentProjects.map((project, index) => (
+                    <li key={index} className="mb-2">
+                      {project}
+                    </li>
+                  ))
+                ) : (
+                  <li>No recent projects available.</li>
+                )}
               </ul>
             </section>
           </div>
