@@ -3,7 +3,7 @@ import user from "../Model/UserModel.js";
 
 export const editUserProfile = async (req, res) => {
   try {
-    const userId = req.user._id; // Assuming user ID is stored in req.user
+    const username = req.user?.username || req.body.username; // Assuming user ID is stored in req.user
     const {
       user_profile_skills,
       user_profile_bio,
@@ -15,8 +15,13 @@ export const editUserProfile = async (req, res) => {
       user_profile_location,
     } = req.body;
 
+    const User = await user.findOne({ username });
+    if (!User) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     // Find the user's profile
-    let profile = await UserProfile.findOne({ user_name: userId });
+    let profile = await UserProfile.findOne({ user_name: user._id  });
 
     if (!profile) {
       return res.status(404).json({ message: "User profile not found" });
@@ -35,8 +40,10 @@ export const editUserProfile = async (req, res) => {
     // Save the updated profile
     await profile.save();
 
-    res.status(200).json({ message: "User profile updated successfully", profile });    
-} catch (error) {
+    res
+      .status(200)
+      .json({ message: "User profile updated successfully", profile });
+  } catch (error) {
     console.error("Error editing user profile:", error);
     res.status(500).json({ message: error.message || "Internal server error" });
   }
