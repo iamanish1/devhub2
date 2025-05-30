@@ -24,7 +24,7 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/bidingPage/:_id" element={<BidingPage />} />
         <Route path="/bidingproposal/:_id" element={<BidingProporsalPage />} />
-        <Route path="/profile" element={<ProfilePage/>}/>
+        <Route path="/profile/:userId" element={<ProfilePage/>}/>
         <Route path="/editprofile" element={<EditProfilePage/>}/>
       </Route>
     </Routes>

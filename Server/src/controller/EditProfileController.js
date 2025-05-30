@@ -94,13 +94,21 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+import mongoose from "mongoose";
 
 export const getUserProfile = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
 
-    // Find the user's profile by userId
-    let profile = await UserProfile.findOne({ user_name: userId }).populate("user_name", "-password"); // Exclude password
+    // Check if userId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId format" });
+    }
+
+    let profile = await UserProfile.findOne({ user_name: userId }).populate(
+      "user_name",
+      "-password"
+    );
 
     if (!profile) {
       return res.status(404).json({ message: "User profile not found" });

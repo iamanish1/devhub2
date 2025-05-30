@@ -6,7 +6,7 @@ const UserProfileSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     auto: true,
   },
-  user_name: {
+  username: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",
    

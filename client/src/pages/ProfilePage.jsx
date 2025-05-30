@@ -3,10 +3,12 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 import { FaGithub, FaTwitter, FaInstagram } from "react-icons/fa";
 import { AiOutlineGlobal } from "react-icons/ai";
+ import { useParams } from "react-router-dom";
 
 import { Link } from "react-router-dom";
 
 const ProfilePage = () => {
+ const userId = useParams(); // Get userId from URL params
   const [userProfile, setUserProfile] = useState({});
   const [user, setUser] = useState({});
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ const ProfilePage = () => {
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/api/profile", {
+        const response = await axios.get(`http://localhost:8000/api/profile/${userId}`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
