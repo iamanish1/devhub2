@@ -2,12 +2,34 @@ import Navbar from "../components/NavBar";
 import axios from "axios";
 import { useState, useEffect } from "react";
 import { FaGithub, FaTwitter, FaInstagram } from "react-icons/fa";
+import { AiOutlineGlobal } from "react-icons/ai";
+
 import { Link } from "react-router-dom";
 
 const ProfilePage = () => {
   const [userProfile, setUserProfile] = useState({});
+  const [user, setUser] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/api/getuser", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setUser(response.data);
+        console.log("User data fetched:", response.data);
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      }
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -19,7 +41,7 @@ const ProfilePage = () => {
           },
         });
         setUserProfile(response.data);
-        console.log("User Profile Data:", response.data);
+        console.log("User profile fetched:", response.data);
         setError(null);
       } catch (err) {
         setError(err.message);
@@ -49,7 +71,7 @@ const ProfilePage = () => {
 
   if (loading) return <div className="text-white p-8">Loading...</div>;
   if (error) return <div className="text-red-500 p-8">Error: {error}</div>;
-  if (!userProfile || !userProfile.user_name)
+  if (!userProfile || !userProfile._id)
     return <div className="text-white p-8">No user data found.</div>;
 
   return (
@@ -80,14 +102,12 @@ const ProfilePage = () => {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white">
-              {userProfile.user_name?.email}
-            </h2>
-            <span className="text-gray-400 text-sm">
-              @{userProfile.user_name?.username}
+            <h2 className="text-2xl font-bold text-white">{user.email}</h2>
+            <span className="text-gray-400 text-sm mt-[2vmin]">
+              {user.username}
             </span>
-            <span className="text-blue-400 text-sm">
-              {userProfile.user_name?.usertype}
+            <span className="text-gray-400 text-sm mt-[2vmin]">
+              {user.usertype}
             </span>
             <div className="flex flex-col gap-2 w-full mt-4">
               <a
@@ -123,6 +143,7 @@ const ProfilePage = () => {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
               >
+                <AiOutlineGlobal className="text-lg" />
                 Website
               </a>
             </div>
