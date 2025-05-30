@@ -5,20 +5,20 @@ import { FaGithub, FaTwitter, FaInstagram } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 const ProfilePage = () => {
-  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchUserProfile = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/api/getuser", {
+        const response = await axios.get("http://localhost:8000/api/profile", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        setUser(response.data);
+        setUserProfile(response.data);
         setError(null);
       } catch (err) {
         setError(err.message);
@@ -26,12 +26,30 @@ const ProfilePage = () => {
         setLoading(false);
       }
     };
-    fetchUserData();
+    fetchUserProfile();
   }, []);
+
+  // Mock recent_projects if not present (for demo)
+  const recentProjects =
+    userProfile.recent_projects && userProfile.recent_projects.length > 0
+      ? userProfile.recent_projects
+      : [
+          {
+            name: "AI Chatbot",
+            date: "May 2025",
+            description: "A smart chatbot using NLP.",
+          },
+          {
+            name: "Bug Tracker",
+            date: "Apr 2025",
+            description: "A collaborative bug tracking platform.",
+          },
+        ];
 
   if (loading) return <div className="text-white p-8">Loading...</div>;
   if (error) return <div className="text-red-500 p-8">Error: {error}</div>;
-  if (!user) return <div className="text-white p-8">No user data found.</div>;
+  if (!userProfile || !userProfile.user_name)
+    return <div className="text-white p-8">No user data found.</div>;
 
   return (
     <>
@@ -61,13 +79,18 @@ const ProfilePage = () => {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white">{user.email}</h2>
-            <span className="text-gray-400 text-sm">@{user.username}</span>
-            <span className="text-blue-400 text-sm">{user.usertype}</span>
-            {/* Add more fields as your API grows */}
+            <h2 className="text-2xl font-bold text-white">
+              {userProfile.user_name?.email}
+            </h2>
+            <span className="text-gray-400 text-sm">
+              @{userProfile.user_name?.username}
+            </span>
+            <span className="text-blue-400 text-sm">
+              {userProfile.user_name?.usertype}
+            </span>
             <div className="flex flex-col gap-2 w-full mt-4">
               <a
-                href={user.github || "#"}
+                href={userProfile.user_profile_github || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
@@ -76,16 +99,16 @@ const ProfilePage = () => {
                 Github
               </a>
               <a
-                href={user.twitter || "#"}
+                href={userProfile.user_profile_linkedIn || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
               >
                 <FaTwitter className="text-lg" />
-                Twitter
+                LinkedIn
               </a>
               <a
-                href={user.instagram || "#"}
+                href={userProfile.user_profile_instagram || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
@@ -93,35 +116,40 @@ const ProfilePage = () => {
                 <FaInstagram className="text-lg" />
                 Instagram
               </a>
+              <a
+                href={userProfile.user_profile_website || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
+              >
+                Website
+              </a>
             </div>
             <div>
-              {/* edit profile button */}
               <Link to="/editprofile">
                 <button className="mt-6 bg-blue-500 text-white px-[10vmin] py-2 rounded-lg hover:bg-blue-600 transition">
-                Edit Profile
-              </button>
+                  Edit Profile
+                </button>
               </Link>
-            
             </div>
           </aside>
 
           {/* Main Content */}
           <div className="flex-1 bg-[#1a1a1a]/90 rounded-2xl shadow-xl border border-blue-500/20 p-8">
             <section className="mb-6">
-             <div className="text-2xl font-bold text-blue-500 mb-4">
-              Bio 
-             </div>
+              <div className="text-2xl font-bold text-blue-500 mb-4">Bio</div>
               <p className="text-white text-sm">
-                  {user.bio || "No bio available."}
-                </p>
+                {userProfile.user_profile_bio || "No bio available."}
+              </p>
             </section>
             <section>
               <div className="text-2xl font-bold text-blue-500 mb-4">
                 Skills
               </div>
               <ul className="list-disc list-inside text-white text-sm">
-                {user.skills && user.skills.length > 0 ? (
-                  user.skills.map((skill, index) => (
+                {userProfile.user_profile_skills &&
+                userProfile.user_profile_skills.length > 0 ? (
+                  userProfile.user_profile_skills.map((skill, index) => (
                     <li key={index} className="mb-2">
                       {skill}
                     </li>
@@ -131,31 +159,55 @@ const ProfilePage = () => {
                 )}
               </ul>
             </section>
-            {/* Activity summary section */}
+            {/* Improved Activity Summary */}
             <section className="mt-6">
               <div className="text-2xl font-bold text-blue-500 mb-4">
                 Activity Summary
               </div>
-              <p className="text-white text-sm">
-                {/* Placeholder for activity summary */}
-                {user.activitySummary || "No activity summary available."}
-              </p>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="bg-[#232a34] rounded-xl p-6 flex flex-col items-center shadow border border-blue-500/10">
+                  <span className="text-3xl font-bold text-blue-400">
+                    {userProfile.user_project_contribution || 0}
+                  </span>
+                  <span className="text-gray-300 mt-2">Contributions</span>
+                </div>
+                <div className="bg-[#232a34] rounded-xl p-6 flex flex-col items-center shadow border border-blue-500/10">
+                  <span className="text-3xl font-bold text-blue-400">
+                    {userProfile.user_completed_projects || 0}
+                  </span>
+                  <span className="text-gray-300 mt-2">Completed Projects</span>
+                </div>
+              </div>
             </section>
-            {/* Recent project section */}
+            {/* Recent Projects Section */}
             <section className="mt-6">
               <div className="text-2xl font-bold text-blue-500 mb-4">
                 Recent Projects
               </div>
-              <ul className="list-disc list-inside text-white text-sm">
-                {user.recentProjects && user.recentProjects.length > 0 ? (
-                  user.recentProjects.map((project, index) => (
-                    <li key={index} className="mb-2">
-                      {project}
+              <ul className="space-y-4">
+                {recentProjects.length > 0 ? (
+                  recentProjects.map((proj, idx) => (
+                    <li
+                      key={idx}
+                      className="bg-[#232323] p-4 rounded-xl border border-blue-500/10"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <h4 className="text-white font-semibold">
+                            {proj.name}
+                          </h4>
+                          <span className="text-gray-500 text-sm">
+                            {proj.date}
+                          </span>
+                        </div>
+                        <p className="text-gray-400 text-sm mt-2 md:mt-0">
+                          {proj.description}
+                        </p>
+                      </div>
                     </li>
                   ))
                 ) : (
-                  <li>No recent projects available.</li>
+                  <li className="text-gray-400">No recent projects.</li>
                 )}
               </ul>
             </section>
