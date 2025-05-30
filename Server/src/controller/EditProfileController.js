@@ -64,19 +64,9 @@ export const getUserProfile = async (req, res) => {
       "user_name"
     );
 
-    // 3. If not found, create a new profile for this user with default values
+    // 3. If not found, return error (do NOT create)
     if (!profile) {
-      profile = await UserProfile.create({
-        user_name: User._id,
-        user_profile_skills: [],
-        user_profile_bio: "No bio yet.",
-        user_profile_cover_photo: "default.jpg",
-        user_profile_linkedIn: "https://linkedin.com/",
-        user_profile_github: "https://github.com/",
-        user_profile_website: "https://yourwebsite.com/",
-        user_profile_instagram: "https://instagram.com/",
-        user_profile_location: "Not set",
-      });
+      return res.status(404).json({ message: "User profile not found" });
     }
 
     res.status(200).json(profile);
@@ -86,8 +76,7 @@ export const getUserProfile = async (req, res) => {
   }
 };
 
-
-// Update profile controller 
+// Update profile controller
 
 export const updateProfile = async (req, res) => {
   try {
@@ -123,9 +112,11 @@ export const updateProfile = async (req, res) => {
     // Save the updated profile
     await profile.save();
 
-    res.status(200).json({ message: "User profile updated successfully", profile });
+    res
+      .status(200)
+      .json({ message: "User profile updated successfully", profile });
   } catch (error) {
     console.error("Error updating user profile:", error);
     res.status(500).json({ message: error.message || "Internal server error" });
   }
-}
+};
