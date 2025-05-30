@@ -19,6 +19,7 @@ const ProfilePage = () => {
           },
         });
         setUserProfile(response.data);
+        console.log("User Profile Data:", response.data);
         setError(null);
       } catch (err) {
         setError(err.message);

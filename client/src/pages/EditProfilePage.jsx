@@ -1,8 +1,8 @@
 import { useState } from "react";
 import Navbar from "../components/NavBar";
+import axios from "axios";
 
 const EditProfilePage = () => {
-  // Dummy initial data, replace with props or API as needed
   const [form, setForm] = useState({
     name: "Your Name",
     username: "yourusername",
@@ -15,24 +15,64 @@ const EditProfilePage = () => {
     instagram: "https://instagram.com/yourusername",
     skills: "React, Node.js, MongoDB, Firebase, Tailwind CSS",
   });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Send form data to API
-    alert("Profile updated!");
+    setLoading(true);
+    setMessage("");
+    try {
+      // Map frontend fields to backend fields
+      const payload = {
+        user_profile_skills: form.skills.split(",").map((s) => s.trim()),
+        user_profile_bio: form.bio,
+        user_profile_cover_photo: "", // Add if you have a field for this
+        user_profile_linkedIn: form.twitter, // If you want to use a separate LinkedIn field, change this
+        user_profile_github: form.github,
+        user_profile_website: "", // Add if you have a field for this
+        user_profile_instagram: form.instagram,
+        user_profile_location: form.location,
+        username: form.username, // Needed for backend to identify user
+      };
+
+      await axios.put("http://localhost:8000/api/updteprofile", payload, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setMessage("Profile updated successfully!");
+    } catch (err) {
+      setMessage(
+        "Error updating profile: " +
+          (err.response?.data?.message || err.message)
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#1a1a2e] flex flex-col items-center pt-[10vmin] px-4">
-        <Navbar/>
+      <Navbar />
       <div className="w-full max-w-xl bg-[#181b23] rounded-2xl shadow-lg border border-blue-500/20 p-8">
         <h1 className="text-3xl font-bold text-blue-400 mb-8 text-center">
           Edit Profile
         </h1>
+        {message && (
+          <div
+            className={`mb-4 text-center ${
+              message.startsWith("Error") ? "text-red-400" : "text-green-400"
+            }`}
+          >
+            {message}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
             <label className="block text-gray-300 mb-1">Name</label>
@@ -42,6 +82,7 @@ const EditProfilePage = () => {
               value={form.name}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
+              
             />
           </div>
           <div>
@@ -52,6 +93,7 @@ const EditProfilePage = () => {
               value={form.username}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
+             
             />
           </div>
           <div>
@@ -62,6 +104,7 @@ const EditProfilePage = () => {
               value={form.email}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
+            
             />
           </div>
           <div>
@@ -72,6 +115,7 @@ const EditProfilePage = () => {
               value={form.role}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
+
             />
           </div>
           <div>
@@ -139,8 +183,9 @@ const EditProfilePage = () => {
           <button
             type="submit"
             className="mt-4 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition"
+            disabled={loading}
           >
-            Save Changes
+            {loading ? "Saving..." : "Save Changes"}
           </button>
         </form>
       </div>

@@ -41,7 +41,7 @@ const UserProfileSchema = new mongoose.Schema({
   },
   user_profile_cover_photo: {
     type: String,
-    required: true,
+   
   },
   user_profile_linkedIn: {
     type: String,
@@ -53,7 +53,7 @@ const UserProfileSchema = new mongoose.Schema({
   },
   user_profile_website: {
     type: String,
-    required: true,
+   
   },
   user_profile_instagram : {
     type: String,
