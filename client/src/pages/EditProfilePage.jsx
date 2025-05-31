@@ -1,8 +1,10 @@
 import { useState } from "react";
 import Navbar from "../components/NavBar";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const EditProfilePage = () => {
+ const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "Your Name",
     username: "yourusername",
@@ -47,6 +49,7 @@ const EditProfilePage = () => {
         },
       });
       setMessage("Profile updated successfully!");
+      navigate("/profile")
     } catch (err) {
       setMessage(
         "Error updating profile: " +

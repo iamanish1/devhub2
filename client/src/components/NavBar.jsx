@@ -2,14 +2,39 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
+import axios from "axios";
 
 const Navbar = () => {
-   
   const { user, logoutUser } = useAuth();
+  const [profileExsist, setProfileExist] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Fetch user profile existence
+  useEffect(() => {
+    async function fetchUserProfile() {
+      try {
+        const response = await axios.get("http://localhost:8000/api/profile", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (response.data.profile) {
+          setProfileExist(true);
+          console.log("User profile exists:", response.data.profile);
+        } else {
+          setProfileExist(false);
+          console.log("User profile does not exist.");
+        }
+        console.log("User profile existence fetched:", response.data);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    }
+    fetchUserProfile();
+  }, []);
 
   // Handle scroll effect
   useEffect(() => {
@@ -152,9 +177,7 @@ const Navbar = () => {
               <button
                 onClick={() => setDropdownOpen((open) => !open)}
                 className="h-[5vmin] w-[5vmin] bg-[#00A8E8] rounded-full text-[2.3vmin] font-medium transition-all duration-300 flex items-center justify-center focus:outline-none"
-              >
-                
-              </button>
+              ></button>
               <AnimatePresence>
                 {dropdownOpen && (
                   <motion.div
@@ -165,13 +188,23 @@ const Navbar = () => {
                     variants={dropdownVariants}
                     className="absolute right-0 mt-2 w-48 bg-[#232323] rounded-lg shadow-xl border border-[#00A8E8]/30 z-50 overflow-hidden"
                   >
-                    <Link
-                      to="/profile"
-                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      My Profile
-                    </Link>
+                    {profileExsist ? (
+                      <Link
+                        to="/profile"
+                        className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        My Profile
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/editprofile"
+                        className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Create Profile
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-6 py-3 text-white hover:bg-red-500 hover:text-white transition-colors text-[2vmin]"

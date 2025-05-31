@@ -9,28 +9,9 @@ import { Link } from "react-router-dom";
 const ProfilePage = () => {
   // Get userId from URL params
   const [userProfile, setUserProfile] = useState({});
-  const [user, setUser] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Fetch user profile data
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await axios.get("http://localhost:8000/api/getuser", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        setUser(response.data);
-        console.log("User data fetched:", response.data);
-      } catch (err) {
-        console.error("Error fetching user data:", err);
-      }
-    };
-    fetchUser();
-  }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -41,7 +22,7 @@ const ProfilePage = () => {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        setUserProfile(response.data);
+        setUserProfile(response.data.profile);
         console.log("User profile fetched:", response.data);
         setError(null);
       } catch (err) {
@@ -103,12 +84,14 @@ const ProfilePage = () => {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-white">{user.email}</h2>
+            <h2 className="text-2xl font-bold text-white">
+              {userProfile.username.email}
+            </h2>
             <span className="text-gray-400 text-sm mt-[2vmin]">
-              {user.username}
+              {userProfile.username.username}
             </span>
             <span className="text-gray-400 text-sm mt-[2vmin]">
-              {user.usertype}
+              {userProfile.username.usertype}
             </span>
             <div className="flex flex-col gap-2 w-full mt-4">
               <a
