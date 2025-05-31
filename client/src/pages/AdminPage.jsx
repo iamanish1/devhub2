@@ -9,6 +9,7 @@ import {
   FaUserCheck,
   FaUserTimes,
 } from "react-icons/fa";
+import Navbar from "../components/NavBar";
 
 const dummyProjects = [
   { id: 1, name: "AI Chatbot", status: "Open", applicants: 5 },
@@ -63,6 +64,7 @@ const AdminPage = () => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e]">
+         <Navbar/>
       {/* Sidebar */}
       <aside className="w-64 bg-[#181b23] text-white flex flex-col p-6 border-r border-blue-500/20 shadow-lg">
         <h2 className="text-3xl font-extrabold mb-10 text-blue-400 tracking-wide">
@@ -104,6 +106,7 @@ const AdminPage = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-10">
+       
         {/* Dashboard Section */}
         {view === "dashboard" && (
           <section>
