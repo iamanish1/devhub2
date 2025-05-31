@@ -40,7 +40,7 @@ const EditProfilePage = () => {
         username: form.username, // Needed for backend to identify user
       };
 
-      await axios.put("http://localhost:8000/api/updteprofile", payload, {
+      await axios.post("http://localhost:8000/api/editprofile", payload, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -82,7 +82,6 @@ const EditProfilePage = () => {
               value={form.name}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
-              
             />
           </div>
           <div>
@@ -93,7 +92,6 @@ const EditProfilePage = () => {
               value={form.username}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
-             
             />
           </div>
           <div>
@@ -104,7 +102,6 @@ const EditProfilePage = () => {
               value={form.email}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
-            
             />
           </div>
           <div>
@@ -115,7 +112,6 @@ const EditProfilePage = () => {
               value={form.role}
               onChange={handleChange}
               className="w-full px-4 py-2 rounded bg-[#23272f] text-white border border-blue-500/20"
-
             />
           </div>
           <div>
