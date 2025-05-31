@@ -205,6 +205,13 @@ const Navbar = () => {
                         Create Profile
                       </Link>
                     )}
+                    <Link
+                      to="/admin"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Admin
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-6 py-3 text-white hover:bg-red-500 hover:text-white transition-colors text-[2vmin]"

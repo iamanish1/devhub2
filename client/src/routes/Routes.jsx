@@ -10,6 +10,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import LoginAccountPage from "../pages/LoginAccountPage";
 import ProfilePage from "../pages/ProfilePage";
 import EditProfilePage from "../pages/EditProfilePage";
+import AdminPage from "../pages/AdminPage";
 
 const AppRoutes = () => {
   return (
@@ -26,6 +27,7 @@ const AppRoutes = () => {
         <Route path="/bidingproposal/:_id" element={<BidingProporsalPage />} />
         <Route path="/profile" element={<ProfilePage/>}/>
         <Route path="/editprofile" element={<EditProfilePage/>}/>
+        <Route path="/admin" element={<AdminPage/>}/>
       </Route>
     </Routes>
   );
