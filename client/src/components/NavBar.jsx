@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useParams } from "react-router-dom";
+
 
 const Navbar = () => {
-  const { userId } = useParams(); // Get userId from URL params
+   
   const { user, logoutUser } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -166,7 +166,7 @@ const Navbar = () => {
                     className="absolute right-0 mt-2 w-48 bg-[#232323] rounded-lg shadow-xl border border-[#00A8E8]/30 z-50 overflow-hidden"
                   >
                     <Link
-                      to={`/profile/${userId}`}
+                      to="/profile"
                       className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
                       onClick={() => setDropdownOpen(false)}
                     >
