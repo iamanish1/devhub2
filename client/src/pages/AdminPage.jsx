@@ -12,6 +12,7 @@ import {
   FaUserTimes,
 } from "react-icons/fa";
 import Navbar from "../components/NavBar";
+import { Link } from "react-router-dom";
 
 // Chart.js imports
 import { Doughnut } from "react-chartjs-2";
@@ -329,9 +330,12 @@ const AdminPage = () => {
                           >
                             <FaUsers /> View
                           </button>
-                          <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                          <Link to={`/editproject/${proj._id}`}>
+                           <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
                             <FaEdit /> Edit
                           </button>
+                          </Link>
+                         
                           <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
                             <FaTrash /> Delete
                           </button>

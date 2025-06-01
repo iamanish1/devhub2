@@ -1,8 +1,16 @@
 /* eslint-disable no-unused-vars */
 import Navbar from "../components/NavBar";
 import { useState } from "react";
+import { useLocation, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
 import axios from "axios";
 const ProjectListingPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams();
+  const editingProject = location.state?.editingProject || null;
   const [formData, setFormData] = useState({
     project_Title: "",
     project_duration: "",
@@ -23,6 +31,30 @@ const ProjectListingPage = () => {
   const [coverImage, setCoverImage] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
+
+  useEffect(() => {
+    if (!editingProject && params.id) {
+      axios
+        .get(`http://localhost:8000/api/project/getlistproject/${params.id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+        .then((res) => {
+          setFormData({
+            ...formData,
+            ...res.data.project,
+          });
+        })
+        .catch(() => setError("Failed to load project for editing."));
+    } else if (editingProject) {
+      setFormData({
+        ...formData,
+        ...editingProject,
+      });
+    }
+    // eslint-disable-next-line
+  }, [editingProject, params.id]);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -56,10 +88,9 @@ const ProjectListingPage = () => {
     setError(null);
 
     try {
-      const projectApi = "http://localhost:8000/api/project/listproject";
-
       const data = new FormData();
       data.append("project_Title", formData.project_Title);
+      data.append("Project_Bid_Amount", formData.Project_Bid_Amount); // ADD THIS LINE
       data.append("project_starting_bid", formData.project_starting_bid);
       data.append("Project_Contributor", formData.Project_Contributor);
       data.append("Project_Number_Of_Bids", formData.Project_Number_Of_Bids);
@@ -69,35 +100,75 @@ const ProjectListingPage = () => {
       data.append("Project_looking", formData.Project_looking);
       data.append("project_duration", formData.project_duration);
       data.append("Project_gitHub_link", formData.Project_gitHub_link);
-      data.append("Project_cover_photo", formData.Project_cover_photo);
+      if (coverImage) {
+        data.append("Project_cover_photo", coverImage);
+      }
 
-      const response = await axios.post(projectApi, data, {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-           Authorization: `Bearer ${localStorage.getItem("token")}`,
+      let response;
+      // Use params.id if editingProject is not available
+      const projectId = editingProject?._id || params.id;
+      for (let pair of data.entries()) {
+        console.log(pair[0], pair[1]);
+      }
 
-        },
-      });
+      if (projectId) {
+        const data = {
+          project_Title: formData.project_Title,
+          Project_Bid_Amount: formData.Project_Bid_Amount,
+          project_starting_bid: formData.project_starting_bid,
+          Project_Contributor: formData.Project_Contributor,
+          Project_Number_Of_Bids: formData.Project_Number_Of_Bids,
+          Project_Description: formData.Project_Description,
+          Project_tech_stack: formData.Project_tech_stack,
+          Project_Features: formData.Project_Features,
+          Project_looking: formData.Project_looking,
+          project_duration: formData.project_duration,
+          Project_gitHub_link: formData.Project_gitHub_link,
+        };
+        // EDIT MODE
+        response = await axios.put(
+          `http://localhost:8000/api/admin/updateproject/${projectId}`,
+          data,
+          {
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        navigate("/admin")
+        alert("Project updated successfully!");
 
-       setFormData({
-      project_Title: "",
-      Project_Bid_Amount: "",
-      Project_Contributor: "",
-      Project_Number_Of_Bids: "",
-      Project_Description: "",
-      Project_tech_stack: "",
-      Project_Features: "",
-      Project_looking: "",
-      project_duration: "",
-      Project_gitHub_link: "",
-      Project_cover_photo: null,
-      project_starting_bid : "",
-    });
-
-
+      } else {
+        // CREATE MODE
+        response = await axios.post(
+          "http://localhost:8000/api/project/listproject",
+          data,
+          {
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setFormData({
+          project_Title: "",
+          Project_Bid_Amount: "",
+          Project_Contributor: "",
+          Project_Number_Of_Bids: "",
+          Project_Description: "",
+          Project_tech_stack: "",
+          Project_Features: "",
+          Project_looking: "",
+          project_duration: "",
+          Project_gitHub_link: "",
+          Project_cover_photo: null,
+          project_starting_bid: "",
+        });
+        setCoverImage(null);
+        alert("Project submitted successfully!");
+      }
       console.log("Project submitted:", response.data);
-
     } catch (error) {
       console.error(error);
       setError(

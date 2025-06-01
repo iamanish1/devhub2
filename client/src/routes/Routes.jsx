@@ -28,6 +28,7 @@ const AppRoutes = () => {
         <Route path="/profile" element={<ProfilePage/>}/>
         <Route path="/editprofile" element={<EditProfilePage/>}/>
         <Route path="/admin" element={<AdminPage/>}/>
+        <Route path="/editproject/:id" element={<ProjectListingPage />} />
       </Route>
     </Routes>
   );
