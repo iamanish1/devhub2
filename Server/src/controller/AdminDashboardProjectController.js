@@ -57,7 +57,7 @@ export const AdminDashboardProjectController = async (req, res) => {
 
 export const EditProjectController = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { _id } = req.params;
     // Destructure to exclude Project_cover_photo (or any file field)
     const {
       Project_cover_photo, // exclude this
