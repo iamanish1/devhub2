@@ -24,7 +24,8 @@ const dummyProjects = [
 ];
 
 const dummyApplicants = [
-  
+  { id: 1, name: "Anish", project: "AI Chatbot", status: "Pending" },
+  { id: 2, name: "Riya", project: "Bug Tracker", status: "Accepted" },
 ];
 
 const statusColors = {
