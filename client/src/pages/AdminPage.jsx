@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -41,6 +42,33 @@ const AdminPage = () => {
   const [stats, setstats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  //  For Projects and Applicants
+  const [projects, setProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState(null);
+
+  // Fetch project for "My projects" section
+
+  useEffect(() => {
+    if (view === "projects") {
+      setProjectsLoading(true);
+      axios
+        .get("http://localhost:8000/api/admin/myproject", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+        .then((res) => {
+          setProjects(res.data.projects || []);
+          console.log("Projects fetched:", res.data.projects);
+          setProjectsError(null);
+        })
+        .catch(() => setProjectsError("Failed to fetch projects"))
+        .finally(() => setProjectsLoading(false));
+    }
+  }, [view]);
 
   // Dashboard stats
   const totalProjects = stats ? stats.totalProjects : dummyProjects.length;
@@ -245,91 +273,290 @@ const AdminPage = () => {
         )}
 
         {/* Projects Section */}
+
         {view === "projects" && (
           <section>
             <h1 className="text-4xl font-bold mb-8 text-blue-400">
               My Projects
             </h1>
-            <div className="overflow-x-auto">
-              <table className="w-full bg-[#232a34] rounded-2xl shadow-lg border border-blue-500/10">
-                <thead>
-                  <tr className="text-blue-300 text-lg">
-                    <th className="p-4 text-left">Project Name</th>
-                    <th className="p-4 text-left">Status</th>
-                    <th className="p-4 text-left">Applicants</th>
-                    <th className="p-4 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dummyProjects.map((proj) => (
-                    <tr
-                      key={proj.id}
-                      className="border-t border-blue-500/10 hover:bg-blue-500/5 transition"
-                    >
-                      <td className="p-4 font-semibold text-white">
-                        {proj.name}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            statusColors[proj.status] ||
-                            "bg-gray-700 text-gray-300"
-                          }`}
-                        >
-                          {proj.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-blue-300">{proj.applicants}</td>
-                      <td className="p-4 flex gap-2">
-                        <button
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1"
-                          onClick={() => setSelectedProject(proj)}
-                        >
-                          <FaUsers /> View
-                        </button>
-                        <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
-                          <FaEdit /> Edit
-                        </button>
-                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
-                          <FaTrash /> Delete
-                        </button>
-                      </td>
+            {projectsLoading ? (
+              <div className="text-blue-300 text-lg">Loading projects...</div>
+            ) : projectsError ? (
+              <div className="text-red-400 text-lg">{projectsError}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full bg-[#232a34] rounded-2xl shadow-lg border border-blue-500/10">
+                  <thead>
+                    <tr className="text-blue-300 text-lg">
+                      <th className="p-4 text-left">Project Name</th>
+                      <th className="p-4 text-left">Status</th>
+                      <th className="p-4 text-left">Applicants</th>
+                      <th className="p-4 text-left">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Applicants Modal */}
-            {selectedProject && (
-              <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-                <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-md border border-blue-500/20 shadow-xl">
-                  <h2 className="text-2xl font-bold mb-4 text-blue-400">
-                    Applicants for {selectedProject.name}
-                  </h2>
-                  <ul>
-                    {dummyApplicants
-                      .filter((a) => a.project === selectedProject.name)
-                      .map((a) => (
-                        <li
-                          key={a.id}
-                          className="flex justify-between items-center mb-3 bg-[#181b23] px-4 py-2 rounded-lg"
-                        >
-                          <span className="text-white font-medium">
-                            {a.name}
-                          </span>
+                  </thead>
+                  <tbody>
+                    {projects.map((proj) => (
+                      <tr
+                        key={proj._id}
+                        className="border-t border-blue-500/10 hover:bg-blue-500/5 transition"
+                      >
+                        <td className="p-4 font-semibold text-white">
+                          {proj.project_Title ||
+                            proj.Project_Title ||
+                            proj.Project_Description ||
+                            "Untitled"}
+                        </td>
+                        <td className="p-4">
                           <span
-                            className={`text-xs px-2 py-1 rounded ${
-                              statusColors[a.status] ||
-                              "bg-gray-700 text-gray-300"
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              statusColors[
+                                proj.status || proj.Project_Status
+                              ] || "bg-gray-700 text-gray-300"
                             }`}
                           >
-                            {a.status}
+                            {proj.status || proj.Project_Status || "N/A"}
                           </span>
+                        </td>
+                        <td className="p-4 text-blue-300">
+                          {proj.bids
+                            ? proj.bids.length
+                            : proj.Project_Number_Of_Bids || 0}
+                        </td>
+                        <td className="p-4 flex gap-2">
+                          <button
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1"
+                            onClick={() => setSelectedProject(proj)}
+                          >
+                            <FaUsers /> View
+                          </button>
+                          <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                            <FaEdit /> Edit
+                          </button>
+                          <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                            <FaTrash /> Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {selectedProject && (
+              <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+                <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-2xl border border-blue-500/20 shadow-2xl relative">
+                  <h2 className="text-2xl font-bold mb-6 text-blue-400 text-center">
+                    Applicants for{" "}
+                    {selectedProject.project_Title ||
+                      selectedProject.Project_Title}
+                  </h2>
+                  <ul className="space-y-8 max-h-[70vh] overflow-y-auto">
+                    {selectedProject.bids && selectedProject.bids.length > 0 ? (
+                      selectedProject.bids.map((a, idx) => (
+                        <li
+                          key={a._id || idx}
+                          className="bg-[#181b23] rounded-xl p-6 flex flex-col md:flex-row gap-6 shadow border border-blue-500/10"
+                        >
+                          {/* Profile Picture & Social */}
+                          <div className="flex-shrink-0 flex flex-col items-center md:items-start w-40">
+                            <img
+                              src={
+                                a.bidderProfile?.user_profile_cover_photo
+                                  ? a.bidderProfile.user_profile_cover_photo
+                                  : "https://ui-avatars.com/api/?name=" +
+                                    (a.bidderProfile?.username || "User")
+                              }
+                              alt="Profile"
+                              className="w-20 h-20 rounded-full object-cover border-2 border-blue-400 mb-3"
+                            />
+                            <span className="text-xs text-gray-400 mb-2">
+                              {a.bidderProfile?.user_profile_location ||
+                                "Unknown"}
+                            </span>
+                            <div className="flex flex-wrap gap-2">
+                              {a.bidderProfile?.user_profile_github && (
+                                <a
+                                  href={a.bidderProfile.user_profile_github}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-white bg-gray-800 px-2 py-1 rounded hover:underline"
+                                >
+                                  GitHub
+                                </a>
+                              )}
+                              {a.bidderProfile?.user_profile_linkedIn && (
+                                <a
+                                  href={a.bidderProfile.user_profile_linkedIn}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-white bg-blue-800 px-2 py-1 rounded hover:underline"
+                                >
+                                  LinkedIn
+                                </a>
+                              )}
+                              {a.bidderProfile?.user_profile_website && (
+                                <a
+                                  href={a.bidderProfile.user_profile_website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-white bg-green-800 px-2 py-1 rounded hover:underline"
+                                >
+                                  Website
+                                </a>
+                              )}
+                              {a.bidderProfile?.user_profile_instagram && (
+                                <a
+                                  href={a.bidderProfile.user_profile_instagram}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-white bg-pink-800 px-2 py-1 rounded hover:underline"
+                                >
+                                  Instagram
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          {/* Profile & Bid Details */}
+                          <div className="flex-1 flex flex-col gap-2">
+                            {/* Username & Status */}
+                            <div className="flex flex-wrap items-center gap-3 mb-1">
+                              <span className="text-xl font-bold text-white">
+                                {a.bidderProfile?.username || "Unknown"}
+                              </span>
+                              <span
+                                className={`text-xs px-2 py-1 rounded font-semibold ${
+                                  statusColors[a.bid_status] ||
+                                  "bg-gray-700 text-gray-300"
+                                }`}
+                              >
+                                {a.bid_status || "Applied"}
+                              </span>
+                            </div>
+                            {/* Profile Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                              <div>
+                                <span className="font-semibold text-gray-300">
+                                  Email:{" "}
+                                </span>
+                                <span className="text-gray-200 break-all">
+                                  {a.bidderProfile?.user_profile_email || "N/A"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-300">
+                                  Profile Created:{" "}
+                                </span>
+                                <span className="text-gray-200">
+                                  {a.bidderProfile?.user_profile_created_at
+                                    ? new Date(
+                                        a.bidderProfile.user_profile_created_at
+                                      ).toLocaleDateString()
+                                    : "N/A"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-300">
+                                  Experience:{" "}
+                                </span>
+                                <span className="text-gray-200">
+                                  {a.year_of_experience || "N/A"} yrs
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-300">
+                                  Hours/Week:{" "}
+                                </span>
+                                <span className="text-gray-200">
+                                  {a.hours_avilable_per_week || "N/A"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-300">
+                                  Projects Done:{" "}
+                                </span>
+                                <span className="text-gray-200">
+                                  {a.bidderProfile?.user_completed_projects ??
+                                    "N/A"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-300">
+                                  Contributions:{" "}
+                                </span>
+                                <span className="text-gray-200">
+                                  {a.bidderProfile?.user_project_contribution ??
+                                    "N/A"}
+                                </span>
+                              </div>
+                            </div>
+                            {/* Skills & Bio */}
+                            <div>
+                              <span className="font-semibold text-gray-300">
+                                Skills:{" "}
+                              </span>
+                              <span className="text-blue-200">
+                                {a.bidderProfile?.user_profile_skills?.join(
+                                  ", "
+                                ) || "N/A"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-semibold text-gray-300">
+                                Bio:{" "}
+                              </span>
+                              <span className="text-gray-200">
+                                {a.bidderProfile?.user_profile_bio || "N/A"}
+                              </span>
+                            </div>
+                            {/* Bid Proposal */}
+                            <div className="mt-2 p-4 rounded-xl bg-[#232a34] border border-blue-500/10">
+                              <div className="flex flex-wrap gap-4 items-center mb-2">
+                                <span className="font-semibold text-yellow-300">
+                                  Bid Amount:{" "}
+                                  <span className="text-white">
+                                    ₹{a.bid_amount}
+                                  </span>
+                                </span>
+                                <span className="font-semibold text-blue-300">
+                                  Proposal Date:{" "}
+                                  <span className="text-white">
+                                    {a.created_at
+                                      ? new Date(
+                                          a.created_at
+                                        ).toLocaleDateString()
+                                      : "N/A"}
+                                  </span>
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-300">
+                                  Proposal Description:{" "}
+                                </span>
+                                <span className="text-gray-200">
+                                  {a.bid_description}
+                                </span>
+                              </div>
+                              {/* Extra: Show skills from bid if present */}
+                              {a.skills && a.skills.length > 0 && (
+                                <div className="mt-2">
+                                  <span className="font-semibold text-gray-300">
+                                    Bid Skills:{" "}
+                                  </span>
+                                  <span className="text-blue-200">
+                                    {a.skills.join(", ")}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </li>
-                      ))}
+                      ))
+                    ) : (
+                      <li className="text-gray-400">No applicants yet.</li>
+                    )}
                   </ul>
                   <button
-                    className="mt-6 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition"
+                    className="mt-8 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition w-full"
                     onClick={() => setSelectedProject(null)}
                   >
                     Close
