@@ -38,7 +38,6 @@ export const updateApplicantStatus = async (req, res) => {
       { bid_status: status },
       { new: true }
     )
-      .populate("bidderProfile")
       .populate("project_id");
     if (!bid) return res.status(404).json({ message: "Bid not found" });
     res.status(200).json({ message: "Status updated", bid });

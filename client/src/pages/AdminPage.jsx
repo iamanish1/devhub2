@@ -181,6 +181,29 @@ const AdminPage = () => {
     }
   };
 
+  const handleApplicantStatus = async (id, status) => {
+    try {
+      await axios.put(
+        `http://localhost:8000/api/admin/applicant/${id}`,
+        { status },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      // Refresh applicants after update
+      setApplicants((prev) =>
+        prev.map((app) =>
+          app._id === id ? { ...app, bid_status: status } : app
+        )
+      );
+    } catch (error) {
+      alert("Failed to update applicant status");
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e]">
       <Navbar />
@@ -695,10 +718,22 @@ const AdminPage = () => {
                           : "N/A"}
                       </div>
                       <div className="flex gap-2 mt-3">
-                        <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs">
+                        <button
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs"
+                          onClick={() =>
+                            handleApplicantStatus(app._id, "Accepted")
+                          }
+                          disabled={app.bid_status === "Accepted"}
+                        >
                           <FaUserCheck /> Accept
                         </button>
-                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs">
+                        <button
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs"
+                          onClick={() =>
+                            handleApplicantStatus(app._id, "Rejected")
+                          }
+                          disabled={app.bid_status === "Rejected"}
+                        >
                           <FaUserTimes /> Reject
                         </button>
                       </div>
