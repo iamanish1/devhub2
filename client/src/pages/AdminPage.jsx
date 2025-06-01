@@ -19,9 +19,7 @@ import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const dummyProjects = [
-
-];
+const dummyProjects = [];
 
 const dummyApplicants = [
   { id: 1, name: "Anish", project: "AI Chatbot", status: "Pending" },
@@ -47,6 +45,32 @@ const AdminPage = () => {
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
+
+  // Add at the top of your AdminPage component
+  const [applicants, setApplicants] = useState([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [applicantsError, setApplicantsError] = useState(null);
+
+  // Fetch applicants when "applicants" view is active
+  useEffect(() => {
+    if (view === "applicants") {
+      setApplicantsLoading(true);
+      axios
+        .get("http://localhost:8000/api/admin/applicant", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        })
+        .then((res) => {
+          setApplicants(res.data.applicants || []);
+          console.log("Applicants fetched:", res.data.applicants);
+          setApplicantsError(null);
+        })
+        .catch(() => setApplicantsError("Failed to fetch applicants"))
+        .finally(() => setApplicantsLoading(false));
+    }
+  }, [view]);
 
   // Fetch project for "My projects" section
 
@@ -133,7 +157,8 @@ const AdminPage = () => {
   };
 
   const handleDelteProject = async (projectId) => {
-    if(!window.confirm("Are you sure you want to delete this project?")) return ; 
+    if (!window.confirm("Are you sure you want to delete this project?"))
+      return;
     try {
       const response = await axios.delete(
         `http://localhost:8000/api/admin/deleteproject/${projectId}`,
@@ -146,18 +171,15 @@ const AdminPage = () => {
       );
       if (response.status === 200) {
         alert("Project deleted successfully");
-        setProjects((prev) =>
-          prev.filter((proj) => proj._id !== projectId)
-        );
+        setProjects((prev) => prev.filter((proj) => proj._id !== projectId));
       } else {
         alert("Failed to delete project");
       }
     } catch (error) {
       console.error("Error deleting project:", error);
       alert("Failed to delete project. Please try again later.");
-      
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e]">
@@ -357,12 +379,13 @@ const AdminPage = () => {
                             <FaUsers /> View
                           </button>
                           <Link to={`/editproject/${proj._id}`}>
-                           <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
-                            <FaEdit /> Edit
-                          </button>
+                            <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                              <FaEdit /> Edit
+                            </button>
                           </Link>
-                         
-                          <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1"
+
+                          <button
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1"
                             onClick={() => handleDelteProject(proj._id)}
                           >
                             <FaTrash /> Delete
@@ -599,53 +622,91 @@ const AdminPage = () => {
           </section>
         )}
 
-        {/* Applicants Section */}
         {view === "applicants" && (
           <section>
-            <h1 className="text-4xl font-bold mb-8 text-blue-400">
+            <h1 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8 text-blue-400">
               Applicants
             </h1>
-            <div className="overflow-x-auto">
-              <table className="w-full bg-[#232a34] rounded-2xl shadow-lg border border-blue-500/10">
-                <thead>
-                  <tr className="text-blue-300 text-lg">
-                    <th className="p-4 text-left">Applicant Name</th>
-                    <th className="p-4 text-left">Project</th>
-                    <th className="p-4 text-left">Status</th>
-                    <th className="p-4 text-left">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dummyApplicants.map((app) => (
-                    <tr
-                      key={app.id}
-                      className="border-t border-blue-500/10 hover:bg-blue-500/5 transition"
+            {applicantsLoading ? (
+              <div className="text-blue-300 text-lg">Loading applicants...</div>
+            ) : applicantsError ? (
+              <div className="text-red-400 text-lg">{applicantsError}</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {applicants.length === 0 ? (
+                  <div className="col-span-full text-center text-gray-400 py-8 bg-[#232a34] rounded-xl shadow">
+                    No applicants found.
+                  </div>
+                ) : (
+                  applicants.map((app) => (
+                    <div
+                      key={app._id}
+                      className="bg-[#232a34] rounded-2xl shadow-lg border border-blue-500/10 p-6 flex flex-col gap-3 transition hover:scale-[1.02] hover:border-blue-400"
                     >
-                      <td className="p-4 text-white font-medium">{app.name}</td>
-                      <td className="p-4 text-blue-300">{app.project}</td>
-                      <td className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <div className="text-xs font-bold text-blue-300 uppercase tracking-wider">
+                            User ID
+                          </div>
+                          <div className="text-base font-semibold text-white break-all">
+                            {app.user_id || "N/A"}
+                          </div>
+                        </div>
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            statusColors[app.status] ||
+                            statusColors[app.bid_status] ||
                             "bg-gray-700 text-gray-300"
                           }`}
                         >
-                          {app.status}
+                          {app.bid_status || "Applied"}
                         </span>
-                      </td>
-                      <td className="p-4 flex gap-2">
-                        <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-blue-300">
+                        <span className="font-semibold">Project:</span>
+                        {app.project_id?.project_Title || "N/A"}
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-yellow-200">
+                        <span className="font-semibold">Bid:</span>₹
+                        {app.bid_amount}
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-gray-200">
+                        <span className="font-semibold">Bid Desc:</span>
+                        {app.bid_description || "N/A"}
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-blue-200">
+                        <span className="font-semibold">Year Exp:</span>
+                        {app.year_of_experience || "N/A"}
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-blue-200">
+                        <span className="font-semibold">Hours/Week:</span>
+                        {app.hours_avilable_per_week || "N/A"}
+                      </div>
+                      <div className="flex flex-wrap gap-1 text-xs text-blue-200">
+                        <span className="font-semibold">Skills:</span>
+                        {app.skills?.length
+                          ? app.skills.map((skill, idx) => (
+                              <span
+                                key={idx}
+                                className="bg-blue-900/40 text-blue-200 px-2 py-1 rounded"
+                              >
+                                {skill}
+                              </span>
+                            ))
+                          : "N/A"}
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs">
                           <FaUserCheck /> Accept
                         </button>
-                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs">
                           <FaUserTimes /> Reject
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </section>
         )}
       </main>

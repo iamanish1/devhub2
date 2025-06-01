@@ -16,6 +16,8 @@ const ListProject = async (req, res) => {
       project_starting_bid,
     } = req.body;
 
+    console.log("Received project data:", req.body);
+
     if (
       !project_Title ||
       !project_duration ||
@@ -39,9 +41,10 @@ const ListProject = async (req, res) => {
         message: "A project with this title already exists",
       });
     }
-    // Create new project listing
+    const userId = req.user._id; // Get the user ID from the authenticated user
+
     const project = new ProjectListing({
-      user: req.user._id, // Assuming user ID is attached to req.user by auth middleware
+      user: userId, // <-- Use 'user' if your schema expects 'user'
       project_Title,
       project_duration,
       Project_Bid_Amount,

@@ -136,14 +136,34 @@ const ProjectListingPage = () => {
             },
           }
         );
-        navigate("/admin")
+        navigate("/admin");
         alert("Project updated successfully!");
-
       } else {
         // CREATE MODE
+        console.log("project_Title", formData.project_Title);
+        console.log("project_duration", formData.project_duration);
+        console.log("project_starting_bid", formData.project_starting_bid);
+        console.log("Project_Contributor", formData.Project_Contributor);
+        console.log("Project_Number_Of_Bids", formData.Project_Number_Of_Bids);
+        console.log("Project_Description", formData.Project_Description);
+        console.log("Project_tech_stack", formData.Project_tech_stack);
+        console.log("Project_Features", formData.Project_Features);
+        console.log("Project_looking", formData.Project_looking);
+        console.log("Project_gitHub_link", formData.Project_gitHub_link);
         response = await axios.post(
           "http://localhost:8000/api/project/listproject",
-          data,
+          {
+            project_Title: formData.project_Title,
+            project_duration: formData.project_duration,
+            project_starting_bid: formData.project_starting_bid,
+            Project_Contributor: formData.Project_Contributor,
+            Project_Number_Of_Bids: formData.Project_Number_Of_Bids,
+            Project_Description: formData.Project_Description,
+            Project_tech_stack: formData.Project_tech_stack,
+            Project_Features: formData.Project_Features,
+            Project_looking: formData.Project_looking,
+            Project_gitHub_link: formData.Project_gitHub_link,
+          },
           {
             withCredentials: true,
             headers: {

@@ -1,16 +1,15 @@
-import mongoose from 'mongoose'; 
-import user from './UserModel.js';
-import ProjectListing from './ProjectListingModel.js';
-
+import mongoose from "mongoose";
+import user from "./UserModel.js";
+import ProjectListing from "./ProjectListingModel.js";
 const BiddingSchema = new mongoose.Schema({
   project_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProjectListing', // Use model name as a string
+    ref: "ProjectListing", // Use model name as a string
     required: true,
   },
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // Use model name as a string
+    ref: "User", // Use model name as a string
     required: true,
   },
   bid_amount: {
@@ -35,8 +34,8 @@ const BiddingSchema = new mongoose.Schema({
   },
   bid_status: {
     type: String,
-    enum: ['Pending', 'Accepted', 'Rejected'],
-    default: 'Pending',
+    enum: ["Pending", "Accepted", "Rejected"],
+    default: "Pending",
   },
   created_at: {
     type: Date,
@@ -47,5 +46,5 @@ const BiddingSchema = new mongoose.Schema({
 // Add a unique compound index for safety
 BiddingSchema.index({ project_id: 1, user_id: 1 }, { unique: true });
 
-const Bidding = mongoose.model('Bidding', BiddingSchema);
+const Bidding = mongoose.model("Bidding", BiddingSchema);
 export default Bidding;

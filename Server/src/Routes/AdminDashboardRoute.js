@@ -3,6 +3,7 @@ import { adminAuthenticationMiddleware } from '../Middleware/Adminauthentication
 import { AdminDashboardStats } from '../controller/AdminDashboardController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 import { AdminDashboardProjectController, DeleteProjectController, EditProjectController } from '../controller/AdminDashboardProjectController.js';
+import { getAllApplicants, updateApplicantStatus } from '../controller/AdminDashboardApplicants.js';
 
 
 const adminDashboardRoutes = express.Router();
@@ -11,5 +12,7 @@ adminDashboardRoutes.get("/overview",  authMiddleware , adminAuthenticationMiddl
 adminDashboardRoutes.get("/myproject", authMiddleware ,  AdminDashboardProjectController)  ; 
 adminDashboardRoutes.put("/updateproject/:_id", authMiddleware , EditProjectController  )  ;
 adminDashboardRoutes.delete("/deleteproject/:id", authMiddleware , DeleteProjectController  )  ;
+adminDashboardRoutes.get("/applicant", authMiddleware , adminAuthenticationMiddleware , getAllApplicants ) ; 
+adminDashboardRoutes.put("/applicant/:id", authMiddleware , adminAuthenticationMiddleware , updateApplicantStatus ) ;
 
 export default adminDashboardRoutes;
