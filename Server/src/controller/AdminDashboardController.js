@@ -4,13 +4,32 @@ import user from "../Model/UserModel.js";
 
 export const AdminDashboardStats = async (req, res) => {
   try {
+    const userId = req.user._id;
 
-    const totalProjects = await ProjectListing.countDocuments();
-    const totalBids = await Bidding.countDocuments();
-    const totalUsers = await user.countDocuments();
-    const totalActiveProjects = await ProjectListing.countDocuments({ status: "active" });
-    const totalCompletedProjects = await ProjectListing.countDocuments({ status: "completed" });
-    const totalPendingProjects = await ProjectListing.countDocuments({ status: "pending" });
+    // 1. Get all project IDs listed by this user
+    const userProjects = await ProjectListing.find({ user: userId }, "_id");
+    const projectIds = userProjects.map((p) => p._id);
+
+    // 2. Count all bids on these projects (by any user)
+    const totalBids = await Bidding.countDocuments({
+      project_id: { $in: projectIds },
+    });
+
+    const totalProjects = projectIds.length;
+    const totalUsers = 1; // Only the logged-in user
+
+    const totalActiveProjects = await ProjectListing.countDocuments({
+      user: userId,
+      status: "active",
+    });
+    const totalCompletedProjects = await ProjectListing.countDocuments({
+      user: userId,
+      status: "completed",
+    });
+    const totalPendingProjects = await ProjectListing.countDocuments({
+      user: userId,
+      status: "pending",
+    });
 
     res.status(200).json({
       totalProjects,
@@ -20,7 +39,6 @@ export const AdminDashboardStats = async (req, res) => {
       totalCompletedProjects,
       totalPendingProjects,
     });
-    
   } catch (error) {
     console.error("🔴 Error in AdminDashboard:", error);
     return res

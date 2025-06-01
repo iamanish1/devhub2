@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import user from "./UserModel.js"; // Importing the User model
 const TechStackEnum = [
     "MERN Stack",
     "MEAN Stack",
@@ -41,6 +42,11 @@ const ProjectListingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         auto: true
     },
+    user : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "user", // Reference to the User model
+        required : true
+    }, 
     project_Title : {
         type : String,
         required : true

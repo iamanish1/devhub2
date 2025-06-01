@@ -6,6 +6,7 @@ import cors from "cors";
 import userRoute from "./Routes/userRoutes.js";
 import projectRoutes from "./Routes/ProjectListingRoutes.js";
 import biddingRoutes from "./Routes/BiddingRoutes.js";
+import adminDashboardRoutes from "./Routes/AdminDashboardRoute.js";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use(cors(CorsOption)) ;
 app.use("/api", userRoute) ; 
 app.use("/api/project", projectRoutes) ; 
 app.use("/api/bid", biddingRoutes) ;
+app.use("/api/admin", adminDashboardRoutes) ; 
 
 const port = process.env.PORT || 5000;
 connectDb();

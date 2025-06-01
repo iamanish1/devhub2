@@ -41,6 +41,7 @@ const ListProject = async (req, res) => {
     }
     // Create new project listing
     const project = new ProjectListing({
+      user: req.user._id, // Assuming user ID is attached to req.user by auth middleware
       project_Title,
       project_duration,
       Project_Bid_Amount,

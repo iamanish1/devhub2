@@ -3,7 +3,7 @@ import ProjectListing from "../Model/ProjectListingModel.js";
 export const adminAuthenticationMiddleware = async (req, res, next) => {
  try {
 const  userId = req.user._id; // Assuming user ID is attached to req.user by auth middleware
-const projectCount = await ProjectListing.countDocuments({ userId });
+const projectCount = await ProjectListing.countDocuments({ user : userId });
 if (projectCount > 0) {
     console.log("🔵 Admin Authentication Successful: User has projects");
     next(); // Proceed to the next middleware or route handler
