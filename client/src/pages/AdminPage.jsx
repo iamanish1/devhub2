@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import {
   FaProjectDiagram,
   FaUsers,
@@ -10,6 +11,11 @@ import {
   FaUserTimes,
 } from "react-icons/fa";
 import Navbar from "../components/NavBar";
+
+// Chart.js imports
+import { Doughnut } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const dummyProjects = [
   { id: 1, name: "AI Chatbot", status: "Open", applicants: 5 },
@@ -29,42 +35,78 @@ const statusColors = {
   Rejected: "text-red-400 bg-red-900/40",
 };
 
-const recentActivity = [
-  {
-    type: "project",
-    text: "New project 'AI Chatbot' created",
-    time: "2 hours ago",
-  },
-  {
-    type: "applicant",
-    text: "Anish applied for 'AI Chatbot'",
-    time: "1 hour ago",
-  },
-  {
-    type: "status",
-    text: "Riya was accepted for 'Bug Tracker'",
-    time: "30 minutes ago",
-  },
-];
-
 const AdminPage = () => {
   const [view, setView] = useState("dashboard");
   const [selectedProject, setSelectedProject] = useState(null);
+  const [stats, setstats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Dashboard stats
-  const totalProjects = dummyProjects.length;
-  const openProjects = dummyProjects.filter((p) => p.status === "Open").length;
-  const closedProjects = dummyProjects.filter(
-    (p) => p.status === "Closed"
-  ).length;
-  const totalApplicants = dummyProjects.reduce(
-    (sum, p) => sum + p.applicants,
-    0
-  );
+  const totalProjects = stats ? stats.totalProjects : dummyProjects.length;
+  const openProjects = stats
+    ? stats.totalActiveProjects
+    : dummyProjects.filter((p) => p.status === "Open").length;
+  const closedProjects = stats
+    ? stats.totalCompletedProjects
+    : dummyProjects.filter((p) => p.status === "Closed").length;
+  const totalApplicants = stats ? stats.totalBids : dummyApplicants.length;
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/admin/overview",
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setstats(response.data);
+        setError(null);
+        setLoading(false);
+      } catch (error) {
+        setError("Failed to fetch stats");
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  // Chart data
+  const chartData = {
+    labels: [
+      "Total Projects",
+      "Open Projects",
+      "Closed Projects",
+      "Applicants",
+    ],
+    datasets: [
+      {
+        label: "Overview",
+        data: [totalProjects, openProjects, closedProjects, totalApplicants],
+        backgroundColor: [
+          "rgba(59,130,246,0.7)", // blue for Total Projects
+          "rgba(34,197,94,0.7)", // green for Open Projects
+          "rgba(239,68,68,0.7)", // red for Closed Projects
+          "rgba(251,191,36,0.7)", // orange for Applicants
+        ],
+        borderColor: [
+          "rgba(59,130,246,1)",
+          "rgba(34,197,94,1)",
+          "rgba(239,68,68,1)",
+          "rgba(251,191,36,1)",
+        ],
+        borderWidth: 2,
+      },
+    ],
+  };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e]">
-         <Navbar/>
+      <Navbar />
       {/* Sidebar */}
       <aside className="w-64 bg-[#181b23] text-white flex flex-col p-6 border-r border-blue-500/20 shadow-lg">
         <h2 className="text-3xl font-extrabold mb-10 text-blue-400 tracking-wide">
@@ -106,7 +148,6 @@ const AdminPage = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-10">
-       
         {/* Dashboard Section */}
         {view === "dashboard" && (
           <section>
@@ -122,55 +163,83 @@ const AdminPage = () => {
               <div className="bg-gradient-to-br from-blue-900/60 to-blue-700/40 rounded-2xl shadow-lg p-8 text-center border border-blue-500/10 flex flex-col items-center">
                 <FaProjectDiagram className="text-4xl text-blue-400 mb-3" />
                 <div className="text-3xl font-extrabold text-blue-400">
-                  {totalProjects}
+                  {loading ? "..." : totalProjects}
                 </div>
                 <div className="mt-2 text-gray-300">Total Projects</div>
               </div>
               <div className="bg-gradient-to-br from-green-900/60 to-green-700/40 rounded-2xl shadow-lg p-8 text-center border border-blue-500/10 flex flex-col items-center">
                 <FaCheckCircle className="text-4xl text-green-400 mb-3" />
                 <div className="text-3xl font-extrabold text-green-400">
-                  {openProjects}
+                  {loading ? "..." : openProjects}
                 </div>
                 <div className="mt-2 text-gray-300">Open Projects</div>
               </div>
               <div className="bg-gradient-to-br from-red-900/60 to-red-700/40 rounded-2xl shadow-lg p-8 text-center border border-blue-500/10 flex flex-col items-center">
                 <FaTimesCircle className="text-4xl text-red-400 mb-3" />
                 <div className="text-3xl font-extrabold text-red-400">
-                  {closedProjects}
+                  {loading ? "..." : closedProjects}
                 </div>
                 <div className="mt-2 text-gray-300">Closed Projects</div>
               </div>
               <div className="bg-gradient-to-br from-purple-900/60 to-purple-700/40 rounded-2xl shadow-lg p-8 text-center border border-blue-500/10 flex flex-col items-center">
                 <FaUsers className="text-4xl text-purple-400 mb-3" />
                 <div className="text-3xl font-extrabold text-purple-400">
-                  {totalApplicants}
+                  {loading ? "..." : totalApplicants}
                 </div>
                 <div className="mt-2 text-gray-300">Total Applicants</div>
               </div>
             </div>
-            <div className="bg-[#232a34] rounded-2xl shadow-lg p-8 border border-blue-500/10">
-              <h2 className="text-2xl font-bold text-blue-300 mb-4">
-                Recent Activity
+            <div className="relative bg-[#181b23]/80 backdrop-blur-md rounded-2xl shadow-xl p-6 md:p-10 border border-blue-500/10 flex flex-col items-center overflow-hidden mt-8 w-full max-w-3xl mx-auto">
+              {/* Subtle animated background gradient */}
+              <div className="absolute inset-0 pointer-events-none z-0">
+                <div className="w-full h-full bg-gradient-to-tr from-blue-900/20 via-purple-900/10 to-yellow-700/10 blur-2xl animate-pulse"></div>
+              </div>
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-1 z-10 tracking-wide drop-shadow">
+                Platform Overview
               </h2>
-              <ul className="divide-y divide-blue-500/10">
-                {recentActivity.map((activity, idx) => (
-                  <li key={idx} className="py-3 flex items-center gap-4">
-                    {activity.type === "project" && (
-                      <FaProjectDiagram className="text-blue-400 text-xl" />
-                    )}
-                    {activity.type === "applicant" && (
-                      <FaUsers className="text-purple-400 text-xl" />
-                    )}
-                    {activity.type === "status" && (
-                      <FaCheckCircle className="text-green-400 text-xl" />
-                    )}
-                    <span className="text-white">{activity.text}</span>
-                    <span className="ml-auto text-xs text-gray-400">
-                      {activity.time}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="w-12 h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-yellow-400 rounded-full mb-6 z-10"></div>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-8 z-10 w-full">
+                <div className="w-44 h-44 md:w-60 md:h-60 flex items-center justify-center bg-[#232a34]/80 rounded-xl shadow-lg border border-blue-500/10">
+                  <Doughnut
+                    data={chartData}
+                    options={{
+                      plugins: { legend: { display: false } },
+                      cutout: "75%",
+                      animation: { animateRotate: true, animateScale: true },
+                      responsive: true,
+                      maintainAspectRatio: false,
+                    }}
+                  />
+                </div>
+                {/* Modern Legend */}
+                <div className="flex flex-col gap-3 w-full max-w-xs">
+                  {chartData.labels.map((label, idx) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between bg-[#232a34]/70 rounded-lg px-4 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-block w-3 h-3 rounded-full"
+                          style={{
+                            backgroundColor:
+                              chartData.datasets[0].backgroundColor[idx],
+                            boxShadow:
+                              "0 0 6px 0 " +
+                              chartData.datasets[0].backgroundColor[idx],
+                          }}
+                        ></span>
+                        <span className="text-sm md:text-base font-medium text-gray-200">
+                          {label}
+                        </span>
+                      </div>
+                      <span className="text-base md:text-lg font-bold text-blue-200">
+                        {chartData.datasets[0].data[idx]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
         )}
