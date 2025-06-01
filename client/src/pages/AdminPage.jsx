@@ -133,6 +133,33 @@ const AdminPage = () => {
     ],
   };
 
+  const handleDelteProject = async (projectId) => {
+    if(!window.confirm("Are you sure you want to delete this project?")) return ; 
+    try {
+      const response = await axios.delete(
+        `http://localhost:8000/api/admin/deleteproject/${projectId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      if (response.status === 200) {
+        alert("Project deleted successfully");
+        setProjects((prev) =>
+          prev.filter((proj) => proj._id !== projectId)
+        );
+      } else {
+        alert("Failed to delete project");
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      alert("Failed to delete project. Please try again later.");
+      
+    }
+  }
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e]">
       <Navbar />
@@ -336,7 +363,9 @@ const AdminPage = () => {
                           </button>
                           </Link>
                          
-                          <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                          <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1"
+                            onClick={() => handleDelteProject(proj._id)}
+                          >
                             <FaTrash /> Delete
                           </button>
                         </td>

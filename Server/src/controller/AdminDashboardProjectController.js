@@ -57,7 +57,7 @@ export const AdminDashboardProjectController = async (req, res) => {
 
 export const EditProjectController = async (req, res) => {
   try {
-    const { _id } = req.params;
+    const { id } = req.params;
     // Destructure to exclude Project_cover_photo (or any file field)
     const {
       Project_cover_photo, // exclude this
@@ -78,6 +78,32 @@ export const EditProjectController = async (req, res) => {
     });
   } catch (error) {
     console.error("🔴 Error in EditProjectController:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
+export const DeleteProjectController = async (req, res) => {
+  try {
+    const { id } = req.params; // Use 'id' as the route param
+    const deletedProject = await ProjectListing.findByIdAndDelete(id);
+
+    if (!deletedProject) {
+      return res.status(404).json({
+        message: "Project not found",
+      });
+    }
+
+    // Optionally, delete all related bids
+    await Bidding.deleteMany({ project_id: id });
+
+    res.status(200).json({
+      message: "Project deleted successfully",
+      project: deletedProject,
+    });
+  } catch (error) {
+    console.error("🔴 Error in DeleteProjectController:", error);
     return res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
