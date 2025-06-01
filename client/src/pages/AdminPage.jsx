@@ -20,13 +20,11 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const dummyProjects = [
-  { id: 1, name: "AI Chatbot", status: "Open", applicants: 5 },
-  { id: 2, name: "Bug Tracker", status: "Closed", applicants: 2 },
+
 ];
 
 const dummyApplicants = [
-  { id: 1, name: "Anish", project: "AI Chatbot", status: "Pending" },
-  { id: 2, name: "Riya", project: "Bug Tracker", status: "Accepted" },
+  
 ];
 
 const statusColors = {
