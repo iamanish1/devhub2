@@ -13,7 +13,7 @@ const BidingPage = () => {
   const [error, setError] = useState(null);
   const [timeLeft, setTimeLeft] = useState(48 * 60 * 60); // 48 hours in seconds
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [hasBid, setHasBid] = useState(false);
+  const [hasBid, setHasBid] = useState(null);
 
   // Real-time listener for project data updates
   useEffect(() => {
@@ -45,7 +45,8 @@ const BidingPage = () => {
             },
           }
         );
-        setHasBid(res.data.existingBid ? true : false);
+        setHasBid(res.data.existingBid || null);
+        console.log("Has bid:", res.data.existingBid);
         console.log("Bid status:", res.data.existingBid);
       } catch (error) {
         console.error("Error checking bid status:", error);
@@ -317,6 +318,7 @@ const BidingPage = () => {
           </div>
 
           {/* Call to Action */}
+          {/* Call to Action */}
           <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-6 border border-blue-500/30 mb-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 opacity-20 rounded-full blur-xl"></div>
             <h2 className="text-xl font-bold text-white mb-2">
@@ -326,24 +328,43 @@ const BidingPage = () => {
               Your expertise in bug hunting can help shape this project. Join
               the team and earn rewards!
             </p>
-            <Link to={hasBid ? "#" : `/bidingproposal/${_id}`}>
+            {hasBid && hasBid.bid_status === "Accepted" ? (
               <button
-                className={`px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30 ${
-                  hasBid ? "opacity-60 cursor-not-allowed" : ""
-                }`}
-                onClick={(e) => {
-                  if (hasBid) {
-                    e.preventDefault();
-                    alert(
-                      "You already placed a bid for this project. Wait for the bid completion."
-                    );
-                  }
-                }}
-                disabled={hasBid}
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-800 text-white text-lg rounded-lg hover:from-green-700 hover:to-green-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-green-500/30"
+                onClick={() =>
+                  alert("You are now participating in this project!")
+                }
               >
-                {hasBid ? "You already placed a bid" : "Place a Bid Now"}
+                Participate
               </button>
-            </Link>
+            ) : hasBid && hasBid.bid_status === "Rejected" ? (
+              <div className="p-4 bg-red-900/40 border border-red-500/30 rounded-lg text-red-300 font-semibold text-center">
+                Your bid was{" "}
+                <span className="text-red-400 font-bold">rejected</span> by the
+                project owner.
+                <br />
+                You can bid for the next project.
+              </div>
+            ) : (
+              <Link to={hasBid ? "#" : `/bidingproposal/${_id}`}>
+                <button
+                  className={`px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30 ${
+                    hasBid ? "opacity-60 cursor-not-allowed" : ""
+                  }`}
+                  onClick={(e) => {
+                    if (hasBid) {
+                      e.preventDefault();
+                      alert(
+                        "You already placed a bid for this project. Wait for the bid completion."
+                      );
+                    }
+                  }}
+                  disabled={hasBid}
+                >
+                  {hasBid ? "You already placed a bid" : "Place a Bid Now"}
+                </button>
+              </Link>
+            )}
           </div>
         </section>
       </main>
