@@ -78,24 +78,22 @@ We’re building a **community-driven environment** where everyone grows togethe
 
 ### 🔗 Clone the Repository
 
-# Start backend
+
+```bash
+git clone https://github.com/<your-username>/devhubs.git
+cd devhubs
+
+# Backend
 cd server
-npm start
+npm install
 
-# Start frontend
+# Frontend
 cd ../client
-npm run dev
-# Start backend
-cd server
-npm start
+npm install
 
-# Start frontend
-cd ../client
-npm run dev
-
-
-```bashdevhubs/
-
-
-
+devhubs/
+├── client/       # Frontend (React)
+├── server/       # Backend (Express)
+├── README.md
+└── ...other files
 
