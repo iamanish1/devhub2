@@ -31,6 +31,7 @@ const AppRoutes = () => {
         <Route path="/admin" element={<AdminPage/>}/>
         <Route path="/editproject/:id" element={<ProjectListingPage />} />
         <Route path = "/contributionPage" element={<ContributionPage/>}/>
+        
       </Route>
     </Routes>
   );

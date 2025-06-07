@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
+import AdminContributionBoard from "../components/AdminContributioBoard";
 import axios from "axios";
 import {
   FaProjectDiagram,
@@ -51,6 +52,49 @@ const AdminPage = () => {
   const [applicantsLoading, setApplicantsLoading] = useState(false);
   const [applicantsError, setApplicantsError] = useState(null);
 
+  const [adminTasks, setAdminTasks] = useState([
+    {
+      id: 1,
+      title: "Review PR #42",
+      desc: "Check the latest pull request",
+      status: "todo",
+    },
+    {
+      id: 2,
+      title: "Merge bugfix branch",
+      desc: "Merge after review",
+      status: "inprogress",
+    },
+    {
+      id: 3,
+      title: "Deploy to production",
+      desc: "Deploy after all checks",
+      status: "done",
+    },
+  ]);
+  const [adminChat, setAdminChat] = useState([
+    { sender: "mentor", text: "Please review the new PR." },
+    { sender: "admin", text: "On it!" },
+  ]);
+
+  const [adminNotes, setAdminNotes] = useState("Monitor deployment status.");
+  const adminMentor = {
+    name: "Jane Doe",
+    avatar: "https://ui-avatars.com/api/?name=Jane+Doe",
+    bio: "Senior Developer, React & Node.js expert.",
+    expertise: "Full Stack, Mentorship",
+    email: "jane.doe@devhubs.com",
+  };
+
+  const handleAdminTaskStatusChange = (id, newStatus) => {
+    setAdminTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    );
+  };
+  const handleAdminSendMessage = (msg) => {
+    setAdminChat((prev) => [...prev, msg]);
+  };
+  const handleAdminNotesChange = (val) => setAdminNotes(val);
   // Fetch applicants when "applicants" view is active
   useEffect(() => {
     if (view === "applicants") {
@@ -243,6 +287,18 @@ const AdminPage = () => {
           >
             Applicants
           </button>
+           <button
+            className={`text-left px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+              view === "applicants"
+                ? "bg-blue-500 text-white shadow"
+                : "hover:bg-blue-500/10 hover:text-blue-400"
+            }`}
+            onClick={() => setView("contribution")}
+          >
+            Contribution 
+          </button>
+
+
         </nav>
       </aside>
 
@@ -742,6 +798,21 @@ const AdminPage = () => {
                 )}
               </div>
             )}
+          </section>
+        )}
+
+        {/* Admin Contribution Board Section */}
+        {view === "contribution" && (
+          <section>
+            <AdminContributionBoard
+              tasks={adminTasks}
+              chat={adminChat}
+              mentor={adminMentor}
+              notes={adminNotes}
+              onTaskStatusChange={handleAdminTaskStatusChange}
+              onSendMessage={handleAdminSendMessage}
+              onNotesChange={handleAdminNotesChange}
+            />
           </section>
         )}
       </main>

@@ -1,0 +1,458 @@
+import React, { useState, useRef, useEffect } from "react";
+import {
+  FaCheck,
+  FaEdit,
+  FaRegStickyNote,
+  FaPaperPlane,
+  FaComments,
+  FaBars,
+  FaUser,
+  FaTrash,
+  FaPlus,
+  FaPen,
+} from "react-icons/fa";
+
+// Admin-focused Contribution Board
+const AdminContributionBoard = ({
+  tasks: initialTasks = [],
+  chat: initialChat = [],
+  team = [],
+  notes: initialNotes = "",
+  onTaskStatusChange,
+  onSendMessage,
+  onNotesChange,
+  onTaskAdd,
+  onTaskEdit,
+  onTaskDelete,
+}) => {
+  const [tasks, setTasks] = useState(initialTasks);
+  const [chat, setChat] = useState(initialChat);
+  const [message, setMessage] = useState("");
+  const [notes, setNotes] = useState(initialNotes);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [editTask, setEditTask] = useState(null);
+  const [taskForm, setTaskForm] = useState({ title: "", desc: "" });
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
+
+  // Task status update
+  const updateTaskStatus = (id, newStatus) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    );
+    if (onTaskStatusChange) onTaskStatusChange(id, newStatus);
+  };
+
+  // Add/Edit Task
+  const handleTaskFormSubmit = (e) => {
+    e.preventDefault();
+    if (!taskForm.title.trim()) return;
+    if (editTask) {
+      // Edit
+      setTasks((prev) =>
+        prev.map((t) => (t.id === editTask.id ? { ...t, ...taskForm } : t))
+      );
+      if (onTaskEdit) onTaskEdit(editTask.id, taskForm);
+    } else {
+      // Add
+      const newTask = {
+        id: Date.now(),
+        ...taskForm,
+        status: "todo",
+      };
+      setTasks((prev) => [newTask, ...prev]);
+      if (onTaskAdd) onTaskAdd(newTask);
+    }
+    setShowTaskModal(false);
+    setEditTask(null);
+    setTaskForm({ title: "", desc: "" });
+  };
+
+  // Delete Task
+  const handleTaskDelete = (id) => {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    if (onTaskDelete) onTaskDelete(id);
+  };
+
+  // Open modal for edit/add
+  const openEditModal = (task) => {
+    setEditTask(task);
+    setTaskForm({ title: task.title, desc: task.desc });
+    setShowTaskModal(true);
+  };
+  const openAddModal = () => {
+    setEditTask(null);
+    setTaskForm({ title: "", desc: "" });
+    setShowTaskModal(true);
+  };
+
+  // Chat send
+  const sendMessage = () => {
+    if (message.trim()) {
+      const newMsg = { sender: "admin", text: message };
+      setChat((prev) => [...prev, newMsg]);
+      setMessage("");
+      if (onSendMessage) onSendMessage(newMsg);
+    }
+  };
+
+  // Notes
+  const handleNotesChange = (e) => {
+    setNotes(e.target.value);
+    if (onNotesChange) onNotesChange(e.target.value);
+  };
+
+  // Progress
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+  const totalCount = tasks.length;
+  const progress =
+    totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
+
+  return (
+    <div className="w-full bg-[#181b23] rounded-2xl shadow-lg border border-blue-500/20 p-4 sm:p-6 flex flex-col gap-8 overflow-x-hidden">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-2">
+        <div className="flex items-center gap-2">
+          <FaBars className="text-yellow-400" />
+          <h2 className="text-xl sm:text-2xl font-bold text-blue-400">
+            Admin Contribution Board
+          </h2>
+        </div>
+        <button
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow transition text-sm"
+          onClick={openAddModal}
+        >
+          <FaPlus /> Add Task
+        </button>
+      </div>
+
+      {/* Kanban Board */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full min-w-0">
+        {/* TODO */}
+        <div className="w-full min-w-0">
+          <h3 className="text-base sm:text-lg font-bold text-blue-300 mb-2 flex items-center gap-1">
+            TODO <FaRegStickyNote className="text-blue-400" />
+          </h3>
+          <div className="space-y-4">
+            {tasks.filter((t) => t.status === "todo").length === 0 && (
+              <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-blue-500/10">
+                All tasks started!
+              </div>
+            )}
+            {tasks
+              .filter((t) => t.status === "todo")
+              .map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 transition hover:scale-[1.01] hover:border-blue-400 flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white flex items-center gap-2">
+                      <FaRegStickyNote className="text-blue-400" /> {task.title}
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded transition"
+                        onClick={() => updateTaskStatus(task.id, "inprogress")}
+                        title="Mark In Progress"
+                      >
+                        In Progress
+                      </button>
+                      <button
+                        className="text-xs bg-blue-500 hover:bg-blue-600 px-2 py-1 rounded text-white"
+                        onClick={() => openEditModal(task)}
+                        title="Edit"
+                      >
+                        <FaPen />
+                      </button>
+                      <button
+                        className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
+                        onClick={() => handleTaskDelete(task.id)}
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-gray-300 text-sm">{task.desc}</p>
+                </div>
+              ))}
+          </div>
+        </div>
+        {/* IN PROGRESS */}
+        <div className="w-full min-w-0">
+          <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-2 flex items-center gap-1">
+            IN PROGRESS <FaEdit className="text-purple-400" />
+          </h3>
+          <div className="space-y-4">
+            {tasks.filter((t) => t.status === "inprogress").length === 0 && (
+              <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-purple-500/10">
+                No tasks in progress.
+              </div>
+            )}
+            {tasks
+              .filter((t) => t.status === "inprogress")
+              .map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-[#232a34] rounded-xl p-4 shadow border border-purple-500/10 transition hover:scale-[1.01] hover:border-purple-400 flex flex-col gap-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white flex items-center gap-2">
+                      <FaEdit className="text-purple-400" /> {task.title}
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition"
+                        onClick={() => updateTaskStatus(task.id, "done")}
+                        title="Mark as Done"
+                      >
+                        Done
+                      </button>
+                      <button
+                        className="text-xs bg-blue-500 hover:bg-blue-600 px-2 py-1 rounded text-white"
+                        onClick={() => openEditModal(task)}
+                        title="Edit"
+                      >
+                        <FaPen />
+                      </button>
+                      <button
+                        className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
+                        onClick={() => handleTaskDelete(task.id)}
+                        title="Delete"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-gray-300 text-sm">{task.desc}</p>
+                </div>
+              ))}
+          </div>
+        </div>
+        {/* DONE */}
+        <div className="w-full min-w-0">
+          <h3 className="text-base sm:text-lg font-bold text-green-300 mb-2 flex items-center gap-1">
+            DONE <FaCheck className="text-green-400" />
+          </h3>
+          <div className="space-y-4">
+            {tasks.filter((t) => t.status === "done").length === 0 && (
+              <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-green-500/10">
+                No tasks done yet.
+              </div>
+            )}
+            {tasks
+              .filter((t) => t.status === "done")
+              .map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-[#232a34] rounded-xl p-4 shadow border border-green-500/10 flex items-center justify-between transition hover:scale-[1.01] hover:border-green-400"
+                >
+                  <div>
+                    <span className="font-semibold text-white flex items-center gap-2">
+                      <FaCheck className="text-green-400" /> {task.title}
+                    </span>
+                    <p className="text-gray-300 text-sm">{task.desc}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      className="text-xs bg-blue-500 hover:bg-blue-600 px-2 py-1 rounded text-white"
+                      onClick={() => openEditModal(task)}
+                      title="Edit"
+                    >
+                      <FaPen />
+                    </button>
+                    <button
+                      className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
+                      onClick={() => handleTaskDelete(task.id)}
+                      title="Delete"
+                    >
+                      <FaTrash />
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Team Section (optional, for admin overview) */}
+      {team && team.length > 0 && (
+        <div className="bg-[#232a34] rounded-xl p-4 border border-blue-500/10 mt-4">
+          <div className="font-bold text-blue-300 mb-2 flex items-center gap-2">
+            <FaUser /> Team Members
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {team.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center gap-2 bg-[#181b23] px-3 py-2 rounded-lg border border-blue-500/10 text-white text-sm"
+              >
+                <img
+                  src={member.avatar}
+                  alt={member.name}
+                  className="w-6 h-6 rounded-full border border-blue-400"
+                />
+                <span>{member.name}</span>
+                <span className="text-xs text-blue-300">{member.role}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Chat and Progress */}
+      <div className="flex flex-col lg:flex-row gap-6 mt-6">
+        {/* Chat */}
+        <div className="flex-1 bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 flex flex-col h-72 sm:h-80 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <FaComments className="text-blue-400" />
+            <span className="font-bold text-white text-sm sm:text-base">
+              Team Chat
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-2 mb-2">
+            {chat.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex ${
+                  msg.sender === "admin"
+                    ? "justify-end"
+                    : msg.sender === "mentor"
+                    ? "justify-start"
+                    : "justify-center"
+                }`}
+              >
+                <div
+                  className={`px-3 py-2 rounded-lg max-w-xs text-sm ${
+                    msg.sender === "admin"
+                      ? "bg-blue-600 text-white"
+                      : msg.sender === "mentor"
+                      ? "bg-gray-700 text-blue-200"
+                      : "bg-purple-700 text-white"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              className="flex-1 rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
+              placeholder="Type a message..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              aria-label="Type a message"
+            />
+            <button
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg transition focus:ring-2 focus:ring-blue-400 flex items-center"
+              onClick={sendMessage}
+              aria-label="Send message"
+            >
+              <FaPaperPlane />
+            </button>
+          </div>
+        </div>
+        {/* Progress & Notes */}
+        <div className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <FaBars className="text-yellow-400" />
+            <span className="font-bold text-white text-sm sm:text-base">
+              Progress Tracker
+            </span>
+          </div>
+          <div className="mb-2">
+            <div className="flex justify-between text-xs sm:text-sm text-gray-300 mb-1">
+              <span>
+                Tasks Done: {doneCount}/{totalCount}
+              </span>
+              <span>{progress}%</span>
+            </div>
+            <div
+              className="w-full bg-gray-700 rounded-full h-2"
+              aria-label="Progress bar"
+            >
+              <div
+                className="bg-gradient-to-r from-blue-400 to-green-400 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+          <div className="mt-4">
+            <label className="text-gray-400 text-xs mb-1 block" htmlFor="notes">
+              Notes
+            </label>
+            <textarea
+              id="notes"
+              className="w-full rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
+              rows={2}
+              value={notes}
+              onChange={handleNotesChange}
+              placeholder="Share progress or blockers..."
+              aria-label="Notes"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Task Modal */}
+      {showTaskModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <form
+            className="bg-[#232a34] rounded-xl p-6 w-full max-w-md border border-blue-500/20 shadow-2xl flex flex-col gap-4"
+            onSubmit={handleTaskFormSubmit}
+          >
+            <h3 className="text-lg font-bold text-blue-400 mb-2">
+              {editTask ? "Edit Task" : "Add Task"}
+            </h3>
+            <input
+              className="rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
+              placeholder="Task Title"
+              value={taskForm.title}
+              onChange={(e) =>
+                setTaskForm((f) => ({ ...f, title: e.target.value }))
+              }
+              required
+            />
+            <textarea
+              className="rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
+              placeholder="Task Description"
+              value={taskForm.desc}
+              onChange={(e) =>
+                setTaskForm((f) => ({ ...f, desc: e.target.value }))
+              }
+              rows={3}
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+                onClick={() => {
+                  setShowTaskModal(false);
+                  setEditTask(null);
+                  setTaskForm({ title: "", desc: "" });
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+              >
+                {editTask ? "Update" : "Add"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminContributionBoard;
