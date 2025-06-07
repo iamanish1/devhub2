@@ -16,6 +16,7 @@ import {
 } from "react-icons/fa";
 import axios from "axios";
 
+
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
   chat: initialChat = [],
@@ -43,6 +44,8 @@ const AdminContributionBoard = ({
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
   const chatEndRef = useRef(null);
+
+
 
   // Fetch projects from API
   useEffect(() => {
@@ -77,6 +80,29 @@ const AdminContributionBoard = ({
       .finally(() => setProjectsLoading(false));
     // eslint-disable-next-line
   }, []);
+
+  //    This useeffect is used for to get the task detail .
+  useEffect(() => {
+    const fetchTask = async () => {
+      if (!selectedProjectId) return;
+      try {
+        const response = await axios.get(
+          `http://localhost:8000/api/admin/getprojecttask/${selectedProjectId}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        console.log("Fetched Tasks by api :", response.data);
+        setTasks(response.data);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+      }
+    };
+    fetchTask();
+  }, [selectedProjectId]);
 
   // Scroll chat to bottom
   useEffect(() => {

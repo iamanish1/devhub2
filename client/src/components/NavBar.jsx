@@ -4,12 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 
+
 const Navbar = () => {
   const { user, logoutUser } = useAuth();
   const [profileExsist, setProfileExist] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
 
   // Fetch user profile existence
   useEffect(() => {
@@ -206,7 +208,7 @@ const Navbar = () => {
                       </Link>
                     )}
                     <Link
-                      to="/admin"
+                      to={`/admin`}
                       className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
                       onClick={() => setDropdownOpen(false)}
                     >
