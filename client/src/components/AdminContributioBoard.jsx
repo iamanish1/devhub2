@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from "react";
 import {
   FaCheck,
@@ -15,7 +16,6 @@ import {
   FaRobot,
 } from "react-icons/fa";
 import axios from "axios";
-
 
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
@@ -44,8 +44,6 @@ const AdminContributionBoard = ({
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
   const chatEndRef = useRef(null);
-
-
 
   // Fetch projects from API
   useEffect(() => {
@@ -329,7 +327,6 @@ const AdminContributionBoard = ({
         </div>
       )}
 
-      {/* Kanban Board for Selected Project */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full min-w-0">
         {/* TODO */}
         <div className="w-full min-w-0">
@@ -337,26 +334,27 @@ const AdminContributionBoard = ({
             TODO <FaRegStickyNote className="text-blue-400" />
           </h3>
           <div className="space-y-4">
-            {filteredTasks.filter((t) => t.status === "todo").length === 0 && (
+            {tasks.filter((t) => t.task_status === "todo").length === 0 && (
               <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-blue-500/10">
                 All tasks started!
               </div>
             )}
-            {filteredTasks
-              .filter((t) => t.status === "todo")
+            {tasks
+              .filter((t) => t.task_status === "todo")
               .map((task) => (
                 <div
-                  key={task.id}
+                  key={task._id}
                   className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 transition hover:scale-[1.01] hover:border-blue-400 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-white flex items-center gap-2">
-                      <FaRegStickyNote className="text-blue-400" /> {task.title}
+                      <FaRegStickyNote className="text-blue-400" />{" "}
+                      {task.task_title}
                     </span>
                     <div className="flex gap-1">
                       <button
                         className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded transition"
-                        onClick={() => updateTaskStatus(task.id, "inprogress")}
+                        onClick={() => updateTaskStatus(task._id, "inprogress")}
                         title="Mark In Progress"
                       >
                         In Progress
@@ -370,45 +368,48 @@ const AdminContributionBoard = ({
                       </button>
                       <button
                         className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
-                        onClick={() => handleTaskDelete(task.id)}
+                        onClick={() => handleTaskDelete(task._id)}
                         title="Delete"
                       >
                         <FaTrash />
                       </button>
                     </div>
                   </div>
-                  <p className="text-gray-300 text-sm">{task.desc}</p>
+                  <p className="text-gray-300 text-sm">
+                    {task.task_description}
+                  </p>
                 </div>
               ))}
           </div>
         </div>
+
         {/* IN PROGRESS */}
         <div className="w-full min-w-0">
           <h3 className="text-base sm:text-lg font-bold text-purple-300 mb-2 flex items-center gap-1">
             IN PROGRESS <FaEdit className="text-purple-400" />
           </h3>
           <div className="space-y-4">
-            {filteredTasks.filter((t) => t.status === "inprogress").length ===
+            {tasks.filter((t) => t.task_status === "inprogress").length ===
               0 && (
               <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-purple-500/10">
                 No tasks in progress.
               </div>
             )}
-            {filteredTasks
-              .filter((t) => t.status === "inprogress")
+            {tasks
+              .filter((t) => t.task_status === "inprogress")
               .map((task) => (
                 <div
-                  key={task.id}
+                  key={task._id}
                   className="bg-[#232a34] rounded-xl p-4 shadow border border-purple-500/10 transition hover:scale-[1.01] hover:border-purple-400 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-white flex items-center gap-2">
-                      <FaEdit className="text-purple-400" /> {task.title}
+                      <FaEdit className="text-purple-400" /> {task.task_title}
                     </span>
                     <div className="flex gap-1">
                       <button
                         className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition"
-                        onClick={() => updateTaskStatus(task.id, "done")}
+                        onClick={() => updateTaskStatus(task._id, "done")}
                         title="Mark as Done"
                       >
                         Done
@@ -422,41 +423,46 @@ const AdminContributionBoard = ({
                       </button>
                       <button
                         className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
-                        onClick={() => handleTaskDelete(task.id)}
+                        onClick={() => handleTaskDelete(task._id)}
                         title="Delete"
                       >
                         <FaTrash />
                       </button>
                     </div>
                   </div>
-                  <p className="text-gray-300 text-sm">{task.desc}</p>
+                  <p className="text-gray-300 text-sm">
+                    {task.task_description}
+                  </p>
                 </div>
               ))}
           </div>
         </div>
+
         {/* DONE */}
         <div className="w-full min-w-0">
           <h3 className="text-base sm:text-lg font-bold text-green-300 mb-2 flex items-center gap-1">
             DONE <FaCheck className="text-green-400" />
           </h3>
           <div className="space-y-4">
-            {filteredTasks.filter((t) => t.status === "done").length === 0 && (
+            {tasks.filter((t) => t.task_status === "done").length === 0 && (
               <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-green-500/10">
                 No tasks done yet.
               </div>
             )}
-            {filteredTasks
-              .filter((t) => t.status === "done")
+            {tasks
+              .filter((t) => t.task_status === "done")
               .map((task) => (
                 <div
-                  key={task.id}
+                  key={task._id}
                   className="bg-[#232a34] rounded-xl p-4 shadow border border-green-500/10 flex items-center justify-between transition hover:scale-[1.01] hover:border-green-400"
                 >
                   <div>
                     <span className="font-semibold text-white flex items-center gap-2">
-                      <FaCheck className="text-green-400" /> {task.title}
+                      <FaCheck className="text-green-400" /> {task.task_title}
                     </span>
-                    <p className="text-gray-300 text-sm">{task.desc}</p>
+                    <p className="text-gray-300 text-sm">
+                      {task.task_description}
+                    </p>
                   </div>
                   <div className="flex gap-1">
                     <button
@@ -468,7 +474,7 @@ const AdminContributionBoard = ({
                     </button>
                     <button
                       className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
-                      onClick={() => handleTaskDelete(task.id)}
+                      onClick={() => handleTaskDelete(task._id)}
                       title="Delete"
                     >
                       <FaTrash />
@@ -479,31 +485,6 @@ const AdminContributionBoard = ({
           </div>
         </div>
       </div>
-
-      {/* Team Section */}
-      {team && team.length > 0 && (
-        <div className="bg-[#232a34] rounded-xl p-4 border border-blue-500/10 mt-4">
-          <div className="font-bold text-blue-300 mb-2 flex items-center gap-2">
-            <FaUser /> Team Members
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {team.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center gap-2 bg-[#181b23] px-3 py-2 rounded-lg border border-blue-500/10 text-white text-sm"
-              >
-                <img
-                  src={member.avatar}
-                  alt={member.name}
-                  className="w-6 h-6 rounded-full border border-blue-400"
-                />
-                <span>{member.name}</span>
-                <span className="text-xs text-blue-300">{member.role}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Chat and Progress */}
       <div className="flex flex-col lg:flex-row gap-6 mt-6">
