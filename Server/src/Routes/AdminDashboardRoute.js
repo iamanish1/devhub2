@@ -4,6 +4,7 @@ import { AdminDashboardStats } from '../controller/AdminDashboardController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 import { AdminDashboardProjectController, DeleteProjectController, EditProjectController } from '../controller/AdminDashboardProjectController.js';
 import { getAllApplicants, updateApplicantStatus } from '../controller/AdminDashboardApplicants.js';
+import { createProjectTask } from '../controller/AdminProjectTaskController.js';
 
 
 const adminDashboardRoutes = express.Router();
@@ -14,5 +15,6 @@ adminDashboardRoutes.put("/updateproject/:_id", authMiddleware , EditProjectCont
 adminDashboardRoutes.delete("/deleteproject/:id", authMiddleware , DeleteProjectController  )  ;
 adminDashboardRoutes.get("/applicant", authMiddleware , adminAuthenticationMiddleware , getAllApplicants ) ; 
 adminDashboardRoutes.put("/applicant/:id", authMiddleware , adminAuthenticationMiddleware , updateApplicantStatus ) ;
+adminDashboardRoutes.post("/projecttask", authMiddleware , adminAuthenticationMiddleware , createProjectTask  ) ;
 
 export default adminDashboardRoutes;
