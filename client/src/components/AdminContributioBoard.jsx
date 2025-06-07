@@ -109,8 +109,10 @@ const AdminContributionBoard = ({
   const handleTaskFormSubmit = (e) => {
     e.preventDefault();
     if (!taskForm.title.trim()) return;
+
     if (editTask) {
-      // Edit
+      // Edit logic here: call editTask API (not implemented in your code)
+      // Or update local state:
       setTasks((prev) =>
         prev.map((t) =>
           t.id === editTask.id
@@ -121,16 +123,33 @@ const AdminContributionBoard = ({
       if (onTaskEdit)
         onTaskEdit(editTask.id, { ...taskForm, projectId: selectedProjectId });
     } else {
-      // Add
-      const newTask = {
-        id: Date.now(),
-        ...taskForm,
-        status: "todo",
-        projectId: selectedProjectId,
-      };
-      setTasks((prev) => [newTask, ...prev]);
-      if (onTaskAdd) onTaskAdd(newTask);
+      // Create new task via API call
+      axios
+        .post(
+          `http://localhost:8000/api/admin/projecttask`,
+          {
+            task_title: taskForm.title,
+            task_description: taskForm.desc,
+            projectId: selectedProjectId,
+            task_status: "todo", // match backend
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        )
+        .then((res) => {
+          console.log("Created Task:", res.data);
+          setTasks((prev) => [res.data, ...prev]);
+          if (onTaskAdd) onTaskAdd(res.data);
+        })
+        .catch((err) => {
+          console.error("Error creating task:", err);
+        });
     }
+
     setShowTaskModal(false);
     setEditTask(null);
     setTaskForm({ title: "", desc: "" });
@@ -557,7 +576,6 @@ const AdminContributionBoard = ({
         </div>
       </div>
 
-      {/* Task Modal */}
       {showTaskModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <form
@@ -571,6 +589,7 @@ const AdminContributionBoard = ({
               className="rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
               placeholder="Task Title"
               value={taskForm.title}
+              name="title"
               onChange={(e) =>
                 setTaskForm((f) => ({ ...f, title: e.target.value }))
               }
@@ -579,6 +598,7 @@ const AdminContributionBoard = ({
             <textarea
               className="rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
               placeholder="Task Description"
+              name="description"
               value={taskForm.desc}
               onChange={(e) =>
                 setTaskForm((f) => ({ ...f, desc: e.target.value }))
