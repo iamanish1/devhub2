@@ -11,7 +11,7 @@ import LoginAccountPage from "../pages/LoginAccountPage";
 import ProfilePage from "../pages/ProfilePage";
 import EditProfilePage from "../pages/EditProfilePage";
 import AdminPage from "../pages/AdminPage";
-import contributionPage from "../pages/ContributionPage";
+import ContributionPage from "../pages/ContributionPage";
 
 const AppRoutes = () => {
   return (
@@ -30,7 +30,7 @@ const AppRoutes = () => {
         <Route path="/editprofile" element={<EditProfilePage/>}/>
         <Route path="/admin" element={<AdminPage/>}/>
         <Route path="/editproject/:id" element={<ProjectListingPage />} />
-        <Route path = "/contributionPage" element={<contributionPage/>}/>
+        <Route path = "/contributionPage" element={<ContributionPage/>}/>
       </Route>
     </Routes>
   );

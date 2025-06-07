@@ -329,14 +329,16 @@ const BidingPage = () => {
               the team and earn rewards!
             </p>
             {hasBid && hasBid.bid_status === "Accepted" ? (
-              <button
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-800 text-white text-lg rounded-lg hover:from-green-700 hover:to-green-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-green-500/30"
-                onClick={() =>
-                  alert("You are now participating in this project!")
-                }
-              >
-                Participate
-              </button>
+              <Link to="/contributionPage">
+                <button
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-800 text-white text-lg rounded-lg hover:from-green-700 hover:to-green-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-green-500/30"
+                  onClick={() =>
+                    alert("You are now participating in this project!")
+                  }
+                >
+                  Participate
+                </button>
+              </Link>
             ) : hasBid && hasBid.bid_status === "Rejected" ? (
               <div className="p-4 bg-red-900/40 border border-red-500/30 rounded-lg text-red-300 font-semibold text-center">
                 Your bid was{" "}
