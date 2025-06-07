@@ -14,32 +14,13 @@ import {
   FaChevronDown,
   FaRobot,
 } from "react-icons/fa";
-
-// Dummy projects for demonstration
-const dummyProjects = [
-  {
-    id: "p1",
-    title: "AI Chatbot",
-    description: "Build a smart chatbot for customer support.",
-  },
-  {
-    id: "p2",
-    title: "Website Redesign",
-    description: "Modernize the company website UI/UX.",
-  },
-  {
-    id: "p3",
-    title: "API Integration",
-    description: "Integrate third-party APIs for analytics.",
-  },
-];
+import axios from "axios";
 
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
   chat: initialChat = [],
   team = [],
   notes: initialNotes = "",
-  projects = dummyProjects,
   onTaskStatusChange,
   onSendMessage,
   onNotesChange,
@@ -56,11 +37,46 @@ const AdminContributionBoard = ({
   const [showAiTaskModal, setShowAiTaskModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [taskForm, setTaskForm] = useState({ title: "", desc: "" });
-  const [selectedProjectId, setSelectedProjectId] = useState(
-    projects.length > 0 ? projects[0].id : ""
-  );
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState(null);
   const chatEndRef = useRef(null);
+
+  // Fetch projects from API
+  useEffect(() => {
+    setProjectsLoading(true);
+    setProjectsError(null);
+    axios
+      .get("http://localhost:8000/api/admin/myproject", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      .then((res) => {
+        // Only use id, title, description
+        const fetchedProjects = (res.data.projects || []).map((proj) => ({
+          id: proj._id,
+          title: proj.project_Title,
+          description: proj.Project_Description,
+        }));
+        console.log("Fetched Projects:", fetchedProjects);
+        setProjects(fetchedProjects);
+        // Set selected project to first if not already set or if current is not in list
+        if (
+          fetchedProjects.length > 0 &&
+          !fetchedProjects.find((p) => p.id === selectedProjectId)
+        ) {
+          setSelectedProjectId(fetchedProjects[0].id);
+        }
+        if (fetchedProjects.length === 0) setSelectedProjectId("");
+      })
+      .catch(() => setProjectsError("Failed to fetch projects"))
+      .finally(() => setProjectsLoading(false));
+    // eslint-disable-next-line
+  }, []);
 
   // Scroll chat to bottom
   useEffect(() => {
@@ -75,6 +91,7 @@ const AdminContributionBoard = ({
     ) {
       setSelectedProjectId(projects[0].id);
     }
+    if (projects.length === 0) setSelectedProjectId("");
   }, [projects, selectedProjectId]);
 
   // Filter tasks by selected project
@@ -121,7 +138,6 @@ const AdminContributionBoard = ({
 
   // Dummy AI Task Add
   const handleAiTaskAdd = () => {
-    // You can replace this with your AI logic
     const aiTask = {
       id: Date.now(),
       title: "AI Suggested Task",
@@ -193,9 +209,14 @@ const AdminContributionBoard = ({
             className="flex items-center justify-between w-full sm:w-64 bg-[#232a34] border border-blue-500/20 rounded-lg px-3 py-2 text-white text-sm focus:outline-none transition hover:border-blue-400"
             onClick={() => setShowProjectDropdown((v) => !v)}
             type="button"
+            disabled={projectsLoading || projects.length === 0}
           >
             <span className="truncate">
-              {selectedProject ? selectedProject.title : "Select Project"}
+              {projectsLoading
+                ? "Loading..."
+                : selectedProject
+                ? selectedProject.title
+                : "Select Project"}
             </span>
             <FaChevronDown className="ml-2" />
           </button>
@@ -221,12 +242,18 @@ const AdminContributionBoard = ({
                   )}
                 </div>
               ))}
+              {projects.length === 0 && (
+                <div className="px-4 py-2 text-gray-400">No projects found</div>
+              )}
             </div>
           )}
         </div>
       </div>
       {/* Project Info & Add Task Buttons */}
-      {selectedProject && (
+      {projectsError && (
+        <div className="text-red-400 text-sm mb-2">{projectsError}</div>
+      )}
+      {selectedProject && selectedProjectId && (
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-blue-400 font-semibold">
