@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import Navbar from "../components/NavBar";
 import {
   FaGithub,
   FaCheck,
@@ -82,8 +83,10 @@ const ContributionPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] flex flex-col overflow-x-hidden">
+      {/* Navbar */}
+      <Navbar/>
       {/* Project Overview Header */}
-      <header className="bg-[#181b23] border-b border-blue-500/20 px-3 sm:px-4 md:px-8 py-4 sm:py-6 flex flex-col md:flex-row md:items-center md:justify-between shadow-lg gap-4">
+      <header className="bg-[#181b23] mt-[6vmin] border-b border-blue-500/20 px-3 sm:px-4 md:px-8 py-4 sm:py-6 flex flex-col md:flex-row md:items-center md:justify-between shadow-lg gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-blue-400 mb-1 flex items-center gap-2 flex-wrap">
             AI Chatbot System
