@@ -287,18 +287,17 @@ const AdminPage = () => {
           >
             Applicants
           </button>
-           <button
+
+          <button
             className={`text-left px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
-              view === "applicants"
+              view === "contribution"
                 ? "bg-blue-500 text-white shadow"
                 : "hover:bg-blue-500/10 hover:text-blue-400"
             }`}
             onClick={() => setView("contribution")}
           >
-            Contribution 
+            Contribution
           </button>
-
-
         </nav>
       </aside>
 
