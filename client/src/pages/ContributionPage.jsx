@@ -84,7 +84,7 @@ const ContributionPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] flex flex-col overflow-x-hidden">
       {/* Navbar */}
-      <Navbar/>
+      <Navbar />
       {/* Project Overview Header */}
       <header className="bg-[#181b23] mt-[6vmin] border-b border-blue-500/20 px-3 sm:px-4 md:px-8 py-4 sm:py-6 flex flex-col md:flex-row md:items-center md:justify-between shadow-lg gap-4">
         <div className="flex-1 min-w-0">
@@ -371,6 +371,130 @@ const ContributionPage = () => {
             </div>
           </div>
         </aside>
+      </main>
+      <main className="flex-1 flex flex-col lg:flex-row gap-6 md:gap-8 p-2 sm:p-4 md:p-8 w-full overflow-x-hidden">
+        {/* Guidance Section: How to Clone the Repository */}
+        <section className="w-full mb-12">
+          <div className="relative bg-gradient-to-br from-[#1a2233] via-[#232a34] to-[#181b23] rounded-2xl shadow-2xl border border-blue-500/30 p-0 sm:p-0 overflow-hidden flex flex-col md:flex-row items-stretch">
+            {/* Decorative background */}
+            <div className="absolute inset-0 pointer-events-none z-0">
+              <div className="w-full h-full bg-gradient-to-tr from-blue-900/30 via-purple-900/10 to-yellow-700/10 blur-2xl animate-pulse"></div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+              <div className="absolute bottom-0 left-0 w-40 h-40 bg-yellow-400/10 rounded-full blur-2xl"></div>
+            </div>
+            {/* Content */}
+            <div className="flex-1 min-w-0 z-10 p-8 flex flex-col justify-center">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-yellow-400 shadow-lg">
+                  <FaGithub className="text-white text-2xl" />
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-yellow-400 drop-shadow">
+                  Clone & Run the Project Locally
+                </h2>
+              </div>
+              <p className="text-gray-300 text-base mb-6 max-w-2xl">
+                Follow these simple steps to get the project running on your
+                machine. If you’re new to Git or open source, don’t worry—just
+                follow along and you’ll be set up in minutes!
+              </p>
+              <ol className="list-decimal list-inside text-gray-200 text-base space-y-3 mb-6 pl-2">
+                <li>
+                  <span className="font-semibold text-blue-300">
+                    Install Git:
+                  </span>
+                  <span>
+                    {" "}
+                    Download and install Git from{" "}
+                    <a
+                      href="https://git-scm.com/downloads"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 underline hover:text-yellow-400 transition"
+                    >
+                      git-scm.com
+                    </a>
+                    .
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-blue-300">
+                    Open Terminal:
+                  </span>
+                  <span>
+                    {" "}
+                    Use{" "}
+                    <span className="bg-[#181b23] px-2 py-1 rounded text-blue-200 font-mono">
+                      Command Prompt
+                    </span>{" "}
+                    or{" "}
+                    <span className="bg-[#181b23] px-2 py-1 rounded text-blue-200 font-mono">
+                      Git Bash
+                    </span>{" "}
+                    on Windows.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-blue-300">
+                    Clone the Repo:
+                  </span>
+                  <span> Run:</span>
+                  <pre className="bg-gradient-to-r from-blue-900/60 to-blue-700/40 text-blue-200 rounded-lg p-3 mt-2 mb-2 font-mono text-base shadow-inner border border-blue-500/10">
+                    git clone https://github.com/devhubs/ai-chatbot.git
+                  </pre>
+                </li>
+                <li>
+                  <span className="font-semibold text-blue-300">
+                    Navigate to the Project Folder:
+                  </span>
+                  <pre className="bg-gradient-to-r from-blue-900/60 to-blue-700/40 text-blue-200 rounded-lg p-3 mt-2 mb-2 font-mono text-base shadow-inner border border-blue-500/10">
+                    cd ai-chatbot
+                  </pre>
+                </li>
+                <li>
+                  <span className="font-semibold text-blue-300">
+                    Install Dependencies:
+                  </span>
+                  <pre className="bg-gradient-to-r from-blue-900/60 to-blue-700/40 text-blue-200 rounded-lg p-3 mt-2 mb-2 font-mono text-base shadow-inner border border-blue-500/10">
+                    npm install
+                  </pre>
+                </li>
+                <li>
+                  <span className="font-semibold text-blue-300">
+                    Start the Project:
+                  </span>
+                  <pre className="bg-gradient-to-r from-blue-900/60 to-blue-700/40 text-blue-200 rounded-lg p-3 mt-2 mb-2 font-mono text-base shadow-inner border border-blue-500/10">
+                    npm start
+                  </pre>
+                </li>
+              </ol>
+              <div className="flex items-center gap-2 text-gray-400 text-sm bg-[#232a34]/70 rounded-lg px-4 py-2 border border-blue-500/10 shadow-inner">
+                <span className="font-semibold text-blue-300">Tip:</span>
+                If you face any issues, ask in the project chat or check the
+                README in the repository.
+              </div>
+            </div>
+            {/* Video */}
+            <div className="flex-1 min-w-0 flex flex-col items-center justify-center z-10 p-8">
+              <div className="w-full aspect-video max-w-md rounded-xl overflow-hidden border-2 border-blue-500/30 shadow-2xl bg-[#181b23]">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src="https://www.youtube.com/embed/QJ_VkN6R6zE"
+                  title="How to Clone a GitHub Repository (Step by Step)"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                ></iframe>
+              </div>
+              <div className="text-xs text-blue-200 mt-3 text-center font-semibold tracking-wide">
+                <span className="inline-block bg-blue-900/40 px-3 py-1 rounded-full">
+                  Video: How to clone a GitHub repository and run it locally
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Chat for mobile (fixed bottom) */}
