@@ -30,7 +30,7 @@ const AppRoutes = () => {
         <Route path="/editprofile" element={<EditProfilePage/>}/>
         <Route path="/admin/" element={<AdminPage/>}/>
         <Route path="/editproject/:id" element={<ProjectListingPage />} />
-        <Route path = "/contributionPage" element={<ContributionPage/>}/>
+        <Route path = "/contributionPage/:_id" element={<ContributionPage/>}/>
         
       </Route>
     </Routes>

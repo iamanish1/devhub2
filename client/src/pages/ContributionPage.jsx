@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Navbar from "../components/NavBar";
+import { useParams } from "react-router-dom";
 import {
   FaGithub,
   FaCheck,
@@ -10,6 +11,8 @@ import {
   FaRegStickyNote,
   FaPaperPlane,
 } from "react-icons/fa";
+
+import axios from "axios";
 
 // Dummy data
 const tasksMock = [
@@ -54,6 +57,34 @@ const ContributionPage = () => {
   const [notes, setNotes] = useState("Excited to contribute!");
   const [descExpanded, setDescExpanded] = useState(false);
   const chatEndRef = useRef(null);
+
+  const { _id } = useParams();
+
+  // api for the fetching the  task for the specific project
+  useEffect(
+    () => {
+      const fetchTask = async () => {
+        try {
+          const response = await axios.get(
+            `http://localhost:8000/api/admin/getprojecttask/${_id}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          console.log("Fetched Tasks by api on user pannel :", response.data);
+          setTasks(response.data);
+        } catch (error) {
+          console.error("Error fetching tasks:", error);
+        }
+      };
+      fetchTask();
+    },
+    // eslint-disable-next-line
+    []
+  );
 
   // Scroll chat to bottom on new message
   useEffect(() => {
@@ -167,97 +198,107 @@ const ContributionPage = () => {
                 TODO <FaRegStickyNote className="text-blue-400" />
               </h2>
               <div className="space-y-4">
-                {tasks.filter((t) => t.status === "todo").length === 0 && (
+                {tasks.filter((t) => t.task_status === "todo").length === 0 && (
                   <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-blue-500/10">
                     All tasks started!
                   </div>
                 )}
                 {tasks
-                  .filter((t) => t.status === "todo")
+                  .filter((t) => t.task_status === "todo")
                   .map((task) => (
                     <div
-                      key={task.id}
+                      key={task._id}
                       className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 transition hover:scale-[1.02] hover:border-blue-400"
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-white flex items-center gap-2">
                           <FaRegStickyNote className="text-blue-400" />{" "}
-                          {task.title}
+                          {task.task_title}
                         </span>
                         <button
                           className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded transition focus:ring-2 focus:ring-yellow-400"
                           onClick={() =>
-                            updateTaskStatus(task.id, "inprogress")
+                            updateTaskStatus(task._id, "inprogress")
                           }
                           title="Mark as In Progress"
                         >
                           Mark In Progress
                         </button>
                       </div>
-                      <p className="text-gray-300 text-sm mt-1">{task.desc}</p>
+                      <p className="text-gray-300 text-sm mt-1">
+                        {task.task_description}
+                      </p>
                     </div>
                   ))}
               </div>
             </div>
+
             {/* IN PROGRESS */}
             <div className="w-72 md:w-full min-w-[16rem] flex-shrink-0 md:flex-shrink md:min-w-0">
               <h2 className="text-base sm:text-lg font-bold text-purple-300 mb-2 flex items-center gap-1">
                 IN PROGRESS <FaEdit className="text-purple-400" />
               </h2>
               <div className="space-y-4">
-                {tasks.filter((t) => t.status === "inprogress").length ===
+                {tasks.filter((t) => t.task_status === "inprogress").length ===
                   0 && (
                   <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-purple-500/10">
                     No tasks in progress.
                   </div>
                 )}
                 {tasks
-                  .filter((t) => t.status === "inprogress")
+                  .filter((t) => t.task_status === "inprogress")
                   .map((task) => (
                     <div
-                      key={task.id}
+                      key={task._id}
                       className="bg-[#232a34] rounded-xl p-4 shadow border border-purple-500/10 transition hover:scale-[1.02] hover:border-purple-400"
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-white flex items-center gap-2">
-                          <FaEdit className="text-purple-400" /> {task.title}
+                          <FaEdit className="text-purple-400" />{" "}
+                          {task.task_title}
                         </span>
                         <button
                           className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition focus:ring-2 focus:ring-green-400"
-                          onClick={() => updateTaskStatus(task.id, "done")}
+                          onClick={() => updateTaskStatus(task._id, "done")}
                           title="Mark as Done"
                         >
                           Mark as Done
                         </button>
                       </div>
-                      <p className="text-gray-300 text-sm mt-1">{task.desc}</p>
+                      <p className="text-gray-300 text-sm mt-1">
+                        {task.task_description}
+                      </p>
                     </div>
                   ))}
               </div>
             </div>
+
             {/* DONE */}
             <div className="w-72 md:w-full min-w-[16rem] flex-shrink-0 md:flex-shrink md:min-w-0">
               <h2 className="text-base sm:text-lg font-bold text-green-300 mb-2 flex items-center gap-1">
                 DONE <FaCheck className="text-green-400" />
               </h2>
               <div className="space-y-4">
-                {tasks.filter((t) => t.status === "done").length === 0 && (
+                {tasks.filter((t) => t.task_status === "done").length === 0 && (
                   <div className="text-gray-500 text-sm text-center py-4 bg-[#232a34] rounded-xl border border-green-500/10">
                     No tasks done yet.
                   </div>
                 )}
                 {tasks
-                  .filter((t) => t.status === "done")
+                  .filter((t) => t.task_status === "done")
                   .map((task) => (
                     <div
-                      key={task.id}
+                      key={task._id}
                       className="bg-[#232a34] rounded-xl p-4 shadow border border-green-500/10 flex items-center justify-between transition hover:scale-[1.0] hover:border-green-400"
                     >
                       <div>
                         <span className="font-semibold text-white flex items-center gap-2">
-                          <FaCheck className="text-green-400" /> {task.title}
+                          <FaCheck className="text-green-400" />{" "}
+                          {task.task_title}
                         </span>
-                        <p className="text-gray-300 text-sm">{task.desc}</p>
+                        <p className="text-gray-300 text-sm">
+                          {task.task_description}
+                        </p>
                       </div>
                     </div>
                   ))}

@@ -329,7 +329,7 @@ const BidingPage = () => {
               the team and earn rewards!
             </p>
             {hasBid && hasBid.bid_status === "Accepted" ? (
-              <Link to="/contributionPage">
+              <Link to={`/contributionPage/${_id}`}>
                 <button
                   className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-800 text-white text-lg rounded-lg hover:from-green-700 hover:to-green-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-green-500/30"
                   onClick={() =>
