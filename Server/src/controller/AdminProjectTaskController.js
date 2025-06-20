@@ -50,3 +50,34 @@ export const getProjectTasks = async (req, res) => {
         res.status(500).json({ message: "Internal server error" || error.message });
     }
 }
+
+// Update a project tasl status function  : 
+
+export const updateProjectTaskStatus = async (req, res)=>{
+    try {
+        const { taskId } = req.params; // Get task ID from request parameters
+        const { task_status } = req.body; // Get new status from request body
+
+        // Validate required fields
+        if (!taskId || !task_status) {
+            return res.status(400).json({ message: "Task ID and status are required." });
+        }
+
+        // Update the task status
+        const updatedTask = await ProjectTask.findByIdAndUpdate(
+            taskId,
+            { task_status },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedTask) {
+            return res.status(404).json({ message: "Task not found." });
+        }
+
+        res.status(200).json({ message: "Task status updated successfully", task: updatedTask });
+        
+    } catch (error) {
+        console.error("Error updating project task status:", error);
+        res.status(500).json({ message: "Internal server error" || error.message });
+    }
+}
