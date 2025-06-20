@@ -1,5 +1,5 @@
 import ProjectTask from "../Model/ProjectTaskModel.js";
-
+import { firestoreDb } from "../config/firebaseAdmin.js";
 export const createProjectTask = async (req, res) => {
     try {
 
@@ -73,6 +73,22 @@ export const updateProjectTaskStatus = async (req, res)=>{
         if (!updatedTask) {
             return res.status(404).json({ message: "Task not found." });
         }
+
+        // Sync the updated task status to Firestore
+        await firestoreDb
+            .collection("project_tasks")
+            .doc(taskId)
+            .set(
+                {
+                    task_status: updatedTask.task_status,
+                    updated_at: new Date(),
+                },
+                { merge: true } // This will create the document if it doesn't exist
+            );
+        console.log("Firestore Sync Data:", {
+            task_status: updatedTask.task_status,
+            updated_at: new Date(),
+        });
 
         res.status(200).json({ message: "Task status updated successfully", task: updatedTask });
         

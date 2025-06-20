@@ -11,6 +11,9 @@ import {
   FaRegStickyNote,
   FaPaperPlane,
 } from "react-icons/fa";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "../Config/firebase";
+
 
 import axios from "axios";
 
@@ -58,9 +61,24 @@ const ContributionPage = () => {
   const [descExpanded, setDescExpanded] = useState(false);
   const chatEndRef = useRef(null);
 
-  const { _id } = useParams();
+  const { _id  } = useParams();
 
-
+ useEffect(() => {
+    if (!_id) return;
+    // Listen for real-time updates for tasks of this project
+    const q = query(
+      collection(db, "project_tasks"),
+      where("projectId", "==", _id)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tasks = snapshot.docs.map(doc => ({
+        _id: doc.id,
+        ...doc.data(),
+      }));
+      setTasks(tasks);
+    });
+    return () => unsubscribe();
+  }, [_id]);
 
   // api for the fetching the  task for the specific project
   useEffect(
