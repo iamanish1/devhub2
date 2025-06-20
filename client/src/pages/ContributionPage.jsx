@@ -60,6 +60,8 @@ const ContributionPage = () => {
 
   const { _id } = useParams();
 
+
+
   // api for the fetching the  task for the specific project
   useEffect(
     () => {
@@ -92,10 +94,25 @@ const ContributionPage = () => {
   }, [chat]);
 
   // Task status update handler
-  const updateTaskStatus = (id, newStatus) => {
-    setTasks((tasks) =>
-      tasks.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
-    );
+  const updateTaskStatus = async(taskId, newStatus) => {
+    try {
+      const response = await axios.put(
+        `http://localhost:8000/api/admin/updatedprojecttask/${taskId}`,
+        { task_status: newStatus },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      console.log("Task status updated:", response.data);
+      setTasks((tasks) =>
+        tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+      );
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
   };
 
   // Chat send handler
