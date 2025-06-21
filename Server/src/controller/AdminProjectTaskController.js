@@ -97,3 +97,33 @@ export const updateProjectTaskStatus = async (req, res)=>{
         res.status(500).json({ message: "Internal server error" || error.message });
     }
 }
+
+
+// Delete a project task function :
+
+export const deleteProjectTask = async (req, res) => {
+    try {
+        const { taskId } = req.params; // Get task ID from request parameters
+
+        // Validate required fields
+        if (!taskId) {
+            return res.status(400).json({ message: "Task ID is required." });
+        }
+
+        // Delete the task
+        const deletedTask = await ProjectTask.findByIdAndDelete(taskId);
+
+        if (!deletedTask) {
+            return res.status(404).json({ message: "Task not found." });
+        }
+
+        // Also delete the task from Firestore
+        await firestoreDb.collection("project_tasks").doc(taskId).delete();
+
+        res.status(200).json({ message: "Task deleted successfully" });
+        
+    } catch (error) {
+        console.error("Error deleting project task:", error);
+        res.status(500).json({ message: "Internal server error" || error.message });
+    }
+}
