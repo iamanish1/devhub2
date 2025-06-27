@@ -16,6 +16,8 @@ import {
   FaRobot,
 } from "react-icons/fa";
 import axios from "axios";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "../Config/firebase";
 
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
@@ -79,27 +81,39 @@ const AdminContributionBoard = ({
     // eslint-disable-next-line
   }, []);
 
-  //    This useeffect is used for to get the task detail .
   useEffect(() => {
-    const fetchTask = async () => {
-      if (!selectedProjectId) return;
-      try {
-        const response = await axios.get(
-          `http://localhost:8000/api/admin/getprojecttask/${selectedProjectId}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
+    if (!selectedProjectId) return;
+    console.log(
+      "Setting up Firestore listener for project:",
+      selectedProjectId
+    );
+    const q = query(
+      collection(db, "project_tasks"),
+      where("projectId", "==", selectedProjectId)
+    );
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const tasksData = [];
+      if (querySnapshot.empty) {
+        console.log(
+          "No tasks found in Firestore for project:",
+          selectedProjectId
         );
-        console.log("Fetched Tasks by api :", response.data);
-        setTasks(response.data);
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
+        setTasks([]);
+        return;
       }
+      querySnapshot.forEach((doc) => {
+        tasksData.push({ id: doc.id, ...doc.data() });
+      });
+      console.log("Fetched tasks from Firestore:", tasksData);
+      setTasks(tasksData);
+    });
+    return () => {
+      console.log(
+        "Unsubscribing Firestore listener for project:",
+        selectedProjectId
+      );
+      unsubscribe();
     };
-    fetchTask();
   }, [selectedProjectId]);
 
   // Scroll chat to bottom
