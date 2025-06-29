@@ -81,6 +81,7 @@ const AdminContributionBoard = ({
     // eslint-disable-next-line
   }, []);
 
+  // Firestore real-time listener for tasks
   useEffect(() => {
     if (!selectedProjectId) return;
     console.log(
@@ -136,40 +137,53 @@ const AdminContributionBoard = ({
   const filteredTasks = tasks.filter((t) => t.projectId === selectedProjectId);
 
   // Task status update
-  const updateTaskStatus = (id, newStatus) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
-    );
-    if (onTaskStatusChange) onTaskStatusChange(id, newStatus);
+  const updateTaskStatus = async (id, newStatus) => {
+    try {
+      const task = tasks.find((t) => t.id === id || t._id === id);
+      if (!task) return;
+      const res = await axios.put(
+        `http://localhost:8000/api/admin/editprojecttask/${id}`,
+        {
+          task_title: task.task_title,
+          task_description: task.task_description,
+          task_status: newStatus,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      console.log("Updated Task Status:", res.data);
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === id || t._id === id ? { ...t, task_status: newStatus } : t
+        )
+      );
+      if (onTaskStatusChange) onTaskStatusChange(id, newStatus);
+    } catch (err) {
+      console.error("Error updating task status:", err);
+      alert("Failed to update task status.");
+    }
   };
 
   // Add/Edit Task
-  const handleTaskFormSubmit = (e) => {
+  const handleTaskFormSubmit = async (e) => {
     e.preventDefault();
     if (!taskForm.title.trim()) return;
 
     if (editTask) {
-      // Edit logic here: call editTask API (not implemented in your code)
-      // Or update local state:
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === editTask.id
-            ? { ...t, ...taskForm, projectId: selectedProjectId }
-            : t
-        )
-      );
-      if (onTaskEdit)
-        onTaskEdit(editTask.id, { ...taskForm, projectId: selectedProjectId });
-    } else {
-      // Create new task via API call
-      axios
-        .post(
-          `http://localhost:8000/api/admin/projecttask`,
+      // Edit logic: call update API
+      try {
+        const res = await axios.put(
+          `http://localhost:8000/api/admin/editprojecttask/${
+            editTask.id || editTask._id
+          }`,
           {
             task_title: taskForm.title,
             task_description: taskForm.desc,
-            projectId: selectedProjectId,
-            task_status: "todo", // match backend
+            task_status: editTask.task_status,
           },
           {
             headers: {
@@ -177,15 +191,55 @@ const AdminContributionBoard = ({
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
           }
-        )
-        .then((res) => {
-          console.log("Created Task:", res.data);
-          setTasks((prev) => [res.data, ...prev]);
-          if (onTaskAdd) onTaskAdd(res.data);
-        })
-        .catch((err) => {
-          console.error("Error creating task:", err);
-        });
+        );
+        console.log("Updated Task:", res.data);
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === (editTask.id || editTask._id)
+              ? {
+                  ...t,
+                  task_title: taskForm.title,
+                  task_description: taskForm.desc,
+                }
+              : t
+          )
+        );
+        if (onTaskEdit)
+          onTaskEdit(editTask.id || editTask._id, {
+            ...taskForm,
+            projectId: selectedProjectId,
+          });
+      } catch (err) {
+        console.error("Error updating task:", err);
+        alert("Failed to update task.");
+        return;
+      }
+    } else {
+      // Create new task via API call
+      try {
+        const res = await axios.post(
+          `http://localhost:8000/api/admin/projecttask`,
+          {
+            task_title: taskForm.title,
+            task_description: taskForm.desc,
+            projectId: selectedProjectId,
+            task_status: "todo",
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        console.log("Created Task:", res.data);
+        setTasks((prev) => [res.data, ...prev]);
+        if (onTaskAdd) onTaskAdd(res.data);
+      } catch (err) {
+        console.error("Error creating task:", err);
+        alert("Failed to create task.");
+        return;
+      }
     }
 
     setShowTaskModal(false);
@@ -234,7 +288,7 @@ const AdminContributionBoard = ({
   // Open modal for edit/add
   const openEditModal = (task) => {
     setEditTask(task);
-    setTaskForm({ title: task.title, desc: task.desc });
+    setTaskForm({ title: task.task_title, desc: task.task_description });
     setShowTaskModal(true);
   };
   const openAddModal = () => {
@@ -260,7 +314,9 @@ const AdminContributionBoard = ({
   };
 
   // Progress
-  const doneCount = filteredTasks.filter((t) => t.status === "done").length;
+  const doneCount = filteredTasks.filter(
+    (t) => t.task_status === "done"
+  ).length;
   const totalCount = filteredTasks.length;
   const progress =
     totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
@@ -375,7 +431,7 @@ const AdminContributionBoard = ({
               .filter((t) => t.task_status === "todo")
               .map((task) => (
                 <div
-                  key={task._id}
+                  key={task.id || task._id}
                   className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 transition hover:scale-[1.01] hover:border-blue-400 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
@@ -386,7 +442,9 @@ const AdminContributionBoard = ({
                     <div className="flex gap-1">
                       <button
                         className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded transition"
-                        onClick={() => updateTaskStatus(task._id, "inprogress")}
+                        onClick={() =>
+                          updateTaskStatus(task.id || task._id, "inprogress")
+                        }
                         title="Mark In Progress"
                       >
                         In Progress
@@ -431,7 +489,7 @@ const AdminContributionBoard = ({
               .filter((t) => t.task_status === "inprogress")
               .map((task) => (
                 <div
-                  key={task._id}
+                  key={task.id || task._id}
                   className="bg-[#232a34] rounded-xl p-4 shadow border border-purple-500/10 transition hover:scale-[1.01] hover:border-purple-400 flex flex-col gap-2"
                 >
                   <div className="flex items-center justify-between">
@@ -441,7 +499,9 @@ const AdminContributionBoard = ({
                     <div className="flex gap-1">
                       <button
                         className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition"
-                        onClick={() => updateTaskStatus(task._id, "done")}
+                        onClick={() =>
+                          updateTaskStatus(task.id || task._id, "done")
+                        }
                         title="Mark as Done"
                       >
                         Done
@@ -485,7 +545,7 @@ const AdminContributionBoard = ({
               .filter((t) => t.task_status === "done")
               .map((task) => (
                 <div
-                  key={task._id}
+                  key={task.id || task._id}
                   className="bg-[#232a34] rounded-xl p-4 shadow border border-green-500/10 flex items-center justify-between transition hover:scale-[1.01] hover:border-green-400"
                 >
                   <div>

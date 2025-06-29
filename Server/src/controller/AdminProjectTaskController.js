@@ -149,3 +149,54 @@ export const deleteProjectTask = async (req, res) => {
     res.status(500).json({ message: "Internal server error" || error.message });
   }
 };
+
+//  for updating the task details of any task :
+export const updateProjectTaskDetails = async (req, res) => {
+  try {
+    const { taskId } = req.params; // Get task ID from request parameters
+    const { task_title, task_description, task_status } = req.body; // Get new details from request body
+
+    // Validate required fields
+    if (!taskId || !task_title || !task_description) {
+      return res.status(400).json({
+        message: "Task ID, title, and description are required.",
+      });
+    }
+
+    // Update the task details
+    const updatedTask = await ProjectTask.findByIdAndUpdate(
+      taskId,
+      { task_title, task_description, task_status },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    // Sync the updated task details to Firestore
+    await firestoreDb.collection("project_tasks").doc(taskId).set(
+      {
+        task_title: updatedTask.task_title,
+        task_description: updatedTask.task_description,
+        task_status: updatedTask.task_status,
+        updated_at: new Date(),
+        projectId: updatedTask.projectId.toString(), // <-- Add this line!
+      },
+      { merge: true } // This will create the document if it doesn't exist
+    );
+    console.log("Firestore Sync Data:", {
+      task_title: updatedTask.task_title,
+      task_description: updatedTask.task_description,
+      task_status: updatedTask.task_status,
+      updated_at: new Date(),
+    });
+
+    res
+      .status(200)
+      .json({ message: "Task details updated successfully", task: updatedTask });
+  } catch (error) {
+    console.error("Error updating project task details:", error);
+    res.status(500).json({ message: "Internal server error" || error.message });
+  }
+}
