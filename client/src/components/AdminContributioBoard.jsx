@@ -136,37 +136,6 @@ const AdminContributionBoard = ({
   // Filter tasks by selected project
   const filteredTasks = tasks.filter((t) => t.projectId === selectedProjectId);
 
-  // Task status update
-  const updateTaskStatus = async (id, newStatus) => {
-    try {
-      const task = tasks.find((t) => t.id === id || t._id === id);
-      if (!task) return;
-      const res = await axios.put(
-        `http://localhost:8000/api/admin/editprojecttask/${id}`,
-        {
-          task_title: task.task_title,
-          task_description: task.task_description,
-          task_status: newStatus,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      console.log("Updated Task Status:", res.data);
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id || t._id === id ? { ...t, task_status: newStatus } : t
-        )
-      );
-      if (onTaskStatusChange) onTaskStatusChange(id, newStatus);
-    } catch (err) {
-      console.error("Error updating task status:", err);
-      alert("Failed to update task status.");
-    }
-  };
 
   // Add/Edit Task
   const handleTaskFormSubmit = async (e) => {
@@ -442,9 +411,9 @@ const AdminContributionBoard = ({
                     <div className="flex gap-1">
                       <button
                         className="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded transition"
-                        onClick={() =>
-                          updateTaskStatus(task.id || task._id, "inprogress")
-                        }
+                        // onClick={() =>
+                        //   updateTaskStatus(task.id || task._id, "inprogress")
+                        // }
                         title="Mark In Progress"
                       >
                         In Progress
@@ -499,9 +468,9 @@ const AdminContributionBoard = ({
                     <div className="flex gap-1">
                       <button
                         className="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded transition"
-                        onClick={() =>
-                          updateTaskStatus(task.id || task._id, "done")
-                        }
+                        // onClick={() =>
+                        //   updateTaskStatus(task.id || task._id, "done")
+                        // }
                         title="Mark as Done"
                       >
                         Done
