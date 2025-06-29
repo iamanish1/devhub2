@@ -208,9 +208,27 @@ const AdminContributionBoard = ({
   };
 
   // Delete Task
-  const handleTaskDelete = (id) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-    if (onTaskDelete) onTaskDelete(id);
+  const handleTaskDelete = async (id) => {
+    if (!id) return;
+    try {
+      const res = await axios.delete(
+        `http://localhost:8000/api/admin/deleteprojecttask/${id}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      console.log("Deleted Task:", res.data);
+      setTasks((prev) => prev.filter((t) => t.id !== id && t._id !== id));
+      if (onTaskDelete) onTaskDelete(id);
+      setEditTask(null);
+      setTaskForm({ title: "", desc: "" });
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      alert("Failed to delete task.");
+    }
   };
 
   // Open modal for edit/add
@@ -382,7 +400,7 @@ const AdminContributionBoard = ({
                       </button>
                       <button
                         className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
-                        onClick={() => handleTaskDelete(task._id)}
+                        onClick={() => handleTaskDelete(task.id || task._id)}
                         title="Delete"
                       >
                         <FaTrash />
@@ -437,7 +455,7 @@ const AdminContributionBoard = ({
                       </button>
                       <button
                         className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
-                        onClick={() => handleTaskDelete(task._id)}
+                        onClick={() => handleTaskDelete(task.id || task._id)}
                         title="Delete"
                       >
                         <FaTrash />
@@ -488,7 +506,7 @@ const AdminContributionBoard = ({
                     </button>
                     <button
                       className="text-xs bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-white"
-                      onClick={() => handleTaskDelete(task._id)}
+                      onClick={() => handleTaskDelete(task.id || task._id)}
                       title="Delete"
                     >
                       <FaTrash />
