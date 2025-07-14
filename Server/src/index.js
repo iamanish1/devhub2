@@ -9,10 +9,14 @@ import biddingRoutes from "./Routes/BiddingRoutes.js";
 import adminDashboardRoutes from "./Routes/AdminDashboardRoute.js";
 import http from "http";
 import { Server } from "socket.io";
+import chatSocket from "./sockets/chatSockte.js"; // Import the chat socket
 
+// Initialize express app and server
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+
 
 app.use(express.json());
 app.use(cookieParser());
@@ -31,6 +35,9 @@ app.use("/api", userRoute) ;
 app.use("/api/project", projectRoutes) ; 
 app.use("/api/bid", biddingRoutes) ;
 app.use("/api/admin", adminDashboardRoutes) ; 
+
+// Initialize chat socket
+chatSocket(io);
 
 const port = process.env.PORT || 5000;
 connectDb();
