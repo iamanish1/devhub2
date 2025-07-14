@@ -7,8 +7,12 @@ import userRoute from "./Routes/userRoutes.js";
 import projectRoutes from "./Routes/ProjectListingRoutes.js";
 import biddingRoutes from "./Routes/BiddingRoutes.js";
 import adminDashboardRoutes from "./Routes/AdminDashboardRoute.js";
+import http from "http";
+import { Server } from "socket.io";
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
 app.use(express.json());
 app.use(cookieParser());
