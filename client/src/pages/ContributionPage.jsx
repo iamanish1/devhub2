@@ -13,9 +13,13 @@ import {
 } from "react-icons/fa";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../Config/firebase";
-
+import io from "socket.io-client";
 
 import axios from "axios";
+
+const Socket_URl =
+  import.meta.env.VITE_SOCKET_SERVER || "http://localhost:8000";
+console.log("Socket URL:", Socket_URl);
 
 // Dummy data
 const tasksMock = [
@@ -60,10 +64,11 @@ const ContributionPage = () => {
   const [notes, setNotes] = useState("Excited to contribute!");
   const [descExpanded, setDescExpanded] = useState(false);
   const chatEndRef = useRef(null);
+  const socket = useRef(null);
 
-  const { _id  } = useParams();
+  const { _id } = useParams();
 
- useEffect(() => {
+  useEffect(() => {
     if (!_id) return;
     // Listen for real-time updates for tasks of this project
     const q = query(
@@ -71,7 +76,7 @@ const ContributionPage = () => {
       where("projectId", "==", _id)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const tasks = snapshot.docs.map(doc => ({
+      const tasks = snapshot.docs.map((doc) => ({
         _id: doc.id,
         ...doc.data(),
       }));
@@ -111,8 +116,37 @@ const ContributionPage = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
 
+  // Initialize socket connection
+  useEffect(() => {
+    if (!_id) return;
+    socket.current = io(Socket_URl, {
+      auth: { token: localStorage.getItem("token") },
+    });
+
+    socket.current.on("connect", () => {
+      console.log("✅ Socket connected! ID:", socket.current.id);
+    });
+
+    socket.current.on("connect_error", (err) => {
+      console.error("❌ Socket connection error:", err.message);
+    });
+
+    socket.current.emit("joinRoom", _id);
+
+    socket.current.on("receiveMessage", (msg) => {
+      setChat((prev) => [...prev, msg]);
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+
+    return () => {
+      if (socket.current) {
+        socket.current.disconnect();
+      }
+    };
+  }, [_id]);
+
   // Task status update handler
-  const updateTaskStatus = async(taskId, newStatus) => {
+  const updateTaskStatus = async (taskId, newStatus) => {
     try {
       const response = await axios.put(
         `http://localhost:8000/api/admin/updatedprojecttask/${taskId}`,
@@ -135,8 +169,12 @@ const ContributionPage = () => {
 
   // Chat send handler
   const sendMessage = () => {
-    if (message.trim()) {
-      setChat([...chat, { sender: "me", text: message }]);
+    if (message.trim() && socket.current) {
+      socket.current.emit("sendMessage", {
+        projectId: _id,
+        senderId: localStorage.getItem("userId"), // or however you store user ID
+        text: message,
+      });
       setMessage("");
     }
   };
