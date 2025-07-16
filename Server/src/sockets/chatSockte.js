@@ -12,7 +12,7 @@ const chatSocket = (io) => {
     socket.on("sendMessage", async ({ projectId, senderId, text }) => {
       const chat = new Chat({
         projectId,
-        senderId,
+       senderID: senderId,
         text,
         timestamp: new Date(),
       });
