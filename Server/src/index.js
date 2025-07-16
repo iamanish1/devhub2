@@ -10,6 +10,7 @@ import adminDashboardRoutes from "./Routes/AdminDashboardRoute.js";
 import http from "http";
 import { Server } from "socket.io";
 import chatSocket from "./sockets/chatSockte.js"; // Import the chat socket
+import chatRoutes from "./Routes/ChatRoutes.js";
 
 // Initialize express app and server
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api", userRoute) ;
 app.use("/api/project", projectRoutes) ; 
 app.use("/api/bid", biddingRoutes) ;
 app.use("/api/admin", adminDashboardRoutes) ; 
+app.use("/api/project",chatRoutes);
 
 // Initialize chat socket
 chatSocket(io);
