@@ -12,6 +12,8 @@ import { Server } from "socket.io";
 import chatSocket from "./sockets/chatSockte.js"; // Import the chat socket
 import chatRoutes from "./Routes/ChatRoutes.js";
 
+dotenv.config();
+
 // Initialize express app and server
 const app = express();
 const server = http.createServer(app);
@@ -27,7 +29,6 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(cookieParser());
 
-dotenv.config();
 
 const CorsOption = {
   origin: process.env.CLIENT_URL,

@@ -1,48 +1,30 @@
 import admin from "firebase-admin";
 import { createRequire } from "module";
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithCustomToken } from "firebase/auth";
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 
-dotenv.config(); // Load environment variables from.env file
+dotenv.config();
 
 const require = createRequire(import.meta.url);
 const serviceAccount = require("./firebase.json");
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-// Firebase Client SDK Config
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY, // Replace with your Firebase API Key
-  authDomain: process.env.AUTH_DOMAIN,
-  projectId: process.env.PROJECT_ID,
-};
-
-
-// Initialize Firebase Client SDK
-const clientApp = initializeApp(firebaseConfig);
-const clientAuth = getAuth(clientApp);
+// Initialize Firebase Admin SDK (only once)
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 /**
- * Generate a Firebase ID Token for testing
+ * Generate a Firebase Custom Token for testing
  * @param {string} uid - Unique user identifier
- * @returns {Promise<string>} - Firebase ID Token
+ * @returns {Promise<string>} - Firebase Custom Token
  */
-export const generateFirebaseIdToken = async (uid = "test-github-user") => {
+export const generateFirebaseCustomToken = async (uid = "test-github-user") => {
   try {
-    // Step 1: Generate Custom Token
     const customToken = await admin.auth().createCustomToken(uid);
-
-    // Step 2: Exchange Custom Token for ID Token
-    const userCredential = await signInWithCustomToken(clientAuth, customToken);
-    const idToken = await userCredential.user.getIdToken();
-
-    return idToken;
+    return customToken;
   } catch (error) {
-    console.error("Error generating Firebase ID Token:", error);
+    console.error("Error generating Firebase Custom Token:", error);
     return null;
   }
 };
@@ -51,6 +33,6 @@ export const generateFirebaseIdToken = async (uid = "test-github-user") => {
 export default admin;
 
 // Example Usage
-generateFirebaseIdToken().then((token) => {
-  console.log("Firebase ID Token for Testing:", token);
+generateFirebaseCustomToken().then((token) => {
+  console.log("Firebase Custom Token for Testing:", token);
 });

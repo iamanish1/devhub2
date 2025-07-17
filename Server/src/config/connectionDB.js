@@ -4,6 +4,7 @@ export const DB_NAME = "DataBase";
 
 // CONNECTION STRING
 const connectDb = async () => {
+  console.log("MONGODB_URI: " + process.env.MONGODB_URI);
   try {
     await mongoose.connect(
       `${process.env.MONGODB_URI}/${DB_NAME}`,
