@@ -16,6 +16,7 @@ import { db } from "../Config/firebase";
 import io from "socket.io-client";
 
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const Socket_URl =
   import.meta.env.VITE_SOCKET_SERVER || "http://localhost:8000";
@@ -65,6 +66,7 @@ const ContributionPage = () => {
   const [descExpanded, setDescExpanded] = useState(false);
   const chatEndRef = useRef(null);
   const socket = useRef(null);
+  const { user } = useAuth();
 
   const { _id } = useParams();
 
@@ -136,6 +138,7 @@ const ContributionPage = () => {
     socket.current.on("receiveMessage", (msg) => {
       setChat((prev) => [...prev, msg]);
       chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      console.log("Received message:", msg);
     });
 
     return () => {
@@ -169,10 +172,10 @@ const ContributionPage = () => {
 
   // Chat send handler
   const sendMessage = () => {
-    if (message.trim() && socket.current) {
+    if (message.trim() && socket.current && user?._id) {
       socket.current.emit("sendMessage", {
         projectId: _id,
-        senderId: localStorage.getItem("userId"), // or however you store user ID
+        senderId: user._id,
         text: message,
       });
       setMessage("");
@@ -383,62 +386,104 @@ const ContributionPage = () => {
         {/* Sidebar: Chat & Progress */}
         <aside className="w-full lg:w-96 flex flex-col gap-6 md:gap-8 min-w-0">
           {/* Chat Panel */}
-          <div className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 flex flex-col h-72 sm:h-80">
-            <div className="flex items-center gap-2 mb-2">
-              <FaComments className="text-blue-400" />
-              <span className="font-bold text-white text-sm sm:text-base">
-                Chat with Owner / Mentor
-              </span>
+          <div className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 flex flex-col h-80 sm:h-96 relative">
+            {/* Chat Header */}
+            <div className="flex items-center gap-3 mb-3 pb-2 border-b border-blue-500/10">
               <img
                 src={mentor.avatar}
                 alt="Mentor"
-                className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-blue-400 ml-2"
+                className="w-7 h-7 rounded-full border-2 border-blue-400 shadow"
               />
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="font-bold text-white text-base truncate">{mentor.name}</span>
+                <span className="text-xs text-blue-300">Mentor <span className="ml-2 inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse" title="Online"></span></span>
+              </div>
+              <FaComments className="text-blue-400 text-xl" />
             </div>
-            <div className="flex-1 overflow-y-auto space-y-2 mb-2">
-              {chat.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${
-                    msg.sender === "me"
-                      ? "justify-end"
-                      : msg.sender === "mentor"
-                      ? "justify-start"
-                      : "justify-center"
-                  }`}
-                >
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-2 scrollbar-thin scrollbar-thumb-blue-900/40 scrollbar-track-transparent transition-all hide-scrollbar">
+              {chat.map((msg, idx) => {
+                const isMe = user && msg.senderID === user._id;
+                const isAdmin = msg.senderRole === "admin";
+                let bubbleColor = isAdmin
+                  ? "bg-gradient-to-br from-green-600 to-green-400 text-white"
+                  : isMe
+                  ? "bg-gradient-to-br from-pink-500 to-pink-400 text-white"
+                  : "bg-gradient-to-br from-blue-600 to-blue-500 text-white";
+                // Alignment: self right, others left
+                const alignment = isMe ? "justify-end" : "justify-start";
+                const bubbleAlign = isMe ? "items-end" : "items-start";
+                const bubbleRadius = isMe ? "rounded-br-md rounded-tl-2xl rounded-bl-2xl" : "rounded-bl-md rounded-tr-2xl rounded-br-2xl";
+                return (
                   <div
-                    className={`px-3 py-2 rounded-lg max-w-xs text-sm ${
-                      msg.sender === "me"
-                        ? "bg-blue-600 text-white"
-                        : msg.sender === "mentor"
-                        ? "bg-gray-700 text-blue-200"
-                        : "bg-purple-700 text-white"
-                    }`}
+                    key={idx}
+                    className={`flex w-full ${alignment} mb-1`}
                   >
-                    {msg.text}
+                    {/* Avatar for others/admin, optional for self */}
+                    {!isMe && (
+                      <img
+                        src={isAdmin ? "https://ui-avatars.com/api/?name=Admin" : `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName || "User")}`}
+                        alt={msg.senderName}
+                        className="w-7 h-7 rounded-full border border-blue-400 shadow-sm mr-2 self-end hidden sm:block"
+                      />
+                    )}
+                    <div className={`flex flex-col ${bubbleAlign} max-w-[90%] sm:max-w-[70%] w-fit`}>
+                      {/* Sender name and role */}
+                      <div className={`flex items-center gap-2 mb-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                        <span className="text-xs font-semibold text-blue-200">
+                          {isMe ? "You" : msg.senderName || (isAdmin ? "Admin" : "User")}
+                        </span>
+                        {isAdmin && (
+                          <span className="ml-1 px-2 py-0.5 bg-green-700 text-green-200 text-[10px] rounded-full font-bold uppercase">Admin</span>
+                        )}
+                      </div>
+                      {/* Message bubble */}
+                      <div
+                        className={`px-4 py-2 ${bubbleRadius} max-w-full text-sm shadow-md transition-all ${bubbleColor} break-words`}
+                      >
+                        {msg.text}
+                      </div>
+                    </div>
+                    {/* Avatar for self (optional, usually omitted) */}
+                    {isMe && (
+                      <img
+                        src={user?.photoURL || `https://ui-avatars.com/api/?name=You`}
+                        alt="You"
+                        className="w-7 h-7 rounded-full border border-pink-400 shadow-sm ml-2 self-end hidden sm:block"
+                      />
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={chatEndRef} />
             </div>
-            <div className="flex gap-2 mt-2">
+            {/* Chat Input */}
+            <form
+              className="flex gap-2 mt-2 pt-2 border-t border-blue-500/10 bg-[#232a34] sticky bottom-0 z-10 w-full"
+              onSubmit={e => {
+                e.preventDefault();
+                sendMessage();
+              }}
+              autoComplete="off"
+            >
               <input
-                className="flex-1 rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
+                className="flex-1 rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm focus:ring-2 focus:ring-blue-400 transition min-w-0"
                 placeholder="Type a message..."
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                onChange={e => setMessage(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
                 aria-label="Type a message"
+                disabled={false}
               />
               <button
-                className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg transition focus:ring-2 focus:ring-blue-400 flex items-center"
-                onClick={sendMessage}
+                type="submit"
+                className={`bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition focus:ring-2 focus:ring-blue-400 flex items-center shadow disabled:opacity-50 disabled:cursor-not-allowed`}
+                disabled={!message.trim()}
                 aria-label="Send message"
               >
                 <FaPaperPlane />
               </button>
-            </div>
+            </form>
           </div>
 
           {/* Progress & Notes */}
