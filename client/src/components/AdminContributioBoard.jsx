@@ -18,6 +18,10 @@ import {
 import axios from "axios";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../Config/firebase";
+import io from "socket.io-client";
+import { useAuth } from "../context/AuthContext";
+const Socket_URl =
+  import.meta.env.VITE_SOCKET_SERVER || "http://localhost:8000";
 
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
@@ -46,6 +50,8 @@ const AdminContributionBoard = ({
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
   const chatEndRef = useRef(null);
+  const socket = useRef(null);
+  const { user } = useAuth();
 
   // Fetch projects from API
   useEffect(() => {
@@ -114,6 +120,31 @@ const AdminContributionBoard = ({
         selectedProjectId
       );
       unsubscribe();
+    };
+  }, [selectedProjectId]);
+
+  // Socket connection and room join
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    socket.current = io(Socket_URl, {
+      auth: { token: localStorage.getItem("token") },
+    });
+    socket.current.on("connect", () => {
+      console.log("✅ Admin Socket connected! ID:", socket.current.id);
+    });
+    socket.current.on("connect_error", (err) => {
+      console.error("❌ Admin Socket connection error:", err.message);
+    });
+    socket.current.emit("joinRoom", selectedProjectId);
+    socket.current.on("receiveMessage", (msg) => {
+      setChat((prev) => [...prev, msg]);
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      console.log("Admin received message:", msg);
+    });
+    return () => {
+      if (socket.current) {
+        socket.current.disconnect();
+      }
     };
   }, [selectedProjectId]);
 
@@ -266,13 +297,18 @@ const AdminContributionBoard = ({
     setShowTaskModal(true);
   };
 
-  // Chat send
+  // Send message via socket
   const sendMessage = () => {
-    if (message.trim()) {
-      const newMsg = { sender: "admin", text: message };
-      setChat((prev) => [...prev, newMsg]);
+    if (message.trim() && socket.current && user?._id) {
+      const msgObj = {
+        projectId: selectedProjectId,
+        senderID: user._id,
+        senderRole: user.role || "admin",
+        senderName: user.name || "Admin",
+        text: message,
+      };
+      socket.current.emit("sendMessage", msgObj);
       setMessage("");
-      if (onSendMessage) onSendMessage(newMsg);
     }
   };
 
@@ -557,50 +593,87 @@ const AdminContributionBoard = ({
               Team Chat
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto space-y-2 mb-2">
-            {chat.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${
-                  msg.sender === "admin"
-                    ? "justify-end"
-                    : msg.sender === "mentor"
-                    ? "justify-start"
-                    : "justify-center"
-                }`}
-              >
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-2 scrollbar-thin scrollbar-thumb-blue-900/40 scrollbar-track-transparent transition-all hide-scrollbar">
+            {chat.map((msg, idx) => {
+              const isMe = user && msg.senderID === user._id;
+              const isAdmin = msg.senderRole === "admin";
+              let bubbleColor = isAdmin
+                ? "bg-gradient-to-br from-green-600 to-green-400 text-white"
+                : isMe
+                ? "bg-gradient-to-br from-pink-500 to-pink-400 text-white"
+                : "bg-gradient-to-br from-blue-600 to-blue-500 text-white";
+              const alignment = isMe ? "justify-end" : "justify-start";
+              const bubbleAlign = isMe ? "items-end" : "items-start";
+              const bubbleRadius = isMe ? "rounded-br-md rounded-tl-2xl rounded-bl-2xl" : "rounded-bl-md rounded-tr-2xl rounded-br-2xl";
+              return (
                 <div
-                  className={`px-3 py-2 rounded-lg max-w-xs text-sm ${
-                    msg.sender === "admin"
-                      ? "bg-blue-600 text-white"
-                      : msg.sender === "mentor"
-                      ? "bg-gray-700 text-blue-200"
-                      : "bg-purple-700 text-white"
-                  }`}
+                  key={idx}
+                  className={`flex w-full ${alignment} mb-1`}
                 >
-                  {msg.text}
+                  {/* Avatar for others/admin, optional for self */}
+                  {!isMe && (
+                    <img
+                      src={isAdmin ? "https://ui-avatars.com/api/?name=Admin" : `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName || "User")}`}
+                      alt={msg.senderName}
+                      className="w-7 h-7 rounded-full border border-blue-400 shadow-sm mr-2 self-end hidden sm:block"
+                    />
+                  )}
+                  <div className={`flex flex-col ${bubbleAlign} max-w-[90%] sm:max-w-[70%] w-fit`}>
+                    {/* Sender name and role */}
+                    <div className={`flex items-center gap-2 mb-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                      <span className="text-xs font-semibold text-blue-200">
+                        {isMe ? "You" : msg.senderName || (isAdmin ? "Admin" : "User")}
+                      </span>
+                      {isAdmin && (
+                        <span className="ml-1 px-2 py-0.5 bg-green-700 text-green-200 text-[10px] rounded-full font-bold uppercase">Admin</span>
+                      )}
+                    </div>
+                    {/* Message bubble */}
+                    <div
+                      className={`px-4 py-2 ${bubbleRadius} max-w-full text-sm shadow-md transition-all ${bubbleColor} break-words`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                  {/* Avatar for self (optional, usually omitted) */}
+                  {isMe && (
+                    <img
+                      src={user?.photoURL || `https://ui-avatars.com/api/?name=You`}
+                      alt="You"
+                      className="w-7 h-7 rounded-full border border-pink-400 shadow-sm ml-2 self-end hidden sm:block"
+                    />
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={chatEndRef} />
           </div>
-          <div className="flex gap-2 mt-2">
+          <form
+            className="flex gap-2 mt-2 pt-2 border-t border-blue-500/10 bg-[#232a34] sticky bottom-0 z-10 w-full"
+            onSubmit={e => {
+              e.preventDefault();
+              sendMessage();
+            }}
+            autoComplete="off"
+          >
             <input
-              className="flex-1 rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
+              className="flex-1 rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm focus:ring-2 focus:ring-blue-400 transition min-w-0"
               placeholder="Type a message..."
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              onChange={e => setMessage(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
               aria-label="Type a message"
+              disabled={false}
             />
             <button
-              className="bg-blue-500 hover:bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg transition focus:ring-2 focus:ring-blue-400 flex items-center"
-              onClick={sendMessage}
+              type="submit"
+              className={`bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition focus:ring-2 focus:ring-blue-400 flex items-center shadow disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={!message.trim()}
               aria-label="Send message"
             >
               <FaPaperPlane />
             </button>
-          </div>
+          </form>
         </div>
         {/* Progress & Notes */}
         <div className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 flex-1 min-w-0 mt-6 lg:mt-0">
