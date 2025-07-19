@@ -61,6 +61,7 @@ const messagesMock = [
 const ContributionPage = () => {
   const [tasks, setTasks] = useState(tasksMock);
   const [chat, setChat] = useState(messagesMock);
+  const [project, setProject] = useState();
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState("Excited to contribute!");
   const [descExpanded, setDescExpanded] = useState(false);
@@ -69,6 +70,27 @@ const ContributionPage = () => {
   const { user } = useAuth();
 
   const { _id } = useParams();
+
+  //  Fetaching project by id 
+   
+useEffect(()=>{
+  const fetchproject = async()=>{
+    try{
+      const response = await axios.get(`http://localhost:8000/api/project/getlistproject/${_id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      console.log("Fetched project by id :", response.data);
+      setProject(response.data);
+    }
+    catch (error){
+      console.error("Error fetching project by id :", error);
+    }
+  }
+  fetchproject();
+} , [_id])
 
   useEffect(() => {
     if (!_id) return;
@@ -606,7 +628,8 @@ const ContributionPage = () => {
                   <span className="font-semibold text-blue-300">
                     Open Terminal:
                   </span>
-                  <span>
+                  <span>Jane Doe
+
                     {" "}
                     Use{" "}
                     <span className="bg-[#181b23] px-2 py-1 rounded text-blue-200 font-mono">
