@@ -71,26 +71,28 @@ const ContributionPage = () => {
 
   const { _id } = useParams();
 
-  //  Fetaching project by id 
-   
-useEffect(()=>{
-  const fetchproject = async()=>{
-    try{
-      const response = await axios.get(`http://localhost:8000/api/project/getlistproject/${_id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-      console.log("Fetched project by id :", response.data);
-      setProject(response.data);
-    }
-    catch (error){
-      console.error("Error fetching project by id :", error);
-    }
-  }
-  fetchproject();
-} , [_id])
+  //  Fetaching project by id
+
+  useEffect(() => {
+    const fetchproject = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:8000/api/project/getlistproject/${_id}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        console.log("Fetched project by id :", response.data);
+        setProject(response.data);
+      } catch (error) {
+        console.error("Error fetching project by id :", error);
+      }
+    };
+    fetchproject();
+  }, [_id]);
 
   useEffect(() => {
     if (!_id) return;
@@ -147,9 +149,10 @@ useEffect(()=>{
       })
       .then((res) => {
         // Normalize messages to match chat panel expectations
-        const normalized = (res.data || []).map(msg => ({
+        const normalized = (res.data || []).map((msg) => ({
           senderID: msg.senderID || msg.sender || "",
-          senderRole: msg.senderRole || (msg.sender === "admin" ? "admin" : "user"),
+          senderRole:
+            msg.senderRole || (msg.sender === "admin" ? "admin" : "user"),
           senderName: msg.senderName || msg.sender || "User",
           text: msg.text || msg.message || "",
           // ...add any other fields as needed
@@ -245,7 +248,7 @@ useEffect(()=>{
       <header className="bg-[#181b23] mt-[6vmin] border-b border-blue-500/20 px-3 sm:px-4 md:px-8 py-4 sm:py-6 flex flex-col md:flex-row md:items-center md:justify-between shadow-lg gap-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold text-blue-400 mb-1 flex items-center gap-2 flex-wrap">
-            AI Chatbot System
+            {project?.project.project_Title}
             <span className="ml-2 text-xs bg-blue-900/40 text-blue-300 px-2 py-1 rounded-full">
               Open
             </span>
@@ -253,21 +256,29 @@ useEffect(()=>{
           <div className="text-gray-300 max-w-xl relative text-sm sm:text-base">
             <span>
               {descExpanded
-                ? "Build a smart chatbot for customer support. Integrate with our API and deploy to production. This project aims to automate responses, improve customer satisfaction, and reduce manual workload. You'll work with a modern stack and collaborate with experienced mentors."
-                : "Build a smart chatbot for customer support. Integrate with our API and deploy to production."}
+                ? project?.project.Project_Description
+                : project?.project.Project_Description
+                ? project.project.Project_Description.slice(0, 120) +
+                  (project.project.Project_Description.length > 120
+                    ? "..."
+                    : "")
+                : "No description available."}
             </span>
-            <button
-              className="ml-2 text-blue-400 hover:underline text-xs"
-              onClick={() => setDescExpanded((v) => !v)}
-              aria-label={descExpanded ? "Show less" : "Show more"}
-            >
-              {descExpanded ? "Show less" : "Show more"}
-            </button>
+            {project?.project.Project_Description &&
+              project.project.Project_Description.length > 120 && (
+                <button
+                  className="ml-2 text-blue-400 hover:underline text-xs"
+                  onClick={() => setDescExpanded((v) => !v)}
+                  aria-label={descExpanded ? "Show less" : "Show more"}
+                >
+                  {descExpanded ? "Show less" : "Show more"}
+                </button>
+              )}
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 flex-shrink-0 w-full sm:w-auto">
           <a
-            href="https://github.com/devhubs/ai-chatbot"
+            href={project?.project.Project_gitHub_link}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg shadow transition focus:ring-2 focus:ring-blue-400 text-sm sm:text-base w-full sm:w-auto justify-center"
@@ -444,8 +455,16 @@ useEffect(()=>{
                 className="w-7 h-7 rounded-full border-2 border-blue-400 shadow"
               />
               <div className="flex flex-col flex-1 min-w-0">
-                <span className="font-bold text-white text-base truncate">{mentor.name}</span>
-                <span className="text-xs text-blue-300">Mentor <span className="ml-2 inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse" title="Online"></span></span>
+                <span className="font-bold text-white text-base truncate">
+                  {mentor.name}
+                </span>
+                <span className="text-xs text-blue-300">
+                  Mentor{" "}
+                  <span
+                    className="ml-2 inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"
+                    title="Online"
+                  ></span>
+                </span>
               </div>
               <FaComments className="text-blue-400 text-xl" />
             </div>
@@ -462,28 +481,43 @@ useEffect(()=>{
                 // Alignment: self right, others left
                 const alignment = isMe ? "justify-end" : "justify-start";
                 const bubbleAlign = isMe ? "items-end" : "items-start";
-                const bubbleRadius = isMe ? "rounded-br-md rounded-tl-2xl rounded-bl-2xl" : "rounded-bl-md rounded-tr-2xl rounded-br-2xl";
+                const bubbleRadius = isMe
+                  ? "rounded-br-md rounded-tl-2xl rounded-bl-2xl"
+                  : "rounded-bl-md rounded-tr-2xl rounded-br-2xl";
                 return (
-                  <div
-                    key={idx}
-                    className={`flex w-full ${alignment} mb-1`}
-                  >
+                  <div key={idx} className={`flex w-full ${alignment} mb-1`}>
                     {/* Avatar for others/admin, optional for self */}
                     {!isMe && (
                       <img
-                        src={isAdmin ? "https://ui-avatars.com/api/?name=Admin" : `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName || "User")}`}
+                        src={
+                          isAdmin
+                            ? "https://ui-avatars.com/api/?name=Admin"
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                msg.senderName || "User"
+                              )}`
+                        }
                         alt={msg.senderName}
                         className="w-7 h-7 rounded-full border border-blue-400 shadow-sm mr-2 self-end hidden sm:block"
                       />
                     )}
-                    <div className={`flex flex-col ${bubbleAlign} max-w-[90%] sm:max-w-[70%] w-fit`}>
+                    <div
+                      className={`flex flex-col ${bubbleAlign} max-w-[90%] sm:max-w-[70%] w-fit`}
+                    >
                       {/* Sender name and role */}
-                      <div className={`flex items-center gap-2 mb-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`flex items-center gap-2 mb-0.5 ${
+                          isMe ? "justify-end" : "justify-start"
+                        }`}
+                      >
                         <span className="text-xs font-semibold text-blue-200">
-                          {isMe ? "You" : msg.senderName || (isAdmin ? "Admin" : "User")}
+                          {isMe
+                            ? "You"
+                            : msg.senderName || (isAdmin ? "Admin" : "User")}
                         </span>
                         {isAdmin && (
-                          <span className="ml-1 px-2 py-0.5 bg-green-700 text-green-200 text-[10px] rounded-full font-bold uppercase">Admin</span>
+                          <span className="ml-1 px-2 py-0.5 bg-green-700 text-green-200 text-[10px] rounded-full font-bold uppercase">
+                            Admin
+                          </span>
                         )}
                       </div>
                       {/* Message bubble */}
@@ -496,7 +530,10 @@ useEffect(()=>{
                     {/* Avatar for self (optional, usually omitted) */}
                     {isMe && (
                       <img
-                        src={user?.photoURL || `https://ui-avatars.com/api/?name=You`}
+                        src={
+                          user?.photoURL ||
+                          `https://ui-avatars.com/api/?name=You`
+                        }
                         alt="You"
                         className="w-7 h-7 rounded-full border border-pink-400 shadow-sm ml-2 self-end hidden sm:block"
                       />
@@ -509,7 +546,7 @@ useEffect(()=>{
             {/* Chat Input */}
             <form
               className="flex gap-2 mt-2 pt-2 border-t border-blue-500/10 bg-[#232a34] sticky bottom-0 z-10 w-full"
-              onSubmit={e => {
+              onSubmit={(e) => {
                 e.preventDefault();
                 sendMessage();
               }}
@@ -519,8 +556,10 @@ useEffect(()=>{
                 className="flex-1 rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm focus:ring-2 focus:ring-blue-400 transition min-w-0"
                 placeholder="Type a message..."
                 value={message}
-                onChange={e => setMessage(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && !e.shiftKey && sendMessage()
+                }
                 aria-label="Type a message"
                 disabled={false}
               />
@@ -628,10 +667,8 @@ useEffect(()=>{
                   <span className="font-semibold text-blue-300">
                     Open Terminal:
                   </span>
-                  <span>Jane Doe
-
-                    {" "}
-                    Use{" "}
+                  <span>
+                    Jane Doe Use{" "}
                     <span className="bg-[#181b23] px-2 py-1 rounded text-blue-200 font-mono">
                       Command Prompt
                     </span>{" "}
