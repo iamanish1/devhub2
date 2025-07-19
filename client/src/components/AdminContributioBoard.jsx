@@ -123,6 +123,33 @@ const AdminContributionBoard = ({
     };
   }, [selectedProjectId]);
 
+  // Fetch chat history for the selected project
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    axios
+      .get(`http://localhost:8000/api/project/chat/${selectedProjectId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      .then((res) => {
+        // Normalize messages to match chat panel expectations
+        const normalized = (res.data || []).map(msg => ({
+          senderID: msg.senderID || msg.sender || "",
+          senderRole: msg.senderRole || (msg.sender === "admin" ? "admin" : "user"),
+          senderName: msg.senderName || msg.sender || "User",
+          text: msg.text || msg.message || "",
+          // ...add any other fields as needed
+        }));
+        setChat(normalized);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch chat history:", err);
+        setChat([]);
+      });
+  }, [selectedProjectId]);
+
   // Socket connection and room join
   useEffect(() => {
     if (!selectedProjectId) return;

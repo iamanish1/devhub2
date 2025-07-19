@@ -113,6 +113,33 @@ const ContributionPage = () => {
     []
   );
 
+  // Fetch chat history for the selected project
+  useEffect(() => {
+    if (!_id) return;
+    axios
+      .get(`http://localhost:8000/api/project/chat/${_id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      .then((res) => {
+        // Normalize messages to match chat panel expectations
+        const normalized = (res.data || []).map(msg => ({
+          senderID: msg.senderID || msg.sender || "",
+          senderRole: msg.senderRole || (msg.sender === "admin" ? "admin" : "user"),
+          senderName: msg.senderName || msg.sender || "User",
+          text: msg.text || msg.message || "",
+          // ...add any other fields as needed
+        }));
+        setChat(normalized);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch chat history:", err);
+        setChat([]);
+      });
+  }, [_id]);
+
   // Scroll chat to bottom on new message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
