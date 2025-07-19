@@ -70,6 +70,8 @@ const ContributionPage = () => {
   const { user } = useAuth();
 
   const { _id } = useParams();
+  const [savedNotes, setSavedNotes] = useState([]);
+  const [noteSaved, setNoteSaved] = useState(false);
 
   //  Fetaching project by id
 
@@ -109,6 +111,49 @@ const ContributionPage = () => {
       setTasks(tasks);
     });
     return () => unsubscribe();
+  }, [_id]);
+
+  //  for handel note sumbit in progress pannel
+  const handleAddNote = async () => {
+    try {
+      const res = await axios.post(
+        `http://localhost:8000/api/notes/usernotes/${_id}`,
+        { note: notes }, // send only the new note
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      setSavedNotes(res.data.notes || []); // update with new notes array from backend
+      setNotes(""); // clear textarea
+      setNoteSaved(true);
+      setTimeout(() => setNoteSaved(false), 1500);
+    } catch (err) {
+      console.error("Failed to save note:", err);
+    }
+  };
+
+  // get notes from database
+  useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:8000/api/notes/getusernotes/${_id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setSavedNotes(res.data.notes || []);
+      } catch (err) {
+        setSavedNotes([]);
+        console.error("Failed to fetch notes:", err);
+      }
+    };
+    if (_id) fetchNotes();
   }, [_id]);
 
   // api for the fetching the  task for the specific project
@@ -573,8 +618,8 @@ const ContributionPage = () => {
               </button>
             </form>
           </div>
-
           {/* Progress & Notes */}
+
           <div className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10">
             <div className="flex items-center gap-2 mb-2">
               <FaBars className="text-yellow-400" />
@@ -615,6 +660,38 @@ const ContributionPage = () => {
                 placeholder="Share your progress or blockers..."
                 aria-label="Notes"
               />
+              <button
+                className={`mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                onClick={handleAddNote}
+                disabled={!notes.trim()}
+                type="button"
+              >
+                <FaPaperPlane className="animate-pulse" />
+                Add Note
+              </button>
+              {noteSaved && (
+                <div className="text-green-400 text-xs mt-2 animate-fade-in">
+                  Note saved!
+                </div>
+              )}
+              {/* Show all notes */}
+              <div className="mt-4 space-y-2 max-h-32 overflow-y-auto">
+                {savedNotes.length > 0 ? (
+                  savedNotes.map((n, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 bg-blue-900/20 rounded text-blue-200 text-xs"
+                    >
+                      <span className="font-semibold text-blue-400">
+                        Note {idx + 1}:
+                      </span>{" "}
+                      {n}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-400 text-xs">No notes yet.</div>
+                )}
+              </div>
             </div>
           </div>
         </aside>

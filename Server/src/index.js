@@ -11,6 +11,7 @@ import http from "http";
 import { Server } from "socket.io";
 import chatSocket from "./sockets/chatSockte.js"; // Import the chat socket
 import chatRoutes from "./Routes/ChatRoutes.js";
+import userNoteRoute from "./Routes/UserNotesRoute.js";
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use("/api/project", projectRoutes) ;
 app.use("/api/bid", biddingRoutes) ;
 app.use("/api/admin", adminDashboardRoutes) ; 
 app.use("/api/project",chatRoutes);
+app.use("/api/notes", userNoteRoute ) ; 
 
 // Initialize chat socket
 chatSocket(io);
