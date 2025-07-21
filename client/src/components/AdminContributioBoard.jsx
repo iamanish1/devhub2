@@ -703,45 +703,7 @@ const AdminContributionBoard = ({
           </form>
         </div>
         {/* Progress & Notes */}
-        <div className="bg-[#232a34] rounded-xl p-4 shadow border border-blue-500/10 flex-1 min-w-0 mt-6 lg:mt-0">
-          <div className="flex items-center gap-2 mb-2">
-            <FaBars className="text-yellow-400" />
-            <span className="font-bold text-white text-sm sm:text-base">
-              Progress Tracker
-            </span>
-          </div>
-          <div className="mb-2">
-            <div className="flex justify-between text-xs sm:text-sm text-gray-300 mb-1">
-              <span>
-                Tasks Done: {doneCount}/{totalCount}
-              </span>
-              <span>{progress}%</span>
-            </div>
-            <div
-              className="w-full bg-gray-700 rounded-full h-2"
-              aria-label="Progress bar"
-            >
-              <div
-                className="bg-gradient-to-r from-blue-400 to-green-400 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              ></div>
-            </div>
-          </div>
-          <div className="mt-4">
-            <label className="text-gray-400 text-xs mb-1 block" htmlFor="notes">
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              className="w-full rounded-lg px-3 py-2 bg-[#181b23] text-white border border-blue-500/20 focus:outline-none text-sm"
-              rows={2}
-              value={notes}
-              onChange={handleNotesChange}
-              placeholder="Share progress or blockers..."
-              aria-label="Notes"
-            />
-          </div>
-        </div>
+
       </div>
 
       {showTaskModal && (

@@ -53,14 +53,31 @@ export const getUserNotes = async (req, res) => {
   }
 };
 
-// delete notes
+// delete  user note functionality based on senderId
+
 export const deleteUserNote = async (req, res) => {
   const { projectId } = req.params;
+  const { senderId } = req.query; // Assuming senderId is passed in query
   try {
-    await UserNote.deleteOne({ projectId });
-    return res.status(200).json({ message: "Notes deleted successfully" });
+    const userNote = await UserNote.findOne({ projectId });
+    if (!userNote) {
+      return res.status(404).json({ message: "User note not found" });
+    }
+    // Filter out the note by senderId
+    userNote.notes = userNote.notes.filter(
+      (note) => note.senderId.toString() !== senderId
+    );
+    await userNote.save();
+    return res
+      .status(200)
+      .json({
+        message: "User note deleted successfully",
+        notes: userNote.notes,
+      });
   } catch (error) {
-    console.error("Error deleting user notes:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("Error deleting user note:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };

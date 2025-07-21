@@ -296,7 +296,7 @@ const AdminPage = () => {
             }`}
             onClick={() => setView("contribution")}
           >
-            Contribution
+            Project Management 
           </button>
         </nav>
       </aside>

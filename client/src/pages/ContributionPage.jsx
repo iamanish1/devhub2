@@ -14,6 +14,7 @@ import {
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../Config/firebase";
 import io from "socket.io-client";
+import { IoTrashBin } from "react-icons/io5";
 
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
@@ -23,26 +24,7 @@ const Socket_URl =
 console.log("Socket URL:", Socket_URl);
 
 // Dummy data
-const tasksMock = [
-  {
-    id: 1,
-    title: "Setup project locally",
-    desc: "Clone and run the repo",
-    status: "todo",
-  },
-  {
-    id: 2,
-    title: "Fix login bug",
-    desc: "Resolve login API error",
-    status: "inprogress",
-  },
-  {
-    id: 3,
-    title: "Write unit tests",
-    desc: "Add tests for user module",
-    status: "done",
-  },
-];
+
 
 const mentor = {
   name: "Jane Doe",
@@ -52,15 +34,11 @@ const mentor = {
   email: "jane.doe@devhubs.com",
 };
 
-const messagesMock = [
-  { sender: "mentor", text: "Welcome! Let me know if you need help." },
-  { sender: "owner", text: "Hi! Please update your progress here." },
-  { sender: "me", text: "Thanks! Starting with setup." },
-];
+
 
 const ContributionPage = () => {
-  const [tasks, setTasks] = useState(tasksMock);
-  const [chat, setChat] = useState(messagesMock);
+  const [tasks, setTasks] = useState([]);
+  const [chat, setChat] = useState([]);
   const [project, setProject] = useState();
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState("Excited to contribute!");
@@ -282,6 +260,24 @@ const ContributionPage = () => {
     }
   };
 
+  //  progress section notes deletion function 
+  const handleDeleteNote = async () => {
+  try {
+    const res = await axios.delete(
+      `http://localhost:8000/api/notes/deleteusernote/${_id}/?senderId=${user._id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+    setSavedNotes(res.data.notes || []);
+  } catch (error) {
+    console.error("Failed to delete note:", error);
+  }
+};
+
+
   // Progress calculation
   const doneCount = tasks.filter((t) => t.status === "done").length;
   const totalCount = tasks.length;
@@ -334,39 +330,6 @@ const ContributionPage = () => {
           >
             <FaGithub /> Clone Project
           </a>
-          <div className="flex items-center gap-2 bg-[#232a34] px-2 sm:px-3 py-2 rounded-lg shadow border border-blue-500/10 w-full sm:w-auto">
-            <img
-              src={mentor.avatar}
-              alt="Owner"
-              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-blue-400"
-            />
-            <span className="text-white font-semibold truncate">
-              {mentor.name}
-            </span>
-            <span className="text-xs text-gray-400 hidden sm:inline">
-              (Owner)
-            </span>
-            <div className="relative group">
-              <FaInfoCircle className="text-blue-300 ml-2 cursor-pointer" />
-              <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-56 bg-[#232a34] text-xs text-gray-200 rounded-lg shadow-lg p-3 border border-blue-500/20 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition z-20">
-                <div className="font-bold text-blue-400 mb-1">
-                  {mentor.name}
-                </div>
-                <div>{mentor.bio}</div>
-                <div className="mt-1 text-blue-300">
-                  Expertise: {mentor.expertise}
-                </div>
-                <div className="mt-1 text-blue-200">
-                  <a
-                    href={`mailto:${mentor.email}`}
-                    className="hover:underline"
-                  >
-                    {mentor.email}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </header>
 
@@ -504,10 +467,10 @@ const ContributionPage = () => {
               />
               <div className="flex flex-col flex-1 min-w-0">
                 <span className="font-bold text-white text-base truncate">
-                  {mentor.name}
+                 Chat with Team 
                 </span>
                 <span className="text-xs text-blue-300">
-                  Mentor{" "}
+                Admin{" "}
                   <span
                     className="ml-2 inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"
                     title="Online"
@@ -663,7 +626,8 @@ const ContributionPage = () => {
                 placeholder="Share your progress or blockers..."
                 aria-label="Notes"
               />
-              <button
+              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+               <button
                 className={`mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed`}
                 onClick={handleAddNote}
                 disabled={!notes.trim()}
@@ -672,6 +636,17 @@ const ContributionPage = () => {
                 <FaPaperPlane className="animate-pulse" />
                 Add Note
               </button>
+              <button
+                className={`mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-400 text-white font-semibold shadow transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                onClick={() => handleDeleteNote(savedNotes._id)}
+                disabled={!notes.trim()}
+                type="button"
+              >
+                <IoTrashBin className="animate-pulse" />
+                Delete Note
+              </button>
+              </div>
+              
               {noteSaved && (
                 <div className="text-green-400 text-xs mt-2 animate-fade-in">
                   Note saved!
@@ -803,9 +778,8 @@ const ContributionPage = () => {
                 <iframe
                   width="100%"
                   height="100%"
-                  src="https://www.youtube.com/embed/QJ_VkN6R6zE"
+                  src="https://www.youtube.com/embed/BMtximK--BQ"
                   title="How to Clone a GitHub Repository (Step by Step)"
-                  frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   className="w-full h-full"
