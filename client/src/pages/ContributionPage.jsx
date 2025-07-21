@@ -118,7 +118,7 @@ const ContributionPage = () => {
     try {
       const res = await axios.post(
         `http://localhost:8000/api/notes/usernotes/${_id}`,
-        { note: notes }, // send only the new note
+        { note: notes, senderId: user?._id }, // send only the new note
         {
           headers: {
             "Content-Type": "application/json",
@@ -140,7 +140,7 @@ const ContributionPage = () => {
     const fetchNotes = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:8000/api/notes/getusernotes/${_id}`,
+          `http://localhost:8000/api/notes/getusernotes/${_id}?senderId=${user?._id}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -148,13 +148,16 @@ const ContributionPage = () => {
           }
         );
         setSavedNotes(res.data.notes || []);
+        console.log("Fetched notes:", res.data.notes);
       } catch (err) {
         setSavedNotes([]);
         console.error("Failed to fetch notes:", err);
       }
     };
-    if (_id) fetchNotes();
-  }, [_id]);
+
+    if (_id && user?._id) fetchNotes();
+    
+  }, [_id , user?._id]);
 
   // api for the fetching the  task for the specific project
   useEffect(
@@ -675,23 +678,21 @@ const ContributionPage = () => {
                 </div>
               )}
               {/* Show all notes */}
-              <div className="mt-4 space-y-2 max-h-32 overflow-y-auto">
-                {savedNotes.length > 0 ? (
-                  savedNotes.map((n, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2 bg-blue-900/20 rounded text-blue-200 text-xs"
-                    >
-                      <span className="font-semibold text-blue-400">
-                        Note {idx + 1}:
-                      </span>{" "}
-                      {n}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-gray-400 text-xs">No notes yet.</div>
-                )}
-              </div>
+              {savedNotes.length > 0 ? (
+                savedNotes.map((n, idx) => (
+                  <div
+                    key={n._id || idx}
+                    className="p-2 bg-blue-900/20 rounded text-blue-200 text-xs"
+                  >
+                    <span className="font-semibold text-blue-400">
+                      Note {idx + 1}:
+                    </span>{" "}
+                    {n.text}
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-400 text-xs">No notes yet.</div>
+              )}
             </div>
           </div>
         </aside>
