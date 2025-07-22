@@ -611,14 +611,14 @@ const LandingPage = () => {
                 mentorship opportunities.
               </p>
               <div className="flex space-x-4">
-                <a href="#" className="hover:text-blue-400">
+                <a href="https://www.linkedin.com/company/devhubs2-0/?viewAsMember=true" className="hover:text-blue-400">
                   LinkedIn
                 </a>
                 <a href="#" className="hover:text-blue-400">
                   GitHub
                 </a>
-                <a href="#" className="hover:text-blue-400">
-                  X / Twitter
+                <a href="https://youtube.com/@devhubs-yt?si=aKGZbo0r03R_q-dO" className="hover:text-blue-400">
+                  YouTube
                 </a>
               </div>
             </div>
