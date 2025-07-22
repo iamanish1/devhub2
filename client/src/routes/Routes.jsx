@@ -12,6 +12,13 @@ import ProfilePage from "../pages/ProfilePage";
 import EditProfilePage from "../pages/EditProfilePage";
 import AdminPage from "../pages/AdminPage";
 import ContributionPage from "../pages/ContributionPage";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
+import TermsOfService from "../pages/TermsofServicePage";
+import CookiePolicy from "../pages/CookiePolicy";
+import CommunityGuidelines from "../pages/CommunityGuideline";
+import Careers from "../pages/CarrerPage";
+import Blog from "../pages/BlogPage";
+import Contact from "../pages/ContactPage";
 
 const AppRoutes = () => {
   return (
@@ -20,6 +27,13 @@ const AppRoutes = () => {
       <Route path="/createaccount" element={<Authenticationpage />} />
       <Route path="/loginaccount" element={<LoginAccountPage />} />
       <Route path="/about" element={<AboutPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-and-service" element={<TermsOfService/>}/>
+      <Route path="/cookie-policy" element={<CookiePolicy/>}/>
+      <Route path="/community-guidelines" element={<CommunityGuidelines/>}/>
+      <Route path="/careers" element={<Careers/>}/>
+      <Route path="/blog" element={<Blog/>}/>
+      <Route path="/contact" element={<Contact/>}/>
 
       <Route element={<ProtectedRoute />}>
         <Route path="/listproject" element={<ProjectListingPage />} />
