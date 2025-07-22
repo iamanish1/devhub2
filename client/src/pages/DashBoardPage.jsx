@@ -39,7 +39,7 @@ const DashboardPage = () => {
       <Navbar />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col md:flex-row">
+      <div className="flex-1 flex flex-col md:flex-row mt-[6vmin]">
         {/* Mobile Filter Toggle */}
         <button
           onClick={toggleMobileFilter}
@@ -139,25 +139,26 @@ const DashboardPage = () => {
             {/* Budget Range Filter */}
             <div className="filter-group">
               <label className="block text-[#00A8E8] mb-2 font-medium">
-                Project Budget
+                Starting Bid 
               </label>
               <select className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors">
-                <option>Above 1k</option>
-                <option>Between 1k-10k</option>
-                <option>Between 10k-50k</option>
-                <option>Above 50k</option>
+                <option>Micro Budget (Below ₹500)</option>
+                <option>Low Budget (₹500 - ₹2,000)</option>
+                <option>Medium Budget (₹2,000 - ₹10,000)</option>
+                <option>High Budget (₹10,000+)</option>
               </select>
             </div>
 
-            {/* Experience Level Filter */}
+            {/* Based on Contributors = number of people required for project */}
             <div className="filter-group">
               <label className="block text-[#00A8E8] mb-2 font-medium">
-                Experience Level
+                Number of Contributors
               </label>
               <select className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors">
-                <option>Fresher Developer</option>
-                <option>Junior Developer</option>
-                <option>Senior Developer</option>
+                <option>Solo (1 Contributor)</option>
+                <option>Small Team (2-4 Contributors)</option>
+                <option>Medium Team (5-10 Contributors)</option>
+                <option>Large Team (10+ Contributors)</option>
               </select>
             </div>
 
@@ -169,7 +170,7 @@ const DashboardPage = () => {
         </aside>
 
         {/* Projects Grid Section */}
-        <main className="flex-1 p-4 mt-[6vmin] md:p-6 overflow-hidden flex flex-col">
+        <main className="flex-1 p-4 mt-[0vmin] md:p-6 overflow-hidden flex flex-col">
           {/* Header with search */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
             <h1 className="text-2xl md:text-3xl font-bold text-white mb-4 md:mb-0">
