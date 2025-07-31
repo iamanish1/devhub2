@@ -74,10 +74,10 @@ export default ListProject;
 
 export const getProject = async (req, res) => {
   try {
-    const { techStack, budget, contributor } = req.query;
+    const { techStack, budget, contributor , search } = req.query;
 
     // If no query param is provided at all, fetch all projects
-    if (!techStack && !budget && !contributor) {
+    if (!techStack && !budget && !contributor && !search) {
       const allProjects = await ProjectListing.find();
       return res.status(200).json({
         message: "All projects fetched successfully",
@@ -85,8 +85,14 @@ export const getProject = async (req, res) => {
       });
     }
 
-    const filter = {};
-
+    const filter = {};   
+    // search filter
+    if (search && search !== "") {
+      filter.project_Title = {
+        $regex: search,
+        $options: "i", // makes it case-insensitive
+      };
+    }
     //  techStack filter
     if (techStack && techStack !== "") {
       const techArray = techStack.split(",");

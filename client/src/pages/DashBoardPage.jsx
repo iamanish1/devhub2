@@ -10,11 +10,7 @@ const DashboardPage = () => {
   const [selectedTechStack, setSelectedTechStack] = useState("");
   const [selectedBudget, setSelectedBudget] = useState("");
   const [selectedContributor, setSelectedContributor] = useState("");
-  const [filter, setFilter] = useState({
-    techStack: "",
-    budget: "",
-    contributor: "",
-  });
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -24,6 +20,9 @@ const DashboardPage = () => {
   const handleFilterProjects = async () => {
     try {
       const params = new URLSearchParams();
+      if (searchTerm) {
+        params.append("search", searchTerm); // 🔥 Add this line
+      }
       if (selectedTechStack) {
         params.append("techStack", selectedTechStack);
       }
@@ -53,23 +52,29 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        const params = {
+          search: searchTerm,
+        };
+
         const response = await axios.get(
-          "http://localhost:8000/api/project/getlistproject"
+          "http://localhost:8000/api/project/getlistproject",
+          { params }
         );
+        console.log("Fetching with filters:", {
+          search: searchTerm,
+        });
         setProjects(response.data.projects || []);
         setLoading(false);
-        console.log("Projects fetched successfully:", response.data);
+        console.log("Projects fetched:", response.data);
       } catch (error) {
-        setError(
-          error.response?.data?.message ||
-            "An error occurred while fetching projects."
-        );
+        setError(error.response?.data?.message || "Error fetching projects.");
         setLoading(false);
       }
     };
-    console.log("Fetching projects...");
+
     fetchProjects();
-  }, []);
+  }, [searchTerm]); // Add all your filters here
+
   return (
     <div className="min-h-screen bg-[#121212] text-white flex flex-col">
       {/* Nav-bar */}
@@ -266,6 +271,8 @@ const DashboardPage = () => {
               <input
                 type="text"
                 placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full md:w-[300px] bg-[#2A2A2A] border border-[#444] rounded-lg pl-10 pr-4 py-2 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none"
               />
               <svg
