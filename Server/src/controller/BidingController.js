@@ -108,7 +108,7 @@ export const getBid = async (req, res) => {
     });
 
     if (!existingBid) {
-      return res.status(404).json({ message: "Bid not found" });
+      return res.status(200).json({ bidExist: false });
     }
 
     res.status(200).json({
