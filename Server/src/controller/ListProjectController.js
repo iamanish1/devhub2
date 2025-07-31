@@ -74,10 +74,51 @@ export default ListProject;
 
 export const getProject = async (req, res) => {
   try {
-    const project = await ProjectListing.find();
+    const {
+      techStack , 
+      budget , 
+      contributor ,
+    } = req.query;
+
+    const filter = {};
+
+    //  techStack filter 
+    if(techStack) {
+      filter.Project_tech_stack = { $in: techStack.split(",") };
+    }
+
+    // budget filter
+    if(budget) {
+      if(budget === "Micro_Budget") {
+        filter.project_starting_bid = { $lt: 500 }; 
+      }
+      else if(budget === "Low_Budget") {
+        filter.project_starting_bid = { $gte: 500, $lt: 2000 };
+      } else if(budget === "Medium_Budget") {
+        filter.project_starting_bid = { $gte: 2000, $lt: 10000 };
+      } else if(budget === "High_Budget") {
+        filter.project_starting_bid = { $gte: 10000 };
+      }
+    }
+
+    // contributor filter
+    if(contributor) {
+      if(contributor === "Solo") {
+        filter.Project_Contributor = 1;
+      } else if(contributor === "Small_Team") {
+        filter.Project_Contributor = { $gte: 2, $lte: 4 };
+      } else if(contributor === "Medium_Team") {
+        filter.Project_Contributor = { $gte: 5, $lte: 10 };
+      } else if(contributor === "Large_Team") {
+        filter.Project_Contributor = { $gt: 10 };
+      }
+    }
+
+    const projects = await ProjectListing.find(filter);
+
     res.status(200).json({
-      message: "Project fetched successfully",
-      project,
+      message: "Projects fetched successfully",
+      projects,
     });
   } catch (error) {
     res.status(500).json({
