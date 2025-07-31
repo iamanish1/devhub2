@@ -7,11 +7,48 @@ import axios from "axios";
 const DashboardPage = () => {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [projects, setProjects] = useState([]);
+  const [selectedTechStack, setSelectedTechStack] = useState("");
+  const [selectedBudget, setSelectedBudget] = useState("");
+  const [selectedContributor, setSelectedContributor] = useState("");
+  const [filter, setFilter] = useState({
+    techStack: "",
+    budget: "",
+    contributor: "",
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const toggleMobileFilter = () => {
     setMobileFilterOpen(!mobileFilterOpen);
+  };
+  const handleFilterProjects = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedTechStack) {
+        params.append("techStack", selectedTechStack);
+      }
+      if (selectedBudget) {
+        params.append("budget", selectedBudget);
+      }
+      if (selectedContributor) {
+        params.append("contributor", selectedContributor);
+      }
+      setLoading(true);
+      const response = await axios.get(
+        `http://localhost:8000/api/project/getlistproject?${params.toString()}`
+      );
+      console.log("Filtered projects:", response.data);
+      setProjects(response.data?.projects || []);
+
+      setLoading(false);
+    } catch (error) {
+      setError(
+        error.response?.data?.message ||
+          "An error occurred while filtering projects."
+      );
+      console.error("Error filtering projects:", error);
+      setLoading(false);
+    }
   };
   useEffect(() => {
     const fetchProjects = async () => {
@@ -19,7 +56,7 @@ const DashboardPage = () => {
         const response = await axios.get(
           "http://localhost:8000/api/project/getlistproject"
         );
-        setProjects(response.data.project || []);
+        setProjects(response.data.projects || []);
         setLoading(false);
         console.log("Projects fetched successfully:", response.data);
       } catch (error) {
@@ -96,56 +133,67 @@ const DashboardPage = () => {
               <label className="block text-[#00A8E8] mb-2 font-medium">
                 Technology Stack
               </label>
-              <select className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors">
-                <option>All</option>
-                <option>MERN Stack</option>
-                <option>MEAN Stack</option>
-                <option>MEVN Stack</option>
-                <option>Next.js</option>
-                <option>NestJS</option>
-                <option>Django</option>
-                <option>Flask</option>
-                <option>Spring Boot</option>
-                <option>ASP.NET</option>
-                <option>React Native</option>
-                <option>Flutter</option>
-                <option>Swift</option>
-                <option>Kotlin</option>
-                <option>TensorFlow</option>
-                <option>PyTorch</option>
-                <option>Apache Spark</option>
-                <option>Solidity</option>
-                <option>Rust</option>
-                <option>Docker</option>
-                <option>Kubernetes</option>
-                <option>AWS</option>
-                <option>GCP</option>
-                <option>MySQL</option>
-                <option>MongoDB</option>
-                <option>PostgreSQL</option>
-                <option>Firebase</option>
-                <option>Redis</option>
-                <option>Unity</option>
-                <option>Unreal Engine</option>
-                <option>IoT</option>
-                <option>C++</option>
-                <option>Go</option>
-                <option>Rust</option>
-                <option>Cybersecurity</option>
-                <option>Other</option>
+              <select
+                className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
+                value={selectedTechStack}
+                onChange={(e) => setSelectedTechStack(e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="MERN Stack">MERN Stack</option>
+                <option value="MEAN Stack">MEAN Stack</option>
+                <option value="MEVN Stack">MEVN Stack</option>
+                <option value="Next.js">Next.js</option>
+                <option value="NestJS">NestJS</option>
+                <option value="Django">Django</option>
+                <option value="Flask">Flask</option>
+                <option value="Spring Boot">Spring Boot</option>
+                <option value="ASP.NET">ASP.NET</option>
+                <option value="React Native">React Native</option>
+                <option value="Flutter">Flutter</option>
+                <option value="Swift">Swift</option>
+                <option value="Kotlin">Kotlin</option>
+                <option value="TensorFlow">TensorFlow</option>
+                <option value="PyTorch">PyTorch</option>
+                <option value="Apache Spark">Apache Spark</option>
+                <option value="Solidity">Solidity</option>
+                <option value="Rust">Rust</option>
+                <option value="Docker">Docker</option>
+                <option value="Kubernetes">Kubernetes</option>
+                <option value="AWS">AWS</option>
+                <option value="GCP">GCP</option>
+                <option value="MySQL">MySQL</option>
+                <option value="MongoDB">MongoDB</option>
+                <option value="PostgreSQL">PostgreSQL</option>
+                <option value="Firebase">Firebase</option>
+                <option value="Redis">Redis</option>
+                <option value="Unity">Unity</option>
+                <option value="Unreal Engine">Unreal Engine</option>
+                <option value="IoT">IoT</option>
+                <option value="C++">C++</option>
+                <option value="Go">Go</option>
+                <option value="Rust">Rust</option>
+                <option value="Cybersecurity">Cybersecurity</option>
+                <option value="Other">Other</option>
               </select>
             </div>
 
             {/* Budget Range Filter */}
             <div className="filter-group">
               <label className="block text-[#00A8E8] mb-2 font-medium">
-                Starting Bid 
+                Starting Bid
               </label>
-              <select className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors">
-                <option>Micro Budget (Below ₹500)</option>
-                <option>Low Budget (₹500 - ₹2,000)</option>
-                <option>Medium Budget (₹2,000 - ₹10,000)</option>
-                <option>High Budget (₹10,000+)</option>
+              <select
+                className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
+                value={selectedBudget}
+                onChange={(e) => setSelectedBudget(e.target.value)}
+              >
+                <option value="">All Budget</option>
+                <option value="Micro_Budget">Micro Budget (Below ₹500)</option>
+                <option value="Low_Budget">Low Budget (₹500 - ₹2,000)</option>
+                <option value="Medium_Budget">
+                  Medium Budget (₹2,000 - ₹10,000)
+                </option>
+                <option value="High_Budget">High Budget (₹10,000+)</option>
               </select>
             </div>
 
@@ -154,17 +202,53 @@ const DashboardPage = () => {
               <label className="block text-[#00A8E8] mb-2 font-medium">
                 Number of Contributors
               </label>
-              <select className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors">
-                <option>Solo (1 Contributor)</option>
-                <option>Small Team (2-4 Contributors)</option>
-                <option>Medium Team (5-10 Contributors)</option>
-                <option>Large Team (10+ Contributors)</option>
+              <select
+                className="w-full bg-[#2A2A2A] border border-[#444] rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
+                value={selectedContributor}
+                onChange={(e) => setSelectedContributor(e.target.value)}
+              >
+                <option value="">All Contributors</option>
+                <option value="Solo">Solo (1 Contributor)</option>
+                <option value="Small_Team">
+                  Small Team (2-4 Contributors)
+                </option>
+                <option value="Medium_Team">
+                  Medium Team (5-10 Contributors)
+                </option>
+                <option value="Large_Team">
+                  Large Team (10+ Contributors)
+                </option>
               </select>
             </div>
 
             {/* Apply Filter Button */}
-            <button className="w-full bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white py-3 px-4 rounded-lg font-medium hover:from-[#00A8E8] hover:to-[#0062E6] transition-all duration-300 shadow-lg shadow-blue-500/20 mt-4">
+            <button
+              className="w-full bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white py-3 px-4 rounded-lg font-medium hover:from-[#00A8E8] hover:to-[#0062E6] transition-all duration-300 shadow-lg shadow-blue-500/20 mt-4"
+              onClick={handleFilterProjects}
+            >
               Apply Filters
+            </button>
+            <button
+              className="w-full bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white py-3 px-4 rounded-lg font-medium hover:from-[#00A8E8] hover:to-[#0062E6] transition-all duration-300 shadow-lg shadow-blue-500/20 mt-2"
+              onClick={async () => {
+                setSelectedTechStack("");
+                setSelectedBudget("");
+                setSelectedContributor("");
+                setLoading(true);
+
+                try {
+                  const response = await axios.get(
+                    "http://localhost:8000/api/project/getlistproject"
+                  );
+                  setProjects(response.data.projects || []);
+                } catch (error) {
+                  setError("Failed to fetch all projects.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Clear Filters
             </button>
           </div>
         </aside>
