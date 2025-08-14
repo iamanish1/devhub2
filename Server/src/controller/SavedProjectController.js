@@ -74,7 +74,7 @@ export const unsaveProject = async (req, res) => {
 export const getSavedProjects = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // Additional security: Ensure we're only getting projects for the authenticated user
     if (!userId) {
       return res.status(401).json({ message: "User not authenticated" });
@@ -83,7 +83,8 @@ export const getSavedProjects = async (req, res) => {
     const savedProjects = await SavedProject.find({ user: userId })
       .populate({
         path: "project",
-        select: "project_Title Project_Description Project_cover_photo project_starting_bid Project_Bid_Amount Project_Number_Of_Bids Project_Contributor Project_tech_stack project_duration user",
+        select:
+          "project_Title Project_Description Project_cover_photo project_starting_bid Project_Bid_Amount Project_Number_Of_Bids Project_Contributor Project_tech_stack project_duration user",
         populate: {
           path: "user",
           select: "name email",
@@ -91,7 +92,9 @@ export const getSavedProjects = async (req, res) => {
       })
       .sort({ savedAt: -1 });
 
-    console.log(`📚 Fetched ${savedProjects.length} saved projects for user: ${userId}`);
+    console.log(
+      `📚 Fetched ${savedProjects.length} saved projects for user: ${userId}`
+    );
 
     res.json({
       savedProjects: savedProjects.map((sp) => ({

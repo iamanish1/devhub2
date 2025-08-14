@@ -1,19 +1,28 @@
 import Navbar from "../components/NavBar";
 import axios from "axios";
 import { useState, useEffect } from "react";
-import { FaGithub, FaTwitter, FaInstagram } from "react-icons/fa";
-import { AiOutlineGlobal } from "react-icons/ai";
+import { FaGithub, FaLinkedin, FaInstagram, FaGlobe, FaEdit, FaCode, FaRocket, FaTrophy, FaCalendar, FaMapMarkerAlt, FaEnvelope, FaPhone, FaMoon, FaSun, FaPalette, FaChartBar, FaDownload } from "react-icons/fa";
 
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 const ProfilePage = () => {
-  // Get userId from URL params
   const [userProfile, setUserProfile] = useState({});
   const [savedProjects, setSavedProjects] = useState([]);
   const [loadingSavedProjects, setLoadingSavedProjects] = useState(false);
-
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activityFeed, setActivityFeed] = useState([]);
+  const [socialStats, setSocialStats] = useState({
+    followers: 0,
+    following: 0,
+    endorsements: 0
+  });
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [theme, setTheme] = useState('dark');
+  const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -68,236 +77,694 @@ const ProfilePage = () => {
             name: "AI Chatbot",
             date: "May 2025",
             description: "A smart chatbot using NLP.",
+            tech: ["React", "Node.js", "OpenAI"],
+            status: "completed"
           },
           {
             name: "Bug Tracker",
             date: "Apr 2025",
             description: "A collaborative bug tracking platform.",
+            tech: ["React", "Express", "MongoDB"],
+            status: "in-progress"
           },
         ];
 
-  if (loading) return <div className="text-white p-8">Loading...</div>;
-  if (error) return <div className="text-red-500 p-8">Error: {error}</div>;
+  // Mock skills with proficiency levels
+  const skills = userProfile.user_profile_skills && userProfile.user_profile_skills.length > 0
+    ? userProfile.user_profile_skills.map(skill => ({
+        name: skill,
+        proficiency: Math.floor(Math.random() * 40) + 60, // 60-100%
+        category: "Programming"
+      }))
+    : [
+        { name: "JavaScript", proficiency: 85, category: "Frontend" },
+        { name: "React", proficiency: 80, category: "Frontend" },
+        { name: "Node.js", proficiency: 75, category: "Backend" },
+        { name: "Python", proficiency: 70, category: "Programming" },
+        { name: "MongoDB", proficiency: 65, category: "Database" },
+        { name: "Docker", proficiency: 60, category: "DevOps" },
+      ];
+
+  // Mock activity feed
+  const mockActivityFeed = [
+    {
+      id: 1,
+      type: "project_completed",
+      title: "Completed AI Chatbot Project",
+      description: "Successfully delivered the NLP-powered chatbot",
+      timestamp: "2 hours ago",
+      icon: "🎉",
+      color: "green"
+    },
+    {
+      id: 2,
+      type: "skill_endorsed",
+      title: "React skill endorsed by John Doe",
+      description: "Received endorsement for React development",
+      timestamp: "1 day ago",
+      icon: "⭐",
+      color: "yellow"
+    },
+    {
+      id: 3,
+      type: "project_started",
+      title: "Started Bug Tracker Project",
+      description: "Began development of collaborative bug tracking platform",
+      timestamp: "3 days ago",
+      icon: "🚀",
+      color: "blue"
+    },
+    {
+      id: 4,
+      type: "achievement_unlocked",
+      title: "First 100 Contributions",
+      description: "Reached milestone of 100 project contributions",
+      timestamp: "1 week ago",
+      icon: "🏆",
+      color: "purple"
+    }
+  ];
+
+  // Mock social stats
+  const mockSocialStats = {
+    followers: 156,
+    following: 89,
+    endorsements: 23
+  };
+
+  // Mock analytics data for Phase 3
+  const analyticsData = {
+    monthlyEarnings: [1200, 1800, 1500, 2200, 1900, 2500],
+    projectCompletion: [85, 92, 78, 95, 88, 91],
+    skillGrowth: {
+      'JavaScript': [70, 75, 80, 85, 88, 90],
+      'React': [60, 68, 75, 82, 85, 88],
+      'Node.js': [65, 70, 75, 80, 83, 85],
+      'Python': [50, 58, 65, 72, 78, 82]
+    },
+    weeklyActivity: Array.from({ length: 52 }, () => Math.floor(Math.random() * 10))
+  };
+
+  // Theme configurations
+  const themes = {
+    dark: {
+      bg: 'from-[#0f0f0f] to-[#1a1a2e]',
+      card: 'from-[#1a1a1a]/80 to-[#2a2a2a]/80',
+      border: 'border-blue-500/20',
+      text: 'text-white'
+    },
+    light: {
+      bg: 'from-[#f8fafc] to-[#e2e8f0]',
+      card: 'from-white/80 to-gray-50/80',
+      border: 'border-blue-500/30',
+      text: 'text-gray-900'
+    },
+    purple: {
+      bg: 'from-[#1a0b2e] to-[#2d1b4e]',
+      card: 'from-[#2a1b4e]/80 to-[#3d2b6e]/80',
+      border: 'border-purple-500/20',
+      text: 'text-white'
+    }
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#1a1a2e] flex items-center justify-center">
+      <div className="text-white text-xl">Loading profile...</div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#1a1a2e] flex items-center justify-center">
+      <div className="text-red-500 text-xl">Error: {error}</div>
+    </div>
+  );
+  
   if (!userProfile || !userProfile._id)
-    return <div className="text-white p-8">No user data found.</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#1a1a2e] flex items-center justify-center">
+        <div className="text-white text-xl">No user data found.</div>
+      </div>
+    );
+
+  const tabs = [
+    { id: "overview", label: "Overview", icon: FaCode },
+    { id: "projects", label: "Projects", icon: FaRocket },
+    { id: "skills", label: "Skills", icon: FaTrophy },
+    { id: "activity", label: "Activity", icon: FaCalendar },
+  ];
 
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#1a1a2e] flex justify-center pt-[10vmin] px-4">
-        <section className="w-full max-w-6xl flex flex-col lg:flex-row gap-10">
-          {/* Sidebar */}
-          <aside className="lg:w-1/3 w-full bg-[#181b23] rounded-2xl shadow-lg border border-blue-500/20 p-8 flex flex-col items-center">
-            <div className="h-36 w-36 bg-[#00A8E8] rounded-full flex items-center justify-center shadow-lg overflow-hidden mb-4">
-              {/* Avatar placeholder */}
-              <svg
-                className="w-20 h-20 text-white opacity-80"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-white">
-              {userProfile.username.email}
-            </h2>
-            <span className="text-gray-400 text-sm mt-[2vmin]">
-              {userProfile.username.username}
-            </span>
-            <span className="text-gray-400 text-sm mt-[2vmin]">
-              {userProfile.username.usertype}
-            </span>
-            <div className="flex flex-col gap-2 w-full mt-4">
-              <a
-                href={userProfile.user_profile_github || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
-              >
-                <FaGithub className="text-lg" />
-                Github
-              </a>
-              <a
-                href={userProfile.user_profile_linkedIn || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
-              >
-                <FaTwitter className="text-lg" />
-                LinkedIn
-              </a>
-              <a
-                href={userProfile.user_profile_instagram || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
-              >
-                <FaInstagram className="text-lg" />
-                Instagram
-              </a>
-              <a
-                href={userProfile.user_profile_website || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[#00A8E8] hover:text-white transition font-medium px-4 py-2 rounded-lg hover:bg-blue-500/10"
-              >
-                <AiOutlineGlobal className="text-lg" />
-                Website
-              </a>
-            </div>
-            <div>
-              <Link to="/editprofile">
-                <button className="mt-6 bg-blue-500 text-white px-[10vmin] py-2 rounded-lg hover:bg-blue-600 transition">
-                  Edit Profile
-                </button>
-              </Link>
-            </div>
-          </aside>
+      <main className={`min-h-screen bg-gradient-to-b ${themes[theme].bg}`}>
+        {/* Hero Section */}
+        <motion.section 
+          className="relative pt-24 pb-16 px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          {/* Background Elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute top-40 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 left-1/2 w-80 h-80 bg-green-500/10 rounded-full blur-3xl"></div>
+          </div>
 
-          {/* Main Content */}
-          <div className="flex-1 bg-[#1a1a1a]/90 rounded-2xl shadow-xl border border-blue-500/20 p-8">
-            <section className="mb-6">
-              <div className="text-2xl font-bold text-blue-500 mb-4">Bio</div>
-              <p className="text-white text-sm">
-                {userProfile.user_profile_bio || "No bio available."}
-              </p>
-            </section>
-            <section>
-              <div className="text-2xl font-bold text-blue-500 mb-4">
-                Skills
-              </div>
-              <ul className="list-disc list-inside text-white text-sm">
-                {userProfile.user_profile_skills &&
-                userProfile.user_profile_skills.length > 0 ? (
-                  userProfile.user_profile_skills.map((skill, index) => (
-                    <li key={index} className="mb-2">
-                      {skill}
-                    </li>
-                  ))
-                ) : (
-                  <li>No skills listed.</li>
-                )}
-              </ul>
-            </section>
-            {/* Improved Activity Summary */}
-            <section className="mt-6">
-              <div className="text-2xl font-bold text-blue-500 mb-4">
-                Activity Summary
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="bg-[#232a34] rounded-xl p-6 flex flex-col items-center shadow border border-blue-500/10">
-                  <span className="text-3xl font-bold text-blue-400">
-                    {userProfile.user_project_contribution || 0}
-                  </span>
-                  <span className="text-gray-300 mt-2">Contributions</span>
-                </div>
-                <div className="bg-[#232a34] rounded-xl p-6 flex flex-col items-center shadow border border-blue-500/10">
-                  <span className="text-3xl font-bold text-blue-400">
-                    {userProfile.user_completed_projects || 0}
-                  </span>
-                  <span className="text-gray-300 mt-2">Completed Projects</span>
-                </div>
-              </div>
-            </section>
-            {/* Saved Projects Section */}
-            <section className="mt-6">
-              <div className="text-2xl font-bold text-blue-500 mb-4 flex items-center gap-2">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                </svg>
-                Saved Projects
-              </div>
-              {loadingSavedProjects ? (
-                <div className="text-gray-400 text-center py-8">Loading saved projects...</div>
-              ) : savedProjects.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {savedProjects.map((savedProject) => (
-                    <div
-                      key={savedProject._id}
-                      className="bg-[#232323] p-4 rounded-xl border border-blue-500/10 hover:border-blue-500/30 transition-all cursor-pointer"
-                      onClick={() => window.open(`/biding/${savedProject.project._id}`, '_blank')}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="text-white font-semibold text-lg">
-                          {savedProject.project.project_Title}
-                        </h4>
-                        <span className="text-yellow-400 text-xs">
-                          {new Date(savedProject.savedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-gray-400 text-sm mb-3 line-clamp-2">
-                        {savedProject.project.Project_Description}
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>Budget: ${savedProject.project.project_starting_bid}</span>
-                        <span>{savedProject.project.Project_tech_stack}</span>
-                      </div>
-                      {savedProject.project.Project_cover_photo && (
-                        <div className="mt-3">
-                          <img
-                            src={`http://localhost:8000${savedProject.project.Project_cover_photo}`}
-                            alt={savedProject.project.project_Title}
-                            className="w-full h-24 object-cover rounded-lg"
-                          />
-                        </div>
-                      )}
+          <div className="max-w-6xl mx-auto relative z-10">
+            {/* Profile Header */}
+            <div className="bg-gradient-to-r from-[#1a1a1a]/80 to-[#2a2a2a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8 mb-8">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
+                {/* Avatar Section */}
+                <div className="relative">
+                  <div className="h-32 w-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl border-4 border-white/10">
+                    <div className="h-24 w-24 bg-[#1a1a1a] rounded-full flex items-center justify-center">
+                      <span className="text-3xl font-bold text-white">
+                        {userProfile.username?.username?.charAt(0).toUpperCase() || "U"}
+                      </span>
                     </div>
-                  ))}
+                  </div>
+                  {/* Online Status */}
+                  <div className="absolute bottom-2 right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
                 </div>
-              ) : (
-                <div className="text-gray-400 text-center py-8">
-                  <svg className="w-12 h-12 mx-auto mb-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                  </svg>
-                  <p>No saved projects yet.</p>
-                  <p className="text-sm mt-2">Click the bookmark icon on any project to save it here!</p>
-                </div>
-              )}
-            </section>
 
-            {/* Recent Projects Section */}
-            <section className="mt-6">
-              <div className="text-2xl font-bold text-blue-500 mb-4">
-                Recent Projects
+                {/* Profile Info */}
+                <div className="flex-1">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                      <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
+                        {userProfile.username?.username || "Developer"}
+                      </h1>
+                      <p className="text-xl text-blue-400 mb-2">
+                        {userProfile.username?.usertype || "Full Stack Developer"}
+                      </p>
+                      <div className="flex items-center gap-4 text-gray-400 text-sm">
+                        <div className="flex items-center gap-1">
+                          <FaMapMarkerAlt />
+                          <span>Mumbai, India</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FaCalendar />
+                          <span>Member since 2024</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                      <Link to="/editprofile">
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2">
+                          <FaEdit />
+                          Edit Profile
+                        </button>
+                      </Link>
+                      <button 
+                        onClick={() => setIsFollowing(!isFollowing)}
+                        className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                          isFollowing 
+                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                            : 'bg-transparent border border-blue-500 text-blue-400 hover:bg-blue-500/10'
+                        }`}
+                      >
+                        {isFollowing ? 'Following' : 'Follow'}
+                      </button>
+                      
+                      {/* Download Resume */}
+                      <button className="p-3 rounded-xl bg-transparent border border-green-500 text-green-400 hover:bg-green-500/10 transition-all duration-300">
+                        <FaDownload className="text-lg" />
+                      </button>
+                      
+                      {/* Theme Toggle */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowThemeMenu(!showThemeMenu)}
+                          className="p-3 rounded-xl bg-transparent border border-blue-500 text-blue-400 hover:bg-blue-500/10 transition-all duration-300"
+                        >
+                          <FaPalette className="text-lg" />
+                        </button>
+                        
+                        <AnimatePresence>
+                          {showThemeMenu && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                              className="absolute top-full right-0 mt-2 bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-xl border border-blue-500/20 p-2 shadow-xl backdrop-blur-xl"
+                            >
+                              <div className="flex flex-col gap-1">
+                                {Object.keys(themes).map((themeName) => (
+                                  <button
+                                    key={themeName}
+                                    onClick={() => {
+                                      setTheme(themeName);
+                                      setShowThemeMenu(false);
+                                    }}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+                                      theme === themeName
+                                        ? 'bg-blue-500 text-white'
+                                        : 'text-gray-300 hover:bg-blue-500/10'
+                                    }`}
+                                  >
+                                    {themeName.charAt(0).toUpperCase() + themeName.slice(1)}
+                                  </button>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bio */}
+                  <p className="text-gray-300 mt-4 text-lg leading-relaxed">
+                    {userProfile.user_profile_bio || "Passionate developer focused on creating innovative solutions. Always eager to learn new technologies and contribute to meaningful projects."}
+                  </p>
+
+                  {/* Social Links */}
+                  <div className="flex gap-4 mt-6">
+                    <a href={userProfile.user_profile_github || "#"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                      <FaGithub className="text-2xl" />
+                    </a>
+                    <a href={userProfile.user_profile_linkedIn || "#"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
+                      <FaLinkedin className="text-2xl" />
+                    </a>
+                    <a href={userProfile.user_profile_instagram || "#"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-pink-400 transition-colors">
+                      <FaInstagram className="text-2xl" />
+                    </a>
+                    <a href={userProfile.user_profile_website || "#"} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-green-400 transition-colors">
+                      <FaGlobe className="text-2xl" />
+                    </a>
+                  </div>
+                </div>
               </div>
-              <ul className="space-y-4">
-                {recentProjects.length > 0 ? (
-                  recentProjects.map((proj, idx) => (
-                    <li
-                      key={idx}
-                      className="bg-[#232323] p-4 rounded-xl border border-blue-500/10"
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <motion.div 
+                className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-xl rounded-2xl border border-blue-500/30 p-6 text-center"
+                whileHover={{ y: -5, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="text-3xl font-bold text-blue-400 mb-2">
+                  {userProfile.user_project_contribution || 12}
+                </div>
+                <div className="text-gray-300">Contributions</div>
+              </motion.div>
+
+              <motion.div 
+                className="bg-gradient-to-br from-green-500/20 to-green-600/20 backdrop-blur-xl rounded-2xl border border-green-500/30 p-6 text-center"
+                whileHover={{ y: -5, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="text-3xl font-bold text-green-400 mb-2">
+                  {userProfile.user_completed_projects || 8}
+                </div>
+                <div className="text-gray-300">Completed Projects</div>
+              </motion.div>
+
+              <motion.div 
+                className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 backdrop-blur-xl rounded-2xl border border-purple-500/30 p-6 text-center"
+                whileHover={{ y: -5, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="text-3xl font-bold text-purple-400 mb-2">
+                  {mockSocialStats.followers}
+                </div>
+                <div className="text-gray-300">Followers</div>
+              </motion.div>
+
+              <motion.div 
+                className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 backdrop-blur-xl rounded-2xl border border-orange-500/30 p-6 text-center"
+                whileHover={{ y: -5, scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="text-3xl font-bold text-orange-400 mb-2">
+                  {mockSocialStats.endorsements}
+                </div>
+                <div className="text-gray-300">Endorsements</div>
+              </motion.div>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Navigation Tabs */}
+        <section className="px-4 mb-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-2xl border border-blue-500/20 p-2">
+              <div className="flex gap-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                      activeTab === tab.id
+                        ? "bg-blue-600 text-white shadow-lg"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <tab.icon className="text-lg" />
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Content Area */}
+        <section className="px-4 pb-16">
+          <div className="max-w-6xl mx-auto">
+            {activeTab === "overview" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="space-y-8"
+              >
+                {/* Saved Projects Section */}
+                <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                      </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-white">Saved Projects</h2>
+                  </div>
+                  
+                  {loadingSavedProjects ? (
+                    <div className="text-gray-400 text-center py-12">
+                      <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                      Loading saved projects...
+                    </div>
+                  ) : savedProjects.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {savedProjects.map((savedProject) => (
+                        <motion.div
+                          key={savedProject._id}
+                          className="bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300 cursor-pointer group"
+                          whileHover={{ y: -5, scale: 1.02 }}
+                          onClick={() => window.open(`/biding/${savedProject.project._id}`, '_blank')}
+                        >
+                          {savedProject.project.Project_cover_photo && (
+                            <div className="relative overflow-hidden rounded-t-2xl">
+                              <img
+                                src={`http://localhost:8000${savedProject.project.Project_cover_photo}`}
+                                alt={savedProject.project.project_Title}
+                                className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                            </div>
+                          )}
+                          <div className="p-6">
+                            <div className="flex items-start justify-between mb-3">
+                              <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+                                {savedProject.project.project_Title}
+                              </h3>
+                              <span className="text-yellow-400 text-xs bg-yellow-400/10 px-2 py-1 rounded-full">
+                                {new Date(savedProject.savedAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                              {savedProject.project.Project_Description}
+                            </p>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-green-400 font-semibold">
+                                ${savedProject.project.project_starting_bid}
+                              </span>
+                              <span className="text-blue-400 bg-blue-400/10 px-2 py-1 rounded-full">
+                                {savedProject.project.Project_tech_stack}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold text-white mb-2">No saved projects yet</h3>
+                      <p className="text-gray-400">Click the bookmark icon on any project to save it here!</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Projects Section */}
+                <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <FaRocket className="w-6 h-6 text-green-400" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white">Recent Projects</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {recentProjects.map((project, index) => (
+                      <motion.div
+                        key={index}
+                        className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300"
+                        whileHover={{ x: 5 }}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-semibold text-white">{project.name}</h3>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                project.status === 'completed' 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : 'bg-yellow-500/20 text-yellow-400'
+                              }`}>
+                                {project.status === 'completed' ? 'Completed' : 'In Progress'}
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-sm mb-3">{project.description}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {project.tech?.map((tech, techIndex) => (
+                                <span key={techIndex} className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full text-xs">
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-gray-500 text-sm">{project.date}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "projects" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8"
+              >
+                <h2 className="text-2xl font-bold text-white mb-6">All Projects</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recentProjects.map((project, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      className="bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300 cursor-pointer group"
+                      whileHover={{ y: -5, scale: 1.02 }}
                     >
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <h4 className="text-white font-semibold">
-                            {proj.name}
-                          </h4>
-                          <span className="text-gray-500 text-sm">
-                            {proj.date}
+                      <div className="p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+                            {project.name}
+                          </h3>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            project.status === 'completed' 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : 'bg-yellow-500/20 text-yellow-400'
+                          }`}>
+                            {project.status === 'completed' ? 'Completed' : 'In Progress'}
                           </span>
                         </div>
-                        <p className="text-gray-400 text-sm mt-2 md:mt-0">
-                          {proj.description}
-                        </p>
+                        <p className="text-gray-400 text-sm mb-4">{project.description}</p>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {project.tech?.map((tech, techIndex) => (
+                            <span key={techIndex} className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full text-xs">
+                              {tech}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{project.date}</span>
+                          <span className="text-blue-400">View Details →</span>
+                        </div>
                       </div>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-gray-400">No recent projects.</li>
-                )}
-              </ul>
-            </section>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "skills" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8"
+              >
+                <h2 className="text-2xl font-bold text-white mb-6">Skills & Technologies</h2>
+                
+                {/* Skills Progress */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {skills.map((skill, index) => (
+                    <motion.div
+                      key={index}
+                      className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6"
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-white">{skill.name}</h3>
+                        <span className="text-blue-400 font-semibold">{skill.proficiency}%</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+                        <motion.div
+                          className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${skill.proficiency}%` }}
+                          transition={{ duration: 1, delay: index * 0.1 }}
+                        ></motion.div>
+                      </div>
+                      <span className="text-gray-400 text-sm">{skill.category}</span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Contribution Graph */}
+                <div className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">Contribution Activity</h3>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: 49 }, (_, i) => (
+                      <motion.div
+                        key={i}
+                        className="w-8 h-8 rounded-sm bg-gray-700 hover:bg-blue-500/50 transition-colors cursor-pointer"
+                        whileHover={{ scale: 1.2 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3, delay: i * 0.01 }}
+                        style={{
+                          backgroundColor: `rgba(59, 130, 246, ${Math.random() * 0.8 + 0.1})`
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-gray-400 text-sm mt-4">Last 7 weeks of activity</p>
+                </div>
+
+                {/* Analytics Section */}
+                <div className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold text-white">Analytics Overview</h3>
+                    <button
+                      onClick={() => setShowAnalytics(!showAnalytics)}
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      <FaChartBar className="text-lg" />
+                    </button>
+                  </div>
+                  
+                  <AnimatePresence>
+                    {showAnalytics && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-4"
+                      >
+                        {/* Monthly Earnings Chart */}
+                        <div>
+                          <h4 className="text-white font-medium mb-2">Monthly Earnings</h4>
+                          <div className="flex items-end gap-1 h-20">
+                            {analyticsData.monthlyEarnings.map((earnings, index) => (
+                              <motion.div
+                                key={index}
+                                className="flex-1 bg-gradient-to-t from-blue-500 to-blue-600 rounded-t-sm"
+                                initial={{ height: 0 }}
+                                animate={{ height: `${(earnings / 3000) * 100}%` }}
+                                transition={{ duration: 0.8, delay: index * 0.1 }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Skill Growth Chart */}
+                        <div>
+                          <h4 className="text-white font-medium mb-2">Skill Growth (6 months)</h4>
+                          <div className="space-y-2">
+                            {Object.entries(analyticsData.skillGrowth).map(([skill, growth], index) => (
+                              <div key={skill} className="flex items-center gap-2">
+                                <span className="text-gray-400 text-sm w-20">{skill}</span>
+                                <div className="flex-1 bg-gray-700 rounded-full h-2">
+                                  <motion.div
+                                    className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${growth[growth.length - 1]}%` }}
+                                    transition={{ duration: 1, delay: index * 0.2 }}
+                                  />
+                                </div>
+                                <span className="text-gray-400 text-xs w-8">{growth[growth.length - 1]}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "activity" && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8"
+              >
+                <h2 className="text-2xl font-bold text-white mb-6">Activity Timeline</h2>
+                <div className="space-y-6">
+                  {mockActivityFeed.map((activity, index) => (
+                    <motion.div
+                      key={activity.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      className="flex items-start gap-4 p-4 bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300"
+                    >
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                        activity.color === 'green' ? 'bg-green-500/20' :
+                        activity.color === 'yellow' ? 'bg-yellow-500/20' :
+                        activity.color === 'blue' ? 'bg-blue-500/20' :
+                        'bg-purple-500/20'
+                      }`}>
+                        {activity.icon}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-white font-semibold mb-1">{activity.title}</h3>
+                        <p className="text-gray-400 text-sm mb-2">{activity.description}</p>
+                        <span className="text-gray-500 text-xs">{activity.timestamp}</span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </div>
         </section>
       </main>
