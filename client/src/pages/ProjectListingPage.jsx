@@ -35,7 +35,7 @@ const ProjectListingPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
-  useEffect(() => {
+      useEffect(() => {
     if (!editingProject && params.id) {
       axios
         .get(`http://localhost:8000/api/project/getlistproject/${params.id}`, {
@@ -186,32 +186,31 @@ const ProjectListingPage = () => {
             },
           }
         );
-        setFormData({
-          project_Title: "",
-          Project_Bid_Amount: "",
-          Project_Contributor: "",
-          Project_Number_Of_Bids: "",
-          Project_Description: "",
-          Project_tech_stack: "",
-          Project_Features: "",
-          Project_looking: "",
-          project_duration: "",
-          Project_gitHub_link: "",
-          Project_cover_photo: null,
-          project_starting_bid: "",
-        });
-        setCoverImage(null);
-        setProjectImages([]);
 
-        alert("Project submitted successfully!");
+        if (response.status === 201) {
+          setFormData({
+            project_Title: "",
+            Project_Bid_Amount: "",
+            Project_Contributor: "",
+            Project_Number_Of_Bids: "",
+            Project_Description: "",
+            Project_tech_stack: "",
+            Project_Features: "",
+            Project_looking: "",
+            project_duration: "",
+            Project_gitHub_link: "",
+            Project_cover_photo: null,
+            project_starting_bid: "",
+          });
+          setCoverImage(null);
+          setProjectImages([]);
+          alert("Project submitted successfully!");
+        }
+        console.log("Project submitted:", response.data);
       }
-      console.log("Project submitted:", response.data);
     } catch (error) {
-      console.error(error);
-      setError(
-        error.response?.data?.message ||
-          "An error occurred while submitting the form. Please try again."
-      );
+      console.error("Error submitting project:", error);
+      setError(error.response?.data?.message || "Failed to submit project");
     } finally {
       setLoading(false);
     }
@@ -255,7 +254,7 @@ const ProjectListingPage = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 text-white">
+                     <form onSubmit={handleSubmit} className="p-6 text-white">
             {/* Step 1: Basic Info */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-fadeIn">
@@ -377,7 +376,6 @@ const ProjectListingPage = () => {
                     <option>IoT</option>
                     <option>C++</option>
                     <option>Go</option>
-                    <option>Rust</option>
                     <option>Cybersecurity</option>
                     <option>Other</option>
                   </select>
@@ -418,10 +416,10 @@ const ProjectListingPage = () => {
                     placeholder="List the key features of your project..."
                     rows="4"
                   ></textarea>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Tip: Use bullet points for better readability
-                  </p>
                 </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Tip: Use bullet points for better readability
+                </p>
 
                 <div className="form-group">
                   <label className="block text-gray-300 mb-2">
@@ -469,6 +467,8 @@ const ProjectListingPage = () => {
                   onFilesChange={handleFilesChange}
                   showPreview={true}
                 />
+
+            
 
                 <div className="form-group">
                   <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700">
