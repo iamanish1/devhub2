@@ -34,6 +34,7 @@ const AppRoutes = () => {
       <Route path="/careers" element={<Careers/>}/>
       <Route path="/blog" element={<Blog/>}/>
       <Route path="/contact" element={<Contact/>}/>
+     
 
       <Route element={<ProtectedRoute />}>
         <Route path="/listproject" element={<ProjectListingPage />} />

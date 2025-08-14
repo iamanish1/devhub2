@@ -143,11 +143,11 @@ const BidingPage = () => {
 
           {/* Project Image with Overlay */}
           <div className="relative group overflow-hidden rounded-xl shadow-lg mb-6">
-            <img
-              src={project.Project_cover_photo || "/api/placeholder/800/400"}
-              alt="AI Chatbot System"
-              className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+                                      <img
+               src={project.Project_cover_photo ? `http://localhost:8000${project.Project_cover_photo}` : "/api/placeholder/800/400"}
+               alt={project.project_Title || "Project Cover"}
+               className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
+             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-80"></div>
             <div className="absolute bottom-0 left-0 p-4">
               <h1 className="text-3xl font-bold text-white tracking-wide">
@@ -315,10 +315,37 @@ const BidingPage = () => {
                 </div>
               </div>
             </div>
-          </div>
+                     </div>
 
-          {/* Call to Action */}
-          {/* Call to Action */}
+           {/* Project Images */}
+           {project.Project_images?.length > 0 && (
+             <div className="bg-[#232323] rounded-xl p-6 border border-gray-700/50 mb-8">
+               <h2 className="text-xl font-bold text-blue-400 mb-4">
+                 Project Images
+               </h2>
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                 {project.Project_images.map((image, index) => (
+                   <div key={index} className="relative group">
+                     <img
+                       src={`http://localhost:8000${image.url}`}
+                       alt={image.originalName}
+                       className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                       onClick={() => window.open(`http://localhost:8000${image.url}`, '_blank')}
+                     />
+                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
+                       <p className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity text-center px-2">
+                         {image.originalName}
+                       </p>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
+
+           
+
+           {/* Call to Action */}
           <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-6 border border-blue-500/30 mb-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 opacity-20 rounded-full blur-xl"></div>
             <h2 className="text-xl font-bold text-white mb-2">

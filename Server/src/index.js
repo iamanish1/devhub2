@@ -12,6 +12,9 @@ import { Server } from "socket.io";
 import chatSocket from "./sockets/chatSockte.js"; // Import the chat socket
 import chatRoutes from "./Routes/ChatRoutes.js";
 import userNoteRoute from "./Routes/UserNotesRoute.js";
+import uploadRoutes from "./Routes/upload.routes.js";
+import path from "path";
+
 
 dotenv.config();
 
@@ -36,15 +39,23 @@ const CorsOption = {
   credentials: true,
 }
   console.log("Frontend_Uri: " + process.env.CLIENT_URL);
-app.use(cors(CorsOption)) ; 
+app.use(cors(CorsOption)) ;
 
-  // Import routes
+// Serve uploaded files statically
+const uploadsDir = process.env.UPLOADS_DIR || 'uploads';
+app.use('/uploads', express.static(path.join(process.cwd(), uploadsDir))); 
+
+
+
+// Import routes
 app.use("/api", userRoute) ; 
 app.use("/api/project", projectRoutes) ; 
 app.use("/api/bid", biddingRoutes) ;
 app.use("/api/admin", adminDashboardRoutes) ; 
 app.use("/api/project",chatRoutes);
-app.use("/api/notes", userNoteRoute ) ; 
+app.use("/api/notes", userNoteRoute ) ;
+app.use("/api", uploadRoutes) ;
+ 
 
 // Initialize chat socket
 chatSocket(io);

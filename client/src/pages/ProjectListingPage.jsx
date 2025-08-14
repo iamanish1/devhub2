@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import FileUploadField from "../components/FileUploadField.jsx";
 
 import axios from "axios";
 const ProjectListingPage = () => {
@@ -29,6 +30,8 @@ const ProjectListingPage = () => {
   const [loading, setLoading] = useState(false);
 
   const [coverImage, setCoverImage] = useState(null);
+  const [projectImages, setProjectImages] = useState([]);
+
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
@@ -62,6 +65,19 @@ const ProjectListingPage = () => {
     }
   };
 
+  const handleFilesChange = (files, fieldName) => {
+    switch (fieldName) {
+      case "Project_cover_photo":
+        setCoverImage(files[0] || null);
+        break;
+      case "Project_images":
+        setProjectImages(files);
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -90,7 +106,7 @@ const ProjectListingPage = () => {
     try {
       const data = new FormData();
       data.append("project_Title", formData.project_Title);
-      data.append("Project_Bid_Amount", formData.Project_Bid_Amount); // ADD THIS LINE
+      data.append("Project_Bid_Amount", formData.Project_Bid_Amount);
       data.append("project_starting_bid", formData.project_starting_bid);
       data.append("Project_Contributor", formData.Project_Contributor);
       data.append("Project_Number_Of_Bids", formData.Project_Number_Of_Bids);
@@ -100,9 +116,16 @@ const ProjectListingPage = () => {
       data.append("Project_looking", formData.Project_looking);
       data.append("project_duration", formData.project_duration);
       data.append("Project_gitHub_link", formData.Project_gitHub_link);
+
+      // Append cover image
       if (coverImage) {
         data.append("Project_cover_photo", coverImage);
       }
+
+      // Append project images
+      projectImages.forEach((file, index) => {
+        data.append("Project_images", file);
+      });
 
       let response;
       // Use params.id if editingProject is not available
@@ -150,24 +173,16 @@ const ProjectListingPage = () => {
         console.log("Project_Features", formData.Project_Features);
         console.log("Project_looking", formData.Project_looking);
         console.log("Project_gitHub_link", formData.Project_gitHub_link);
+
+        // Use FormData for CREATE mode to handle file uploads
         response = await axios.post(
           "http://localhost:8000/api/project/listproject",
-          {
-            project_Title: formData.project_Title,
-            project_duration: formData.project_duration,
-            project_starting_bid: formData.project_starting_bid,
-            Project_Contributor: formData.Project_Contributor,
-            Project_Number_Of_Bids: formData.Project_Number_Of_Bids,
-            Project_Description: formData.Project_Description,
-            Project_tech_stack: formData.Project_tech_stack,
-            Project_Features: formData.Project_Features,
-            Project_looking: formData.Project_looking,
-            Project_gitHub_link: formData.Project_gitHub_link,
-          },
+          data, // Use the FormData we created earlier
           {
             withCredentials: true,
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
+              // Don't set Content-Type header - let browser set it for FormData
             },
           }
         );
@@ -186,6 +201,8 @@ const ProjectListingPage = () => {
           project_starting_bid: "",
         });
         setCoverImage(null);
+        setProjectImages([]);
+
         alert("Project submitted successfully!");
       }
       console.log("Project submitted:", response.data);
@@ -443,51 +460,15 @@ const ProjectListingPage = () => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="block text-gray-300 mb-2">
-                    Upload Cover Image
-                  </label>
-                  <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-[#00A8E8] transition-colors">
-                    <input
-                      type="file"
-                      onChange={(e) => {
-                        handleChange(e);
-                        handleFileChange(e);
-                      }}
-                      className="hidden"
-                      id="cover-image"
-                      accept="image/*"
-                      name="Project_cover_photo"
-                    />
-
-                    <label htmlFor="cover-image" className="cursor-pointer">
-                      <div className="flex flex-col items-center justify-center">
-                        <svg
-                          className="w-12 h-12 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          ></path>
-                        </svg>
-                        <p className="mt-2 text-sm text-gray-400">
-                          {coverImage
-                            ? coverImage.name
-                            : "Click to upload or drag and drop"}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          PNG, JPG or GIF (Max. 2MB)
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
+                <FileUploadField
+                  label="Upload Cover Image"
+                  name="Project_cover_photo"
+                  multiple={false}
+                  accept="image/*"
+                  maxSize={2}
+                  onFilesChange={handleFilesChange}
+                  showPreview={true}
+                />
 
                 <div className="form-group">
                   <div className="bg-[#1a1a1a] p-4 rounded-lg border border-gray-700">

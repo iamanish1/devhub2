@@ -16,6 +16,33 @@ const ListProject = async (req, res) => {
       project_starting_bid,
     } = req.body;
 
+    // Handle uploaded files
+    console.log('Debug - req.files:', req.files);
+    console.log('Debug - req.file:', req.file);
+    console.log('Debug - req.namedFiles function:', typeof req.namedFiles);
+    
+    const uploadedImages = req.namedFiles ? req.namedFiles('Project_images') || [] : [];
+    const coverImage = req.getFile ? req.getFile('Project_cover_photo') : null;
+
+    // Process uploaded images
+    const projectImages = uploadedImages.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      url: `/uploads/${file.filename}`,
+      size: file.size
+    }));
+
+    // Process cover image
+    let coverPhotoUrl = Project_cover_photo;
+    if (coverImage) {
+      coverPhotoUrl = `/uploads/${coverImage.filename}`;
+    }
+
+    console.log('Uploaded files:', {
+      coverImage: coverImage?.filename,
+      images: projectImages.length
+    });
+
     console.log("Received project data:", req.body);
 
     if (
@@ -47,7 +74,6 @@ const ListProject = async (req, res) => {
       user: userId, // <-- Use 'user' if your schema expects 'user'
       project_Title,
       project_duration,
-      Project_Bid_Amount,
       Project_Contributor,
       Project_Number_Of_Bids,
       Project_Description,
@@ -55,7 +81,8 @@ const ListProject = async (req, res) => {
       Project_Features,
       Project_looking,
       Project_gitHub_link,
-      Project_cover_photo,
+      Project_cover_photo: coverPhotoUrl,
+      Project_images: projectImages,
       project_starting_bid,
     });
     await project.save();

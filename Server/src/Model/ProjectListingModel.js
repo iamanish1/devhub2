@@ -97,6 +97,8 @@ const ProjectListingSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  
+
 });
 
 const ProjectListing = mongoose.model("ProjectListing", ProjectListingSchema); // Capital "P" and "L"
