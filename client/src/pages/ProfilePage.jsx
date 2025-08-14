@@ -9,6 +9,8 @@ import { Link } from "react-router-dom";
 const ProfilePage = () => {
   // Get userId from URL params
   const [userProfile, setUserProfile] = useState({});
+  const [savedProjects, setSavedProjects] = useState([]);
+  const [loadingSavedProjects, setLoadingSavedProjects] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,6 +34,29 @@ const ProfilePage = () => {
       }
     };
     fetchUserProfile();
+  }, []);
+
+  // Fetch saved projects
+  useEffect(() => {
+    const fetchSavedProjects = async () => {
+      try {
+        setLoadingSavedProjects(true);
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const response = await axios.get("http://localhost:8000/api/saved-projects/saved", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setSavedProjects(response.data.savedProjects);
+      } catch (error) {
+        console.error("Error fetching saved projects:", error);
+      } finally {
+        setLoadingSavedProjects(false);
+      }
+    };
+    fetchSavedProjects();
   }, []);
 
   // Mock recent_projects if not present (for demo)
@@ -185,6 +210,62 @@ const ProfilePage = () => {
                 </div>
               </div>
             </section>
+            {/* Saved Projects Section */}
+            <section className="mt-6">
+              <div className="text-2xl font-bold text-blue-500 mb-4 flex items-center gap-2">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                </svg>
+                Saved Projects
+              </div>
+              {loadingSavedProjects ? (
+                <div className="text-gray-400 text-center py-8">Loading saved projects...</div>
+              ) : savedProjects.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {savedProjects.map((savedProject) => (
+                    <div
+                      key={savedProject._id}
+                      className="bg-[#232323] p-4 rounded-xl border border-blue-500/10 hover:border-blue-500/30 transition-all cursor-pointer"
+                      onClick={() => window.open(`/biding/${savedProject.project._id}`, '_blank')}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <h4 className="text-white font-semibold text-lg">
+                          {savedProject.project.project_Title}
+                        </h4>
+                        <span className="text-yellow-400 text-xs">
+                          {new Date(savedProject.savedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+                        {savedProject.project.Project_Description}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Budget: ${savedProject.project.project_starting_bid}</span>
+                        <span>{savedProject.project.Project_tech_stack}</span>
+                      </div>
+                      {savedProject.project.Project_cover_photo && (
+                        <div className="mt-3">
+                          <img
+                            src={`http://localhost:8000${savedProject.project.Project_cover_photo}`}
+                            alt={savedProject.project.project_Title}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-400 text-center py-8">
+                  <svg className="w-12 h-12 mx-auto mb-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                  </svg>
+                  <p>No saved projects yet.</p>
+                  <p className="text-sm mt-2">Click the bookmark icon on any project to save it here!</p>
+                </div>
+              )}
+            </section>
+
             {/* Recent Projects Section */}
             <section className="mt-6">
               <div className="text-2xl font-bold text-blue-500 mb-4">

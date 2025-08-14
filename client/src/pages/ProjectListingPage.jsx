@@ -292,14 +292,19 @@ const ProjectListingPage = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="block text-gray-300 mb-2">Duration</label>
+                    <label className="block text-gray-300 mb-2">Project End Date</label>
                     <input
                       type="date"
                       name="project_duration"
                       value={formData.project_duration}
                       onChange={handleChange}
+                      min={new Date().toISOString().split('T')[0]}
                       className="w-full bg-[#2A2A2A] border border-gray-600 rounded-lg p-3 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8] focus:outline-none transition-colors"
+                      placeholder="When should bidding end?"
                     />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Choose when bidding for this project should end
+                    </p>
                   </div>
                 </div>
 

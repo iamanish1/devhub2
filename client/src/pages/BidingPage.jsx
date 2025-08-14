@@ -11,9 +11,12 @@ const BidingPage = () => {
   const [project, setProject] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(48 * 60 * 60); // 48 hours in seconds
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isProjectEnded, setIsProjectEnded] = useState(false);
+  const [countdownInitialized, setCountdownInitialized] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [hasBid, setHasBid] = useState(null);
+  const [savingProject, setSavingProject] = useState(false);
 
   // Real-time listener for project data updates
   useEffect(() => {
@@ -31,13 +34,15 @@ const BidingPage = () => {
     return () => unsub();
   }, [_id]);
 
-  // Check if the user has already placed a bid
+  // Check if the user has already placed a bid and if project is bookmarked
   useEffect(() => {
-    const checkHasBid = async () => {
+    const checkUserStatus = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const res = await axios.get(
+        
+        // Check bid status
+        const bidRes = await axios.get(
           `http://localhost:8000/api/bid/getBid/${_id}`,
           {
             headers: {
@@ -45,16 +50,27 @@ const BidingPage = () => {
             },
           }
         );
-        setHasBid(res.data.existingBid || null);
-        console.log("Has bid:", res.data.existingBid);
-        console.log("Bid status:", res.data.existingBid);
+        setHasBid(bidRes.data.existingBid || null);
+        
+        // Check if project is saved/bookmarked
+        const savedRes = await axios.get(
+          `http://localhost:8000/api/saved-projects/check/${_id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setIsBookmarked(savedRes.data.isSaved);
+        
       } catch (error) {
-        console.error("Error checking bid status:", error);
-        setError("Failed to check bid status.");
+        console.error("Error checking user status:", error);
+        setError("Failed to check user status.");
         setHasBid(false);
+        setIsBookmarked(false);
       }
     };
-    checkHasBid();
+    checkUserStatus();
   }, [_id]);
   // Fetch project data based on project ID
   useEffect(() => {
@@ -67,6 +83,31 @@ const BidingPage = () => {
         setLoading(false);
         console.log("_id:", _id);
         console.log(response.data.project);
+        
+        // Calculate countdown based on project end date
+        if (response.data.project.project_duration) {
+          const endDate = new Date(response.data.project.project_duration);
+          const now = new Date();
+          
+          // Ensure we're comparing dates correctly
+          const endTime = endDate.getTime();
+          const currentTime = now.getTime();
+          const timeDiff = Math.floor((endTime - currentTime) / 1000); // Convert to seconds
+          
+          if (timeDiff > 0) {
+            setTimeLeft(timeDiff);
+            setIsProjectEnded(false);
+            setCountdownInitialized(true);
+          } else {
+            setTimeLeft(0);
+            setIsProjectEnded(true);
+            setCountdownInitialized(true);
+          }
+        } else {
+          setTimeLeft(0);
+          setIsProjectEnded(true);
+          setCountdownInitialized(true);
+        }
       } catch (error) {
         setError(
           error.response?.data?.message || "Failed to fetch project data."
@@ -78,17 +119,87 @@ const BidingPage = () => {
 
   // Countdown timer effect
   useEffect(() => {
+    if (timeLeft <= 0) {
+      setIsProjectEnded(true);
+      return;
+    }
+    
     const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setIsProjectEnded(true);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [timeLeft]);
+
+  // Effect to update project status when timeLeft changes
+  useEffect(() => {
+    if (timeLeft <= 0 && !isProjectEnded) {
+      setIsProjectEnded(true);
+    }
+  }, [timeLeft, isProjectEnded]);
+
+  // Handle bookmark toggle
+  const handleBookmarkToggle = async () => {
+    try {
+      setSavingProject(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please login to save projects");
+        return;
+      }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      };
+
+      if (isBookmarked) {
+        // Unsave project
+        await axios.delete(
+          `http://localhost:8000/api/saved-projects/unsave/${_id}`,
+          config
+        );
+        setIsBookmarked(false);
+      } else {
+        // Save project
+        await axios.post(
+          `http://localhost:8000/api/saved-projects/save/${_id}`,
+          {},
+          config
+        );
+        setIsBookmarked(true);
+      }
+    } catch (error) {
+      console.error("Error toggling bookmark:", error);
+      alert(error.response?.data?.message || "Failed to update bookmark");
+    } finally {
+      setSavingProject(false);
+    }
+  };
 
   // Format time for display
   const formatTime = () => {
-    const hours = Math.floor(timeLeft / 3600);
+    if (timeLeft <= 0) {
+      return "00:00:00";
+    }
+    
+    const days = Math.floor(timeLeft / (24 * 3600));
+    const hours = Math.floor((timeLeft % (24 * 3600)) / 3600);
     const minutes = Math.floor((timeLeft % 3600) / 60);
     const seconds = timeLeft % 60;
+    
+    if (days > 0) {
+      return `${days}d ${hours.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+    }
+    
     return `${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
@@ -110,16 +221,35 @@ const BidingPage = () => {
           {/* Header with Bookmark and Timer */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-2">
-              <span className="px-3 py-1 bg-blue-600 text-white text-sm rounded-full animate-pulse">
-                Live
-              </span>
-              <span className="text-gray-300">Ends in: {formatTime()}</span>
+              {countdownInitialized && (
+                <>
+                  <span className={`px-3 py-1 text-white text-sm rounded-full ${
+                    isProjectEnded 
+                      ? 'bg-red-600' 
+                      : 'bg-blue-600 animate-pulse'
+                  }`}>
+                    {isProjectEnded ? 'Ended' : 'Live'}
+                  </span>
+                  <span className="text-gray-300">
+                    {isProjectEnded ? 'Project ended' : `Ends in: ${formatTime()}`}
+                  </span>
+                </>
+              )}
             </div>
             <button
-              onClick={() => setIsBookmarked(!isBookmarked)}
-              className="text-gray-300 hover:text-yellow-400 transition-colors"
+              onClick={handleBookmarkToggle}
+              disabled={savingProject}
+              className={`text-gray-300 hover:text-yellow-400 transition-colors ${
+                savingProject ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              title={isBookmarked ? "Remove from saved projects" : "Save project"}
             >
-              {isBookmarked ? (
+              {savingProject ? (
+                <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : isBookmarked ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-6 w-6 fill-yellow-400"
