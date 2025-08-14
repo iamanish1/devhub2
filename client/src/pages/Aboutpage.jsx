@@ -423,26 +423,32 @@ const AboutPage = () => {
           </motion.h2>
           
           <motion.div
-            className="mt-10 grid md:grid-cols-3 gap-6"
+            className="mt-10 grid md:grid-cols-2 lg:grid-cols-4 gap-6"
             variants={staggerContainer}
           >
             <Testimonial 
-              quote="Dev Hub helped me find a mentor who guided me to land my first dev role at a major tech company." 
-              author="Alex Chen"
-              role="Frontend Developer"
+              quote="Just got placed at TCS! 🎉 Dev Hub helped me so much - I was clueless about building a portfolio but found amazing mentors here who guided me through everything. The community is super supportive!" 
+              author="Priya Sharma"
+              role="Final Year B.Tech, Mumbai University"
               index={0}
             />
             <Testimonial 
-              quote="The live coding events pushed me to improve my skills. I've learned more in 3 months than in a year of self-study." 
-              author="Sarah Johnson"
-              role="Full Stack Engineer"
+              quote="Bro, I was literally failing in DSA! 😅 Found study buddies from IIT Delhi on Dev Hub and we practiced together daily. Finally cracked Amazon's interview! This platform is a lifesaver for interview prep." 
+              author="Rahul Verma"
+              role="Final Year CSE, DTU"
               index={1}
             />
             <Testimonial 
-              quote="Our startup uses Dev Hub's collaborative tools daily. We've cut development time by 30% and found amazing talent." 
-              author="Michael Rodriguez"
-              role="CTO, CodeLift"
+              quote="From a tier-3 college and everyone said I won't get a good job. But Dev Hub helped me showcase my projects properly and I got hired by a cool Bangalore startup! Never give up guys! 💪" 
+              author="Amit Patel"
+              role="Final Year IT, Local Engineering College"
               index={2}
+            />
+            <Testimonial 
+              quote="Was preparing for GATE but wanted to try IT too. Dev Hub's coding challenges are so fun and the mentors are really helpful. Got placed at Infosys! Still can't believe it happened! 😊" 
+              author="Neha Singh"
+              role="Final Year ECE, State University"
+              index={3}
             />
           </motion.div>
         </motion.section>
