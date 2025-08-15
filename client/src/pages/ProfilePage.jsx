@@ -1,6 +1,6 @@
 import Navbar from "../components/NavBar";
 import axios from "axios";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   FaGithub,
   FaLinkedin,
@@ -33,6 +33,719 @@ import {
 
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Optimized Skill Card Component
+const SkillCard = React.memo(({ skill, getSkillIcon, getSkillLevel }) => {
+  const SkillIcon = getSkillIcon(skill.name);
+  const skillLevel = getSkillLevel(skill.proficiency);
+
+  return (
+    <div className="group relative bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300">
+      {/* Skill Header */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl border border-blue-500/30">
+          <SkillIcon className="text-2xl text-blue-400" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
+            {skill.name}
+          </h3>
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${skillLevel.bg} ${skillLevel.color}`}
+            >
+              {skillLevel.label}
+            </span>
+            <span className="text-gray-400 text-xs">
+              • {skill.category}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-gray-400">
+            Proficiency
+          </span>
+          <span className="text-sm font-semibold text-blue-400">
+            {skill.proficiency}%
+          </span>
+        </div>
+        <div className="relative w-full bg-gray-700/50 rounded-full h-3 overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 rounded-full transition-all duration-1000 ease-out"
+            style={{ width: `${skill.proficiency}%` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
+        </div>
+      </div>
+
+      {/* Skill Stats */}
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-1 text-gray-400">
+          <span>📅</span>
+          <span>
+            {skill.experience} year
+            {skill.experience > 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-gray-400">
+          <span>📁</span>
+          <span>{skill.projects} projects</span>
+        </div>
+      </div>
+
+      {/* Hover Effect Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    </div>
+  );
+});
+
+// Optimized Contribution Square Component
+const ContributionSquare = React.memo(({ contributionLevel, contributionCount, date }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div
+      className="w-4 h-4 rounded-md cursor-pointer group relative border border-gray-700/40 transition-transform duration-200 hover:scale-110"
+      style={{
+        backgroundColor:
+          contributionLevel === 0
+            ? "#374151"
+            : contributionLevel === 1
+            ? "#0e4429"
+            : contributionLevel === 2
+            ? "#006d32"
+            : contributionLevel === 3
+            ? "#26a641"
+            : "#39d353",
+        boxShadow: contributionLevel > 0 ? '0 2px 6px rgba(0, 0, 0, 0.3)' : 'none'
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Optimized Tooltip */}
+      {isHovered && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-gray-900/95 backdrop-blur-sm text-white text-sm rounded-xl whitespace-nowrap z-20 border border-gray-700/50 shadow-2xl">
+          <div className="font-bold text-green-400 mb-1">
+            {contributionCount} contributions
+          </div>
+          <div className="text-gray-300 text-xs">
+            {date.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent border-t-gray-900/95"></div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// Lazy Skills Section Component
+const SkillsSection = React.memo(({ skills, getSkillIcon, getSkillLevel, contributionData, selectedTimePeriod, setSelectedTimePeriod, showAnalytics, setShowAnalytics, isRealTimeEnabled, setIsRealTimeEnabled, analyticsData, getRealTimeData }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    // Simulate loading time for better UX
+    const timer = setTimeout(() => setIsLoaded(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isLoaded) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-700 rounded mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-32 bg-gray-700 rounded-2xl"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8"
+    >
+      {/* Skills Overview Header */}
+      <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-2">
+              Skills & Technologies
+            </h2>
+            <p className="text-gray-400 text-lg">
+              Professional expertise across multiple domains
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-blue-400">
+              {skills.length}
+            </div>
+            <div className="text-gray-400 text-sm">Technologies</div>
+          </div>
+        </div>
+
+        {/* Skills Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {skills.map((skill, index) => (
+            <SkillCard
+              key={index}
+              skill={skill}
+              getSkillIcon={getSkillIcon}
+              getSkillLevel={getSkillLevel}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Skills Summary & Categories */}
+      <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
+        <h3 className="text-2xl font-bold text-white mb-6">
+          Skills Overview
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Frontend Skills */}
+          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl border border-blue-500/20 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <FaHtml5 className="text-xl text-blue-400" />
+              </div>
+              <h4 className="text-lg font-semibold text-white">
+                Frontend
+              </h4>
+            </div>
+            <div className="space-y-2">
+              {skills
+                .filter((skill) => skill.category === "Frontend")
+                .map((skill, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-gray-300 text-sm">
+                      {skill.name}
+                    </span>
+                    <span className="text-blue-400 text-sm font-medium">
+                      {skill.proficiency}%
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Backend Skills */}
+          <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-2xl border border-green-500/20 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <FaNodeJs className="text-xl text-green-400" />
+              </div>
+              <h4 className="text-lg font-semibold text-white">
+                Backend
+              </h4>
+            </div>
+            <div className="space-y-2">
+              {skills
+                .filter((skill) => skill.category === "Backend")
+                .map((skill, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-gray-300 text-sm">
+                      {skill.name}
+                    </span>
+                    <span className="text-green-400 text-sm font-medium">
+                      {skill.proficiency}%
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* DevOps Skills */}
+          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-2xl border border-purple-500/20 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <FaDocker className="text-xl text-purple-400" />
+              </div>
+              <h4 className="text-lg font-semibold text-white">
+                DevOps
+              </h4>
+            </div>
+            <div className="space-y-2">
+              {skills
+                .filter((skill) => skill.category === "DevOps")
+                .map((skill, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-gray-300 text-sm">
+                      {skill.name}
+                    </span>
+                    <span className="text-purple-400 text-sm font-medium">
+                      {skill.proficiency}%
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Professional Contribution Activity */}
+      <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              Contribution Activity
+            </h3>
+            <p className="text-gray-400">
+              Your coding activity over the past year
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-2xl font-bold text-green-400">
+                1,247
+              </div>
+              <div className="text-gray-400 text-sm">
+                Total Contributions
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-400">
+                156
+              </div>
+              <div className="text-gray-400 text-sm">This Year</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced GitHub-Style Activity Heatmap */}
+        <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-2xl border border-blue-500/20 p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h4 className="text-lg font-semibold text-white">
+                Activity Heatmap
+              </h4>
+              <p className="text-gray-400 text-sm">
+                Your contribution activity over the past year
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Time Period Selector */}
+              <div className="flex items-center gap-2 bg-[#2a2a2a] rounded-lg border border-blue-500/20 p-1">
+                {["7D", "30D", "90D", "1Y"].map((period) => (
+                  <button
+                    key={period}
+                    onClick={() => setSelectedTimePeriod(period)}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-300 ${
+                      selectedTimePeriod === period
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-400 hover:text-white hover:bg-blue-500/10"
+                    }`}
+                  >
+                    {period}
+                  </button>
+                ))}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <span>Less</span>
+                <div className="flex gap-1">
+                  {[0, 1, 2, 3, 4].map((level) => (
+                    <div
+                      key={level}
+                      className="w-3 h-3 rounded-sm"
+                      style={{
+                        backgroundColor:
+                          level === 0
+                            ? "#161b22"
+                            : level === 1
+                            ? "#0e4429"
+                            : level === 2
+                            ? "#006d32"
+                            : level === 3
+                            ? "#26a641"
+                            : "#39d353",
+                      }}
+                    />
+                  ))}
+                </div>
+                <span>More</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Activity Heatmap with Perfect Size Boxes */}
+          <div className="relative">
+            {/* Month Labels Row */}
+            <div className="flex mb-3">
+              <div className="w-8"></div> {/* Spacer for day labels */}
+              <div className="flex-1 flex">
+                {[
+                  "Jan",
+                  "Feb",
+                  "Mar",
+                  "Apr",
+                  "May",
+                  "Jun",
+                  "Jul",
+                  "Aug",
+                  "Sep",
+                  "Oct",
+                  "Nov",
+                  "Dec",
+                ].map((month, index) => (
+                  <div
+                    key={month}
+                    className="flex-1 text-center text-sm text-gray-400 font-medium"
+                  >
+                    {month}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Main Heatmap Container */}
+            <div className="flex">
+              {/* Day Labels Column */}
+              <div className="w-8 flex flex-col">
+                {["", "Mon", "", "Wed", "", "Fri", ""].map(
+                  (day, index) => (
+                    <div
+                      key={index}
+                      className="text-xs text-gray-400 text-right pr-2 h-4 leading-4 mb-1"
+                    >
+                      {day}
+                    </div>
+                  )
+                )}
+              </div>
+
+              {/* Contribution Squares Container */}
+              <div className="flex-1">
+                <div className="grid grid-cols-52 gap-1.5">
+                  {contributionData.map((item, i) => (
+                    <ContributionSquare
+                      key={i}
+                      contributionLevel={item.contributionLevel}
+                      contributionCount={item.contributionCount}
+                      date={item.date}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Contribution Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <FaCode className="text-green-400" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-green-400">
+                  156
+                </div>
+                <div className="text-gray-400 text-sm">This Year</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <FaCalendar className="text-blue-400" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-blue-400">
+                  23
+                </div>
+                <div className="text-gray-400 text-sm">
+                  Current Streak
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <FaTrophy className="text-purple-400" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-purple-400">
+                  45
+                </div>
+                <div className="text-gray-400 text-sm">Best Day</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-500/20 rounded-lg">
+                <FaRocket className="text-orange-400" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-orange-400">
+                  89%
+                </div>
+                <div className="text-gray-400 text-sm">
+                  Consistency
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Professional Analytics Dashboard */}
+      <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              Analytics Dashboard
+            </h3>
+            <p className="text-gray-400">
+              Comprehensive insights into your performance
+            </p>
+            {isRealTimeEnabled && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-green-400 text-sm font-medium">
+                  Live Updates
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {/* Real-time Toggle */}
+            <button
+              onClick={() => setIsRealTimeEnabled(!isRealTimeEnabled)}
+              className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 flex items-center gap-2 ${
+                isRealTimeEnabled
+                  ? "bg-green-600 hover:bg-green-700 text-white"
+                  : "bg-gray-600 hover:bg-gray-700 text-white"
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isRealTimeEnabled
+                    ? "bg-white animate-pulse"
+                    : "bg-gray-300"
+                }`}
+              ></div>
+              Live
+            </button>
+
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center gap-2"
+            >
+              <FaChartBar className="text-sm" />
+              {showAnalytics ? "Hide" : "Show"} Analytics
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {showAnalytics && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-8"
+            >
+              {/* Key Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-blue-500/20 rounded-lg">
+                      <FaChartBar className="text-blue-400" />
+                    </div>
+                    <span className="text-green-400 text-sm font-medium">
+                      +12.5%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    $2,450
+                  </div>
+                  <div className="text-gray-400 text-sm">
+                    Monthly Earnings
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-green-500/20 rounded-lg">
+                      <FaRocket className="text-green-400" />
+                    </div>
+                    <span className="text-green-400 text-sm font-medium">
+                      +8.2%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    92%
+                  </div>
+                  <div className="text-gray-400 text-sm">
+                    Project Success Rate
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-purple-500/20 rounded-lg">
+                      <FaTrophy className="text-purple-400" />
+                    </div>
+                    <span className="text-green-400 text-sm font-medium">
+                      +15.3%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    4.8
+                  </div>
+                  <div className="text-gray-400 text-sm">
+                    Average Rating
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 bg-orange-500/20 rounded-lg">
+                      <FaCode className="text-orange-400" />
+                    </div>
+                    <span className="text-green-400 text-sm font-medium">
+                      +22.1%
+                    </span>
+                  </div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    156
+                  </div>
+                  <div className="text-gray-400 text-sm">
+                    Lines of Code
+                  </div>
+                </div>
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Monthly Earnings Chart */}
+                <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="text-lg font-semibold text-white">
+                      Monthly Earnings Trend
+                    </h4>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span>Earnings</span>
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-2 h-32">
+                    {getRealTimeData().monthlyEarnings.map(
+                      (earnings, index) => (
+                        <motion.div
+                          key={index}
+                          className="flex-1 bg-gradient-to-t from-blue-500 to-blue-600 rounded-t-sm relative group"
+                          initial={{ height: 0 }}
+                          animate={{
+                            height: `${(earnings / 3000) * 100}%`,
+                          }}
+                          transition={{
+                            duration: 0.8,
+                            delay: index * 0.1,
+                          }}
+                        >
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                            ${earnings}
+                          </div>
+                        </motion.div>
+                      )
+                    )}
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400 mt-2">
+                    <span>Jan</span>
+                    <span>Mar</span>
+                    <span>May</span>
+                    <span>Jul</span>
+                    <span>Sep</span>
+                    <span>Nov</span>
+                  </div>
+                </div>
+
+                {/* Skill Growth Chart */}
+                <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="text-lg font-semibold text-white">
+                      Skill Growth (6 months)
+                    </h4>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span>Progress</span>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {Object.entries(
+                      getRealTimeData().skillGrowth
+                    ).map(([skill, growth], index) => (
+                      <div key={skill} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300 text-sm font-medium">
+                            {skill}
+                          </span>
+                          <span className="text-blue-400 text-sm font-semibold">
+                            {growth[growth.length - 1]}%
+                          </span>
+                        </div>
+                        <div className="relative bg-gray-700 rounded-full h-3 overflow-hidden">
+                          <motion.div
+                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-500 to-blue-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{
+                              width: `${growth[growth.length - 1]}%`,
+                            }}
+                            transition={{
+                              duration: 1.5,
+                              delay: index * 0.2,
+                              ease: "easeOut",
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+});
 
 const ProfilePage = () => {
   const [userProfile, setUserProfile] = useState({});
@@ -118,8 +831,65 @@ const ProfilePage = () => {
           },
         ];
 
-  // Skill icon mapping
-  const getSkillIcon = (skillName) => {
+  // Optimized skills data - memoized to prevent unnecessary re-renders
+  const skills = useMemo(() => {
+    if (userProfile.user_profile_skills && userProfile.user_profile_skills.length > 0) {
+      return userProfile.user_profile_skills.map((skill) => ({
+        name: skill,
+        proficiency: Math.floor(Math.random() * 40) + 60,
+        category: "Programming",
+        experience: Math.floor(Math.random() * 3) + 1,
+        projects: Math.floor(Math.random() * 10) + 2,
+      }));
+    }
+    return [
+      {
+        name: "JavaScript",
+        proficiency: 85,
+        category: "Frontend",
+        experience: 3,
+        projects: 8,
+      },
+      {
+        name: "React",
+        proficiency: 80,
+        category: "Frontend",
+        experience: 2,
+        projects: 6,
+      },
+      {
+        name: "Node.js",
+        proficiency: 75,
+        category: "Backend",
+        experience: 2,
+        projects: 5,
+      },
+      {
+        name: "Python",
+        proficiency: 70,
+        category: "Programming",
+        experience: 1,
+        projects: 3,
+      },
+      {
+        name: "MongoDB",
+        proficiency: 65,
+        category: "Database",
+        experience: 1,
+        projects: 4,
+      },
+      {
+        name: "Docker",
+        proficiency: 60,
+        category: "DevOps",
+        experience: 1,
+        projects: 2,
+      },
+    ];
+  }, [userProfile.user_profile_skills]);
+
+  // Optimized skill functions with useCallback
+  const getSkillIcon = useCallback((skillName) => {
     const iconMap = {
       JavaScript: FaJs,
       React: FaReact,
@@ -143,10 +913,10 @@ const ProfilePage = () => {
       Nginx: FaDocker,
     };
     return iconMap[skillName] || FaCode;
-  };
+  }, []);
 
   // Get skill level label
-  const getSkillLevel = (proficiency) => {
+  const getSkillLevel = useCallback((proficiency) => {
     if (proficiency >= 90)
       return {
         label: "Expert",
@@ -170,63 +940,44 @@ const ProfilePage = () => {
       color: "text-yellow-400",
       bg: "bg-yellow-500/10",
     };
-  };
+  }, []);
 
-  // Mock skills with enhanced data
-  const skills =
-    userProfile.user_profile_skills &&
-    userProfile.user_profile_skills.length > 0
-      ? userProfile.user_profile_skills.map((skill) => ({
-          name: skill,
-          proficiency: Math.floor(Math.random() * 40) + 60, // 60-100%
-          category: "Programming",
-          experience: Math.floor(Math.random() * 3) + 1, // 1-4 years
-          projects: Math.floor(Math.random() * 10) + 2, // 2-12 projects
-        }))
-      : [
-          {
-            name: "JavaScript",
-            proficiency: 85,
-            category: "Frontend",
-            experience: 3,
-            projects: 8,
-          },
-          {
-            name: "React",
-            proficiency: 80,
-            category: "Frontend",
-            experience: 2,
-            projects: 6,
-          },
-          {
-            name: "Node.js",
-            proficiency: 75,
-            category: "Backend",
-            experience: 2,
-            projects: 5,
-          },
-          {
-            name: "Python",
-            proficiency: 70,
-            category: "Programming",
-            experience: 1,
-            projects: 3,
-          },
-          {
-            name: "MongoDB",
-            proficiency: 65,
-            category: "Database",
-            experience: 1,
-            projects: 4,
-          },
-          {
-            name: "Docker",
-            proficiency: 60,
-            category: "DevOps",
-            experience: 1,
-            projects: 2,
-          },
-        ];
+  // Optimized contribution data - memoized to prevent recalculation
+  const contributionData = useMemo(() => {
+    const data = [];
+    const today = new Date();
+    const startDate = new Date(today.getFullYear(), 0, 1); // Start of year
+    
+    // Generate data for 52 weeks (364 days) instead of 365 for better performance
+    for (let i = 0; i < 364; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      
+      const dayOfWeek = date.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isRecent = i >= 334; // Last 30 days
+      
+      let contributionLevel;
+      if (isRecent) {
+        contributionLevel = Math.random() > 0.3 ? Math.floor(Math.random() * 3) + 2 : Math.floor(Math.random() * 2);
+      } else if (isWeekend) {
+        contributionLevel = Math.random() > 0.7 ? Math.floor(Math.random() * 2) + 1 : 0;
+      } else {
+        contributionLevel = Math.random() > 0.4 ? Math.floor(Math.random() * 4) + 1 : 0;
+      }
+      
+      const contributionCount = contributionLevel === 0 ? 0 : Math.floor(Math.random() * 8) + 1;
+      
+      data.push({
+        date,
+        contributionLevel,
+        contributionCount,
+        index: i
+      });
+    }
+    
+    return data;
+  }, []);
 
   // Mock activity feed
   const mockActivityFeed = [
@@ -854,836 +1605,20 @@ const ProfilePage = () => {
             )}
 
             {activeTab === "skills" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="space-y-8"
-              >
-                {/* Skills Overview Header */}
-                <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h2 className="text-3xl font-bold text-white mb-2">
-                        Skills & Technologies
-                      </h2>
-                      <p className="text-gray-400 text-lg">
-                        Professional expertise across multiple domains
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-400">
-                        {skills.length}
-                      </div>
-                      <div className="text-gray-400 text-sm">Technologies</div>
-                    </div>
-                  </div>
-
-                  {/* Skills Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {skills.map((skill, index) => {
-                      const SkillIcon = getSkillIcon(skill.name);
-                      const skillLevel = getSkillLevel(skill.proficiency);
-
-                      return (
-                        <motion.div
-                          key={index}
-                          className="group relative bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300"
-                          whileHover={{ y: -4, scale: 1.02 }}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, delay: index * 0.1 }}
-                        >
-                          {/* Skill Header */}
-                          <div className="flex items-center gap-4 mb-4">
-                            <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl border border-blue-500/30">
-                              <SkillIcon className="text-2xl text-blue-400" />
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
-                                {skill.name}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium ${skillLevel.bg} ${skillLevel.color}`}
-                                >
-                                  {skillLevel.label}
-                                </span>
-                                <span className="text-gray-400 text-xs">
-                                  • {skill.category}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Progress Bar */}
-                          <div className="mb-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-400">
-                                Proficiency
-                              </span>
-                              <span className="text-sm font-semibold text-blue-400">
-                                {skill.proficiency}%
-                              </span>
-                            </div>
-                            <div className="relative w-full bg-gray-700/50 rounded-full h-3 overflow-hidden">
-                              <motion.div
-                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${skill.proficiency}%` }}
-                                transition={{
-                                  duration: 1.5,
-                                  delay: index * 0.1,
-                                  ease: "easeOut",
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
-                            </div>
-                          </div>
-
-                          {/* Skill Stats */}
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-1 text-gray-400">
-                              <span>📅</span>
-                              <span>
-                                {skill.experience} year
-                                {skill.experience > 1 ? "s" : ""}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-400">
-                              <span>📁</span>
-                              <span>{skill.projects} projects</span>
-                            </div>
-                          </div>
-
-                          {/* Hover Effect Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Skills Summary & Categories */}
-                <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
-                  <h3 className="text-2xl font-bold text-white mb-6">
-                    Skills Overview
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Frontend Skills */}
-                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl border border-blue-500/20 p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-blue-500/20 rounded-lg">
-                          <FaHtml5 className="text-xl text-blue-400" />
-                        </div>
-                        <h4 className="text-lg font-semibold text-white">
-                          Frontend
-                        </h4>
-                      </div>
-                      <div className="space-y-2">
-                        {skills
-                          .filter((skill) => skill.category === "Frontend")
-                          .map((skill, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between"
-                            >
-                              <span className="text-gray-300 text-sm">
-                                {skill.name}
-                              </span>
-                              <span className="text-blue-400 text-sm font-medium">
-                                {skill.proficiency}%
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Backend Skills */}
-                    <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-2xl border border-green-500/20 p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-green-500/20 rounded-lg">
-                          <FaNodeJs className="text-xl text-green-400" />
-                        </div>
-                        <h4 className="text-lg font-semibold text-white">
-                          Backend
-                        </h4>
-                      </div>
-                      <div className="space-y-2">
-                        {skills
-                          .filter((skill) => skill.category === "Backend")
-                          .map((skill, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between"
-                            >
-                              <span className="text-gray-300 text-sm">
-                                {skill.name}
-                              </span>
-                              <span className="text-green-400 text-sm font-medium">
-                                {skill.proficiency}%
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* DevOps Skills */}
-                    <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-2xl border border-purple-500/20 p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-purple-500/20 rounded-lg">
-                          <FaDocker className="text-xl text-purple-400" />
-                        </div>
-                        <h4 className="text-lg font-semibold text-white">
-                          DevOps
-                        </h4>
-                      </div>
-                      <div className="space-y-2">
-                        {skills
-                          .filter((skill) => skill.category === "DevOps")
-                          .map((skill, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between"
-                            >
-                              <span className="text-gray-300 text-sm">
-                                {skill.name}
-                              </span>
-                              <span className="text-purple-400 text-sm font-medium">
-                                {skill.proficiency}%
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Professional Contribution Activity */}
-                <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">
-                        Contribution Activity
-                      </h3>
-                      <p className="text-gray-400">
-                        Your coding activity over the past year
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-green-400">
-                          1,247
-                        </div>
-                        <div className="text-gray-400 text-sm">
-                          Total Contributions
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-blue-400">
-                          156
-                        </div>
-                        <div className="text-gray-400 text-sm">This Year</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced GitHub-Style Activity Heatmap */}
-                  <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-2xl border border-blue-500/20 p-6 mb-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h4 className="text-lg font-semibold text-white">
-                          Activity Heatmap
-                        </h4>
-                        <p className="text-gray-400 text-sm">
-                          Your contribution activity over the past year
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {/* Time Period Selector */}
-                        <div className="flex items-center gap-2 bg-[#2a2a2a] rounded-lg border border-blue-500/20 p-1">
-                          {["7D", "30D", "90D", "1Y"].map((period) => (
-                            <button
-                              key={period}
-                              onClick={() => setSelectedTimePeriod(period)}
-                              className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-300 ${
-                                selectedTimePeriod === period
-                                  ? "bg-blue-600 text-white"
-                                  : "text-gray-400 hover:text-white hover:bg-blue-500/10"
-                              }`}
-                            >
-                              {period}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Legend */}
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <span>Less</span>
-                          <div className="flex gap-1">
-                            {[0, 1, 2, 3, 4].map((level) => (
-                              <div
-                                key={level}
-                                className="w-3 h-3 rounded-sm"
-                                style={{
-                                  backgroundColor:
-                                    level === 0
-                                      ? "#161b22"
-                                      : level === 1
-                                      ? "#0e4429"
-                                      : level === 2
-                                      ? "#006d32"
-                                      : level === 3
-                                      ? "#26a641"
-                                      : "#39d353",
-                                }}
-                              />
-                            ))}
-                          </div>
-                          <span>More</span>
-                        </div>
-                      </div>
-                    </div>
-
-                                         {/* Enhanced Activity Heatmap with Perfect Size Boxes */}
-                     <div className="relative">
-                       {/* Month Labels Row */}
-                       <div className="flex mb-3">
-                         <div className="w-8"></div> {/* Spacer for day labels */}
-                         <div className="flex-1 flex">
-                           {[
-                             "Jan",
-                             "Feb",
-                             "Mar",
-                             "Apr",
-                             "May",
-                             "Jun",
-                             "Jul",
-                             "Aug",
-                             "Sep",
-                             "Oct",
-                             "Nov",
-                             "Dec",
-                           ].map((month, index) => (
-                             <div
-                               key={month}
-                               className="flex-1 text-center text-sm text-gray-400 font-medium"
-                             >
-                               {month}
-                             </div>
-                           ))}
-                         </div>
-                       </div>
-
-                       {/* Main Heatmap Container */}
-                       <div className="flex">
-                         {/* Day Labels Column */}
-                         <div className="w-8 flex flex-col">
-                           {["", "Mon", "", "Wed", "", "Fri", ""].map(
-                             (day, index) => (
-                               <div
-                                 key={index}
-                                 className="text-xs text-gray-400 text-right pr-2 h-4 leading-4 mb-1"
-                               >
-                                 {day}
-                               </div>
-                             )
-                           )}
-                         </div>
-
-                                                   {/* Contribution Squares Container */}
-                          <div className="flex-1">
-                            <div className="grid grid-cols-52 gap-1.5">
-                              {Array.from({ length: 365 }, (_, i) => {
-                                // Calculate the exact date for each day
-                                const today = new Date();
-                                const date = new Date(today.getFullYear(), 0, 1); // Start of year
-                                date.setDate(date.getDate() + i);
-                                
-                                // Generate more realistic contribution levels
-                                let contributionLevel;
-                                const dayOfWeek = date.getDay();
-                                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                                const isRecent = i >= 335; // Last 30 days
-                                
-                                if (isRecent) {
-                                  // Higher activity in recent days
-                                  contributionLevel = Math.random() > 0.3 ? Math.floor(Math.random() * 3) + 2 : Math.floor(Math.random() * 2);
-                                } else if (isWeekend) {
-                                  // Lower activity on weekends
-                                  contributionLevel = Math.random() > 0.7 ? Math.floor(Math.random() * 2) + 1 : 0;
-                                } else {
-                                  // Normal weekday activity
-                                  contributionLevel = Math.random() > 0.4 ? Math.floor(Math.random() * 4) + 1 : 0;
-                                }
-                                
-                                const contributionCount = contributionLevel === 0 ? 0 : Math.floor(Math.random() * 8) + 1;
-
-                               return (
-                                 <motion.div
-                                   key={i}
-                                   className="w-4 h-4 rounded-md cursor-pointer group relative border border-gray-700/40"
-                                   whileHover={{ 
-                                     scale: 1.3, 
-                                     zIndex: 10,
-                                     boxShadow: "0 6px 20px rgba(0, 0, 0, 0.4)"
-                                   }}
-                                   initial={{ opacity: 0, scale: 0.8 }}
-                                   animate={{ opacity: 1, scale: 1 }}
-                                   transition={{
-                                     duration: 0.4,
-                                     delay: i * 0.002,
-                                     type: "spring",
-                                     stiffness: 100
-                                   }}
-                                   style={{
-                                     backgroundColor:
-                                       contributionLevel === 0
-                                         ? "#374151" // More visible gray for no contributions
-                                         : contributionLevel === 1
-                                         ? "#0e4429"
-                                         : contributionLevel === 2
-                                         ? "#006d32"
-                                         : contributionLevel === 3
-                                         ? "#26a641"
-                                         : "#39d353",
-                                     boxShadow: contributionLevel > 0 ? '0 2px 6px rgba(0, 0, 0, 0.3)' : 'none'
-                                   }}
-                                 >
-                                   {/* Enhanced Tooltip */}
-                                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 px-4 py-3 bg-gray-900/95 backdrop-blur-sm text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-20 border border-gray-700/50 shadow-2xl">
-                                     <div className="font-bold text-green-400 mb-1">
-                                       {contributionCount} contributions
-                                     </div>
-                                     <div className="text-gray-300 text-xs">
-                                       {date.toLocaleDateString("en-US", {
-                                         weekday: "long",
-                                         year: "numeric",
-                                         month: "long",
-                                         day: "numeric",
-                                       })}
-                                     </div>
-                                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent border-t-gray-900/95"></div>
-                                   </div>
-                                 </motion.div>
-                               );
-                             })}
-                           </div>
-                         </div>
-                       </div>
-                     </div>
-                  </div>
-
-                  {/* Contribution Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-500/20 rounded-lg">
-                          <FaCode className="text-green-400" />
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-green-400">
-                            156
-                          </div>
-                          <div className="text-gray-400 text-sm">This Year</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/20 rounded-lg">
-                          <FaCalendar className="text-blue-400" />
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-blue-400">
-                            23
-                          </div>
-                          <div className="text-gray-400 text-sm">
-                            Current Streak
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-500/20 rounded-lg">
-                          <FaTrophy className="text-purple-400" />
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-purple-400">
-                            45
-                          </div>
-                          <div className="text-gray-400 text-sm">Best Day</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-orange-500/20 rounded-lg">
-                          <FaRocket className="text-orange-400" />
-                        </div>
-                        <div>
-                          <div className="text-lg font-bold text-orange-400">
-                            89%
-                          </div>
-                          <div className="text-gray-400 text-sm">
-                            Consistency
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Professional Analytics Dashboard */}
-                <div
-                  className={`bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8 ${
-                    isPrintMode ? "print-mode" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">
-                        Analytics Dashboard
-                      </h3>
-                      <p className="text-gray-400">
-                        Comprehensive insights into your performance
-                      </p>
-                      {isRealTimeEnabled && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                          <span className="text-green-400 text-sm font-medium">
-                            Live Updates
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {/* Real-time Toggle */}
-                      <button
-                        onClick={() => setIsRealTimeEnabled(!isRealTimeEnabled)}
-                        className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 flex items-center gap-2 ${
-                          isRealTimeEnabled
-                            ? "bg-green-600 hover:bg-green-700 text-white"
-                            : "bg-gray-600 hover:bg-gray-700 text-white"
-                        }`}
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            isRealTimeEnabled
-                              ? "bg-white animate-pulse"
-                              : "bg-gray-300"
-                          }`}
-                        ></div>
-                        Live
-                      </button>
-
-                      <button
-                        onClick={() => setShowAnalytics(!showAnalytics)}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center gap-2"
-                      >
-                        <FaChartBar className="text-sm" />
-                        {showAnalytics ? "Hide" : "Show"} Analytics
-                      </button>
-                    </div>
-                  </div>
-
-                  <AnimatePresence>
-                    {showAnalytics && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="space-y-8"
-                      >
-                        {/* Key Metrics */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="p-3 bg-blue-500/20 rounded-lg">
-                                <FaChartBar className="text-blue-400" />
-                              </div>
-                              <span className="text-green-400 text-sm font-medium">
-                                +12.5%
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-white mb-1">
-                              $2,450
-                            </div>
-                            <div className="text-gray-400 text-sm">
-                              Monthly Earnings
-                            </div>
-                          </div>
-
-                          <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="p-3 bg-green-500/20 rounded-lg">
-                                <FaRocket className="text-green-400" />
-                              </div>
-                              <span className="text-green-400 text-sm font-medium">
-                                +8.2%
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-white mb-1">
-                              92%
-                            </div>
-                            <div className="text-gray-400 text-sm">
-                              Project Success Rate
-                            </div>
-                          </div>
-
-                          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="p-3 bg-purple-500/20 rounded-lg">
-                                <FaTrophy className="text-purple-400" />
-                              </div>
-                              <span className="text-green-400 text-sm font-medium">
-                                +15.3%
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-white mb-1">
-                              4.8
-                            </div>
-                            <div className="text-gray-400 text-sm">
-                              Average Rating
-                            </div>
-                          </div>
-
-                          <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="p-3 bg-orange-500/20 rounded-lg">
-                                <FaCode className="text-orange-400" />
-                              </div>
-                              <span className="text-green-400 text-sm font-medium">
-                                +22.1%
-                              </span>
-                            </div>
-                            <div className="text-2xl font-bold text-white mb-1">
-                              156
-                            </div>
-                            <div className="text-gray-400 text-sm">
-                              Lines of Code
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Charts Section */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                          {/* Monthly Earnings Chart */}
-                          <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                              <h4 className="text-lg font-semibold text-white">
-                                Monthly Earnings Trend
-                              </h4>
-                              <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                <span>Earnings</span>
-                              </div>
-                            </div>
-                            <div className="flex items-end gap-2 h-32">
-                              {getRealTimeData().monthlyEarnings.map(
-                                (earnings, index) => (
-                                  <motion.div
-                                    key={index}
-                                    className="flex-1 bg-gradient-to-t from-blue-500 to-blue-600 rounded-t-sm relative group"
-                                    initial={{ height: 0 }}
-                                    animate={{
-                                      height: `${(earnings / 3000) * 100}%`,
-                                    }}
-                                    transition={{
-                                      duration: 0.8,
-                                      delay: index * 0.1,
-                                    }}
-                                  >
-                                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
-                                      ${earnings}
-                                    </div>
-                                  </motion.div>
-                                )
-                              )}
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-400 mt-2">
-                              <span>Jan</span>
-                              <span>Mar</span>
-                              <span>May</span>
-                              <span>Jul</span>
-                              <span>Sep</span>
-                              <span>Nov</span>
-                            </div>
-                          </div>
-
-                          {/* Skill Growth Chart */}
-                          <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                              <h4 className="text-lg font-semibold text-white">
-                                Skill Growth (6 months)
-                              </h4>
-                              <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                                <span>Progress</span>
-                              </div>
-                            </div>
-                            <div className="space-y-4">
-                              {Object.entries(
-                                getRealTimeData().skillGrowth
-                              ).map(([skill, growth], index) => (
-                                <div key={skill} className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-gray-300 text-sm font-medium">
-                                      {skill}
-                                    </span>
-                                    <span className="text-blue-400 text-sm font-semibold">
-                                      {growth[growth.length - 1]}%
-                                    </span>
-                                  </div>
-                                  <div className="relative bg-gray-700 rounded-full h-3 overflow-hidden">
-                                    <motion.div
-                                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-500 to-blue-500 rounded-full"
-                                      initial={{ width: 0 }}
-                                      animate={{
-                                        width: `${growth[growth.length - 1]}%`,
-                                      }}
-                                      transition={{
-                                        duration: 1.5,
-                                        delay: index * 0.2,
-                                        ease: "easeOut",
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Real-time Activity Feed */}
-                          <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                              <h4 className="text-lg font-semibold text-white">
-                                Real-time Activity
-                              </h4>
-                              <div className="flex items-center gap-2 text-sm text-gray-400">
-                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                <span>Live</span>
-                              </div>
-                            </div>
-                            <div className="space-y-4">
-                              {mockActivityFeed
-                                .slice(0, 3)
-                                .map((activity, index) => (
-                                  <motion.div
-                                    key={activity.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{
-                                      duration: 0.5,
-                                      delay: index * 0.1,
-                                    }}
-                                    className="flex items-center gap-4 p-4 bg-[#1a1a1a] rounded-xl border border-blue-500/10 hover:border-blue-500/30 transition-all duration-300"
-                                  >
-                                    <div
-                                      className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                                        activity.color === "green"
-                                          ? "bg-green-500/20"
-                                          : activity.color === "yellow"
-                                          ? "bg-yellow-500/20"
-                                          : activity.color === "blue"
-                                          ? "bg-blue-500/20"
-                                          : "bg-purple-500/20"
-                                      }`}
-                                    >
-                                      {activity.icon}
-                                    </div>
-                                    <div className="flex-1">
-                                      <h5 className="text-white font-medium mb-1">
-                                        {activity.title}
-                                      </h5>
-                                      <p className="text-gray-400 text-sm">
-                                        {activity.description}
-                                      </p>
-                                    </div>
-                                    <span className="text-gray-500 text-xs">
-                                      {activity.timestamp}
-                                    </span>
-                                  </motion.div>
-                                ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Performance Insights */}
-                        <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
-                          <h4 className="text-lg font-semibold text-white mb-6">
-                            Performance Insights
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between p-4 bg-[#1a1a1a] rounded-xl">
-                                <div>
-                                  <h5 className="text-white font-medium">
-                                    Best Performing Skill
-                                  </h5>
-                                  <p className="text-gray-400 text-sm">
-                                    JavaScript - 90% proficiency
-                                  </p>
-                                </div>
-                                <div className="text-green-400 text-2xl font-bold">
-                                  90%
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between p-4 bg-[#1a1a1a] rounded-xl">
-                                <div>
-                                  <h5 className="text-white font-medium">
-                                    Most Active Day
-                                  </h5>
-                                  <p className="text-gray-400 text-sm">
-                                    Wednesday - 45 contributions
-                                  </p>
-                                </div>
-                                <div className="text-blue-400 text-2xl font-bold">
-                                  45
-                                </div>
-                              </div>
-                            </div>
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between p-4 bg-[#1a1a1a] rounded-xl">
-                                <div>
-                                  <h5 className="text-white font-medium">
-                                    Project Success Rate
-                                  </h5>
-                                  <p className="text-gray-400 text-sm">
-                                    92% of projects completed on time
-                                  </p>
-                                </div>
-                                <div className="text-green-400 text-2xl font-bold">
-                                  92%
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between p-4 bg-[#1a1a1a] rounded-xl">
-                                <div>
-                                  <h5 className="text-white font-medium">
-                                    Average Response Time
-                                  </h5>
-                                  <p className="text-gray-400 text-sm">
-                                    2.3 hours to client inquiries
-                                  </p>
-                                </div>
-                                <div className="text-purple-400 text-2xl font-bold">
-                                  2.3h
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
+              <SkillsSection
+                skills={skills}
+                getSkillIcon={getSkillIcon}
+                getSkillLevel={getSkillLevel}
+                contributionData={contributionData}
+                selectedTimePeriod={selectedTimePeriod}
+                setSelectedTimePeriod={setSelectedTimePeriod}
+                showAnalytics={showAnalytics}
+                setShowAnalytics={setShowAnalytics}
+                isRealTimeEnabled={isRealTimeEnabled}
+                setIsRealTimeEnabled={setIsRealTimeEnabled}
+                analyticsData={analyticsData}
+                getRealTimeData={getRealTimeData}
+              />
             )}
 
             {activeTab === "activity" && (
