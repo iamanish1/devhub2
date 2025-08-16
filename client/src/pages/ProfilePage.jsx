@@ -174,6 +174,8 @@ const SkillsSection = React.memo(
     loading,
     loadingProjects,
     isFirebaseConnected,
+    syncAnalyticsToFirebase,
+    loadingAnalytics,
   }) => {
     const [isLoaded, setIsLoaded] = useState(false);
 
@@ -656,32 +658,43 @@ const SkillsSection = React.memo(
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              {/* Real-time Toggle */}
-              <button
-                onClick={() => setIsRealTimeEnabled(!isRealTimeEnabled)}
-                className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 flex items-center gap-2 ${
-                  isRealTimeEnabled
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-gray-600 hover:bg-gray-700 text-white"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isRealTimeEnabled ? "bg-white animate-pulse" : "bg-gray-300"
-                  }`}
-                ></div>
-                Live
-              </button>
+                         <div className="flex items-center gap-3">
+               {/* Sync to Firebase Button */}
+               <button
+                 onClick={syncAnalyticsToFirebase}
+                 disabled={loadingAnalytics}
+                 className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                 title="Sync analytics to Firebase"
+               >
+                 <FaSync className={`text-sm ${loadingAnalytics ? "animate-spin" : ""}`} />
+                 Sync
+               </button>
 
-              <button
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center gap-2"
-              >
-                <FaChartBar className="text-sm" />
-                {showAnalytics ? "Hide" : "Show"} Analytics
-              </button>
-            </div>
+               {/* Real-time Toggle */}
+               <button
+                 onClick={() => setIsRealTimeEnabled(!isRealTimeEnabled)}
+                 className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 flex items-center gap-2 ${
+                   isRealTimeEnabled
+                     ? "bg-green-600 hover:bg-green-700 text-white"
+                     : "bg-gray-600 hover:bg-gray-700 text-white"
+                 }`}
+               >
+                 <div
+                   className={`w-2 h-2 rounded-full ${
+                     isRealTimeEnabled ? "bg-white animate-pulse" : "bg-gray-300"
+                   }`}
+                 ></div>
+                 Live
+               </button>
+
+               <button
+                 onClick={() => setShowAnalytics(!showAnalytics)}
+                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center gap-2"
+               >
+                 <FaChartBar className="text-sm" />
+                 {showAnalytics ? "Hide" : "Show"} Analytics
+               </button>
+             </div>
           </div>
 
           <AnimatePresence>
@@ -692,72 +705,78 @@ const SkillsSection = React.memo(
                 exit={{ opacity: 0, height: 0 }}
                 className="space-y-8"
               >
-                {/* Key Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 bg-blue-500/20 rounded-lg">
-                        <FaChartBar className="text-blue-400" />
-                      </div>
-                      <span className="text-green-400 text-sm font-medium">
-                        +12.5%
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold text-white mb-1">
-                      $2,450
-                    </div>
-                    <div className="text-gray-400 text-sm">
-                      Monthly Earnings
-                    </div>
-                  </div>
+                                 {/* Key Metrics */}
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                   <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-6">
+                     <div className="flex items-center justify-between mb-4">
+                       <div className="p-3 bg-blue-500/20 rounded-lg">
+                         <FaChartBar className="text-blue-400" />
+                       </div>
+                       <span className="text-green-400 text-sm font-medium">
+                         {analyticsData.monthlyEarnings.length > 1 ? 
+                           `+${Math.round(((analyticsData.monthlyEarnings[analyticsData.monthlyEarnings.length - 1] - analyticsData.monthlyEarnings[analyticsData.monthlyEarnings.length - 2]) / Math.max(analyticsData.monthlyEarnings[analyticsData.monthlyEarnings.length - 2], 1)) * 100)}%` : 
+                           '+0%'
+                         }
+                       </span>
+                     </div>
+                     <div className="text-2xl font-bold text-white mb-1">
+                       ${analyticsData.monthlyEarnings[analyticsData.monthlyEarnings.length - 1] || 0}
+                     </div>
+                     <div className="text-gray-400 text-sm">
+                       Monthly Earnings
+                     </div>
+                   </div>
 
-                  <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 bg-green-500/20 rounded-lg">
-                        <FaRocket className="text-green-400" />
-                      </div>
-                      <span className="text-green-400 text-sm font-medium">
-                        +8.2%
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold text-white mb-1">
-                      92%
-                    </div>
-                    <div className="text-gray-400 text-sm">
-                      Project Success Rate
-                    </div>
-                  </div>
+                   <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-6">
+                     <div className="flex items-center justify-between mb-4">
+                       <div className="p-3 bg-green-500/20 rounded-lg">
+                         <FaRocket className="text-green-400" />
+                       </div>
+                       <span className="text-green-400 text-sm font-medium">
+                         {analyticsData.projectCompletion.length > 1 ? 
+                           `+${Math.round(((analyticsData.projectCompletion[analyticsData.projectCompletion.length - 1] - analyticsData.projectCompletion[analyticsData.projectCompletion.length - 2]) / Math.max(analyticsData.projectCompletion[analyticsData.projectCompletion.length - 2], 1)) * 100)}%` : 
+                           '+0%'
+                         }
+                       </span>
+                     </div>
+                     <div className="text-2xl font-bold text-white mb-1">
+                       {analyticsData.projectCompletion[analyticsData.projectCompletion.length - 1] || 0}%
+                     </div>
+                     <div className="text-gray-400 text-sm">
+                       Project Success Rate
+                     </div>
+                   </div>
 
-                  <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 bg-purple-500/20 rounded-lg">
-                        <FaTrophy className="text-purple-400" />
-                      </div>
-                      <span className="text-green-400 text-sm font-medium">
-                        +15.3%
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold text-white mb-1">
-                      4.8
-                    </div>
-                    <div className="text-gray-400 text-sm">Average Rating</div>
-                  </div>
+                   <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-6">
+                     <div className="flex items-center justify-between mb-4">
+                       <div className="p-3 bg-purple-500/20 rounded-lg">
+                         <FaTrophy className="text-purple-400" />
+                       </div>
+                       <span className="text-green-400 text-sm font-medium">
+                         +{Math.round(contributionStats.consistency)}%
+                       </span>
+                     </div>
+                     <div className="text-2xl font-bold text-white mb-1">
+                       {contributionStats.currentStreak}
+                     </div>
+                     <div className="text-gray-400 text-sm">Current Streak</div>
+                   </div>
 
-                  <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="p-3 bg-orange-500/20 rounded-lg">
-                        <FaCode className="text-orange-400" />
-                      </div>
-                      <span className="text-green-400 text-sm font-medium">
-                        +22.1%
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold text-white mb-1">
-                      156
-                    </div>
-                    <div className="text-gray-400 text-sm">Lines of Code</div>
-                  </div>
-                </div>
+                   <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl border border-orange-500/20 p-6">
+                     <div className="flex items-center justify-between mb-4">
+                       <div className="p-3 bg-orange-500/20 rounded-lg">
+                         <FaCode className="text-orange-400" />
+                       </div>
+                       <span className="text-green-400 text-sm font-medium">
+                         +{Math.round(contributionStats.bestDay)}%
+                       </span>
+                     </div>
+                     <div className="text-2xl font-bold text-white mb-1">
+                       {contributionStats.totalContributions}
+                     </div>
+                     <div className="text-gray-400 text-sm">Total Contributions</div>
+                   </div>
+                 </div>
 
                 {/* Charts Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1391,145 +1410,190 @@ const ProfilePage = () => {
     };
   }, [contributionData, selectedTimePeriod]);
 
-  // Real-time activity feed from Firebase
-  const [realTimeActivityFeed, setRealTimeActivityFeed] = useState([]);
-  const [loadingActivityFeed, setLoadingActivityFeed] = useState(false);
 
-  // Initialize Firebase real-time listener for activity feed
+  
+  // Real-time analytics data from Firebase
+  const [firebaseAnalyticsData, setFirebaseAnalyticsData] = useState({});
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
+
+
+  // Initialize Firebase real-time listener for analytics data
   useEffect(() => {
     if (!userProfile._id) return;
 
-    setLoadingActivityFeed(true);
+    setLoadingAnalytics(true);
     const userId = userProfile._id;
-    const activityRef = collection(db, 'userActivity');
-    const activityQuery = query(
-      activityRef,
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc'),
-      limit(10)
-    );
+    const analyticsRef = doc(db, 'userAnalytics', userId);
     
-    const unsubscribe = onSnapshot(activityQuery, (snapshot) => {
-      const activities = [];
-      snapshot.forEach((doc) => {
-        activities.push({
-          id: doc.id,
-          ...doc.data()
-        });
-      });
-      setRealTimeActivityFeed(activities);
-      setLoadingActivityFeed(false);
+    const unsubscribe = onSnapshot(analyticsRef, (doc) => {
+      if (doc.exists()) {
+        setFirebaseAnalyticsData(doc.data());
+        setIsFirebaseConnected(true);
+      } else {
+        // Initialize empty analytics data if document doesn't exist
+        setFirebaseAnalyticsData({});
+        setIsFirebaseConnected(false);
+      }
+      setLoadingAnalytics(false);
     }, (error) => {
-      console.error("Firebase activity feed listener error:", error);
-      setLoadingActivityFeed(false);
+      console.error("Firebase analytics listener error:", error);
+      setIsFirebaseConnected(false);
+      setLoadingAnalytics(false);
     });
 
     return () => unsubscribe();
   }, [userProfile._id]);
 
-  // Function to add activity to Firebase
-  const addActivityToFirebase = useCallback(async (activityType, title, description, projectId = null) => {
+  // Function to update analytics data in Firebase
+  const updateAnalyticsInFirebase = useCallback(async (analyticsType, data) => {
     if (!userProfile._id) return;
 
     try {
-      const activityRef = collection(db, 'userActivity');
-      await setDoc(doc(activityRef), {
-        userId: userProfile._id,
-        type: activityType,
-        title: title,
-        description: description,
-        projectId: projectId,
-        timestamp: serverTimestamp(),
-        icon: getActivityIcon(activityType),
-        color: getActivityColor(activityType)
-      });
+      const userId = userProfile._id;
+      const analyticsRef = doc(db, 'userAnalytics', userId);
+      
+      // Get current analytics data
+      const docSnap = await getDoc(analyticsRef);
+      
+      if (docSnap.exists()) {
+        const currentData = docSnap.data();
+        await updateDoc(analyticsRef, {
+          [analyticsType]: data,
+          lastUpdated: serverTimestamp(),
+          [`${analyticsType}_timestamp`]: serverTimestamp()
+        });
+      } else {
+        // Create new analytics document
+        await setDoc(analyticsRef, {
+          [analyticsType]: data,
+          lastUpdated: serverTimestamp(),
+          [`${analyticsType}_timestamp`]: serverTimestamp()
+        });
+      }
     } catch (error) {
-      console.error("Error adding activity to Firebase:", error);
+      console.error("Error updating analytics in Firebase:", error);
     }
   }, [userProfile._id]);
 
-  // Helper functions for activity icons and colors
-  const getActivityIcon = (type) => {
-    const icons = {
-      'project_completed': '🎉',
-      'project_started': '🚀',
-      'task_completed': '✅',
-      'skill_endorsed': '⭐',
-      'achievement_unlocked': '🏆',
-      'contribution_milestone': '📈'
+
+
+
+
+  // Real analytics data calculated from user's actual data with Firebase integration
+  const analyticsData = useMemo(() => {
+    // Use Firebase data if available, otherwise calculate from local data
+    if (firebaseAnalyticsData && Object.keys(firebaseAnalyticsData).length > 0) {
+      return {
+        monthlyEarnings: firebaseAnalyticsData.monthlyEarnings || [],
+        projectCompletion: firebaseAnalyticsData.projectCompletion || [],
+        skillGrowth: firebaseAnalyticsData.skillGrowth || {},
+        weeklyActivity: firebaseAnalyticsData.weeklyActivity || []
+      };
+    }
+
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    
+    // Calculate monthly earnings from completed projects
+    const monthlyEarnings = Array.from({ length: 6 }, (_, i) => {
+      const month = (currentMonth - 5 + i + 12) % 12;
+      const year = currentMonth - 5 + i < 0 ? currentYear - 1 : currentYear;
+      
+      return userProjects
+        .filter(project => {
+          const projectDate = new Date(project.assignedDate);
+          return project.projectStatus === "Completed" && 
+                 projectDate.getMonth() === month && 
+                 projectDate.getFullYear() === year;
+        })
+        .reduce((total, project) => total + (project.bidAmount || 0), 0);
+    });
+    
+    // Calculate project completion rates by month
+    const projectCompletion = Array.from({ length: 6 }, (_, i) => {
+      const month = (currentMonth - 5 + i + 12) % 12;
+      const year = currentMonth - 5 + i < 0 ? currentYear - 1 : currentYear;
+      
+      const monthProjects = userProjects.filter(project => {
+        const projectDate = new Date(project.assignedDate);
+        return projectDate.getMonth() === month && projectDate.getFullYear() === year;
+      });
+      
+      if (monthProjects.length === 0) return 0;
+      
+      const completedProjects = monthProjects.filter(project => 
+        project.projectStatus === "Completed"
+      ).length;
+      
+      return Math.round((completedProjects / monthProjects.length) * 100);
+    });
+    
+    // Calculate skill growth based on project experience
+    const skillGrowth = {};
+    if (skills.length > 0) {
+      skills.forEach(skill => {
+        const skillName = skill.name;
+        const baseLevel = skill.proficiency === "Experienced" ? 85 : 
+                         skill.proficiency === "Intermediate" ? 65 : 45;
+        
+        // Simulate growth over 6 months based on project activity
+        const growth = Array.from({ length: 6 }, (_, i) => {
+          const month = (currentMonth - 5 + i + 12) % 12;
+          const year = currentMonth - 5 + i < 0 ? currentYear - 1 : currentYear;
+          
+          const monthProjects = userProjects.filter(project => {
+            const projectDate = new Date(project.assignedDate);
+            return projectDate.getMonth() === month && 
+                   projectDate.getFullYear() === year &&
+                   project.techStack?.toLowerCase().includes(skillName.toLowerCase());
+          });
+          
+          const growthFactor = Math.min(monthProjects.length * 3, 15); // Max 15% growth per month
+          return Math.min(100, baseLevel + (i * 2) + growthFactor);
+        });
+        
+        skillGrowth[skillName] = growth;
+      });
+    }
+    
+    // Calculate weekly activity from contribution data
+    const weeklyActivity = Array.from({ length: 52 }, (_, i) => {
+      const weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() - (51 - i) * 7);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      
+      return contributionData
+        .filter(item => item.date >= weekStart && item.date <= weekEnd)
+        .reduce((total, item) => total + item.contributionCount, 0);
+    });
+    
+    return {
+      monthlyEarnings,
+      projectCompletion,
+      skillGrowth,
+      weeklyActivity
     };
-    return icons[type] || '📝';
-  };
+  }, [userProjects, skills, contributionData, firebaseAnalyticsData]);
 
-  const getActivityColor = (type) => {
-    const colors = {
-      'project_completed': 'green',
-      'project_started': 'blue',
-      'task_completed': 'green',
-      'skill_endorsed': 'yellow',
-      'achievement_unlocked': 'purple',
-      'contribution_milestone': 'orange'
-    };
-    return colors[type] || 'gray';
-  };
+  // Function to sync current analytics to Firebase (defined after analyticsData)
+  const syncAnalyticsToFirebase = useCallback(async () => {
+    if (!userProfile._id) return;
 
-  // Mock activity feed (fallback)
-  const mockActivityFeed = [
-    {
-      id: 1,
-      type: "project_completed",
-      title: "Completed AI Chatbot Project",
-      description: "Successfully delivered the NLP-powered chatbot",
-      timestamp: "2 hours ago",
-      icon: "🎉",
-      color: "green",
-    },
-    {
-      id: 2,
-      type: "skill_endorsed",
-      title: "React skill endorsed by John Doe",
-      description: "Received endorsement for React development",
-      timestamp: "1 day ago",
-      icon: "⭐",
-      color: "yellow",
-    },
-    {
-      id: 3,
-      type: "project_started",
-      title: "Started Bug Tracker Project",
-      description: "Began development of collaborative bug tracking platform",
-      timestamp: "3 days ago",
-      icon: "🚀",
-      color: "blue",
-    },
-    {
-      id: 4,
-      type: "achievement_unlocked",
-      title: "First 100 Contributions",
-      description: "Reached milestone of 100 project contributions",
-      timestamp: "1 week ago",
-      icon: "🏆",
-      color: "purple",
-    },
-  ];
-
-  // Use real-time activity feed if available, otherwise fallback to mock
-  const activityFeed = realTimeActivityFeed.length > 0 ? realTimeActivityFeed : mockActivityFeed;
-
-  // Mock analytics data for Phase 3
-  const analyticsData = {
-    monthlyEarnings: [1200, 1800, 1500, 2200, 1900, 2500],
-    projectCompletion: [85, 92, 78, 95, 88, 91],
-    skillGrowth: {
-      JavaScript: [70, 75, 80, 85, 88, 90],
-      React: [60, 68, 75, 82, 85, 88],
-      "Node.js": [65, 70, 75, 80, 83, 85],
-      Python: [50, 58, 65, 72, 78, 82],
-    },
-    weeklyActivity: Array.from({ length: 52 }, () =>
-      Math.floor(Math.random() * 10)
-    ),
-  };
+    try {
+      await updateAnalyticsInFirebase('monthlyEarnings', analyticsData.monthlyEarnings);
+      await updateAnalyticsInFirebase('projectCompletion', analyticsData.projectCompletion);
+      await updateAnalyticsInFirebase('skillGrowth', analyticsData.skillGrowth);
+      await updateAnalyticsInFirebase('weeklyActivity', analyticsData.weeklyActivity);
+      await updateAnalyticsInFirebase('contributionStats', contributionStats);
+      
+      console.log("Analytics data synced to Firebase");
+    } catch (error) {
+      console.error("Error syncing analytics to Firebase:", error);
+    }
+  }, [userProfile._id, analyticsData, contributionStats, updateAnalyticsInFirebase]);
 
   // Advanced Analytics Functions
   const getTimePeriodData = (period) => {
@@ -1545,19 +1609,21 @@ const ProfilePage = () => {
   const getRealTimeData = () => {
     if (!isRealTimeEnabled) return analyticsData;
 
-    // Simulate real-time updates
-    const now = new Date();
+    // Add small real-time variations to make it feel dynamic
     const updatedData = {
       ...analyticsData,
       monthlyEarnings: analyticsData.monthlyEarnings.map(
-        (earning) => earning + Math.floor(Math.random() * 100) - 50
+        (earning) => Math.max(0, earning + Math.floor(Math.random() * 50) - 25)
       ),
       projectCompletion: analyticsData.projectCompletion.map((completion) =>
-        Math.min(
-          100,
-          Math.max(0, completion + Math.floor(Math.random() * 10) - 5)
-        )
+        Math.min(100, Math.max(0, completion + Math.floor(Math.random() * 5) - 2))
       ),
+      skillGrowth: Object.fromEntries(
+        Object.entries(analyticsData.skillGrowth).map(([skill, growth]) => [
+          skill,
+          growth.map(level => Math.min(100, Math.max(0, level + Math.floor(Math.random() * 3) - 1)))
+        ])
+      )
     };
     return updatedData;
   };
@@ -1583,6 +1649,18 @@ const ProfilePage = () => {
       text: "text-white",
     },
   };
+
+  // Auto-sync analytics to Firebase when data changes
+  useEffect(() => {
+    if (isFirebaseConnected && userProjects.length > 0 && analyticsData) {
+      // Sync analytics data to Firebase every 30 seconds
+      const syncInterval = setInterval(() => {
+        syncAnalyticsToFirebase();
+      }, 30000);
+
+      return () => clearInterval(syncInterval);
+    }
+  }, [isFirebaseConnected, userProjects, syncAnalyticsToFirebase, analyticsData]);
 
   // Real-time data simulation effect
   useEffect(() => {
@@ -1660,7 +1738,6 @@ const ProfilePage = () => {
     { id: "overview", label: "Overview", icon: FaCode },
     { id: "projects", label: "Projects", icon: FaRocket },
     { id: "skills", label: "Skills", icon: FaTrophy },
-    { id: "activity", label: "Activity", icon: FaCalendar },
   ];
 
   return (
@@ -2312,93 +2389,12 @@ const ProfilePage = () => {
                  loading={loading}
                  loadingProjects={loadingProjects}
                  isFirebaseConnected={isFirebaseConnected}
+                 syncAnalyticsToFirebase={syncAnalyticsToFirebase}
+                 loadingAnalytics={loadingAnalytics}
                />
              )}
 
-                         {activeTab === "activity" && (
-               <motion.div
-                 initial={{ opacity: 0, y: 20 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ duration: 0.5 }}
-                 className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8"
-               >
-                 <div className="flex items-center justify-between mb-6">
-                   <div>
-                     <h2 className="text-2xl font-bold text-white mb-2">
-                       Activity Timeline
-                     </h2>
-                     <p className="text-gray-400">
-                       Your real-time project activities and achievements
-                     </p>
-                     {isFirebaseConnected && (
-                       <div className="flex items-center gap-2 mt-2">
-                         <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                         <span className="text-blue-400 text-sm font-medium">
-                           Live Firebase Updates
-                         </span>
-                       </div>
-                     )}
-                   </div>
-                   <button
-                     onClick={() => addActivityToFirebase('test_activity', 'Test Activity', 'Testing Firebase integration')}
-                     className="px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-all duration-300 border border-blue-500/30 rounded-lg text-sm font-medium"
-                   >
-                     Test Activity
-                   </button>
-                 </div>
-                 
-                 {loadingActivityFeed ? (
-                   <div className="text-gray-400 text-center py-12">
-                     <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                     Loading activity feed...
-                   </div>
-                 ) : (
-                   <div className="space-y-6">
-                     {activityFeed.map((activity, index) => (
-                       <motion.div
-                         key={activity.id}
-                         initial={{ opacity: 0, x: -20 }}
-                         animate={{ opacity: 1, x: 0 }}
-                         transition={{ duration: 0.5, delay: index * 0.1 }}
-                         className="flex items-start gap-4 p-4 bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300"
-                       >
-                         <div
-                           className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
-                             activity.color === "green"
-                               ? "bg-green-500/20"
-                               : activity.color === "yellow"
-                               ? "bg-yellow-500/20"
-                               : activity.color === "blue"
-                               ? "bg-blue-500/20"
-                               : activity.color === "purple"
-                               ? "bg-purple-500/20"
-                               : activity.color === "orange"
-                               ? "bg-orange-500/20"
-                               : "bg-gray-500/20"
-                           }`}
-                         >
-                           {activity.icon}
-                         </div>
-                         <div className="flex-1">
-                           <h3 className="text-white font-semibold mb-1">
-                             {activity.title}
-                           </h3>
-                           <p className="text-gray-400 text-sm mb-2">
-                             {activity.description}
-                           </p>
-                           <span className="text-gray-500 text-xs">
-                             {activity.timestamp ? 
-                               new Date(activity.timestamp.toDate()).toLocaleString() : 
-                               activity.timestamp || "Just now"
-                             }
-                           </span>
-                         </div>
-                       </motion.div>
-                     ))}
-                   </div>
-                 )}
-               </motion.div>
-             )}
+                         
           </div>
         </section>
       </main>
