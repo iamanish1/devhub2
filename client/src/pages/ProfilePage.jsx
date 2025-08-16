@@ -1183,8 +1183,19 @@ const ProfilePage = () => {
               <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
                 {/* Avatar Section */}
                 <div className="relative">
-                  <div className="h-32 w-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl border-4 border-white/10">
-                    <div className="h-24 w-24 bg-[#1a1a1a] rounded-full flex items-center justify-center">
+                  <div className="h-32 w-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl border-4 border-white/10 overflow-hidden">
+                    {userProfile.user_profile_avatar ? (
+                      <img
+                        src={`http://localhost:8000${userProfile.user_profile_avatar}`}
+                        alt={`${userProfile.username?.username || 'User'} avatar`}
+                        className="h-28 w-28 rounded-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className={`h-28 w-28 bg-[#1a1a1a] rounded-full flex items-center justify-center ${userProfile.user_profile_avatar ? 'hidden' : ''}`}>
                       <span className="text-3xl font-bold text-white">
                         {userProfile.username?.username
                           ?.charAt(0)

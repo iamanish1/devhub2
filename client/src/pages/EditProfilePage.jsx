@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../components/NavBar";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   FaUser,
   FaEnvelope,
@@ -40,7 +39,7 @@ import {
 const EditProfilePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isNewProfile = location.pathname.includes('create') || !location.state?.existingProfile;
+  const isNewProfile = location.pathname.includes('createprofile') || location.pathname.includes('create');
 
   // Enhanced form state with better structure
   const [form, setForm] = useState({
@@ -59,7 +58,6 @@ const EditProfilePage = () => {
     skills: [],
     skillExperience: {}, // New: Detailed skill experience tracking
     avatar: null,
-    coverPhoto: null,
   });
 
   const [loading, setLoading] = useState(false);
@@ -145,6 +143,26 @@ const EditProfilePage = () => {
       });
       
       const profile = response.data.profile;
+      // Process skills to extract names and build skillExperience
+      const processedSkills = [];
+      const processedSkillExperience = {};
+      
+      if (profile.user_profile_skills && Array.isArray(profile.user_profile_skills)) {
+        profile.user_profile_skills.forEach(skill => {
+          if (typeof skill === 'string') {
+            processedSkills.push(skill);
+            processedSkillExperience[skill] = { years: 1, projects: 1, proficiency: "Beginner" };
+          } else if (skill && typeof skill === 'object' && skill.name) {
+            processedSkills.push(skill.name);
+            processedSkillExperience[skill.name] = {
+              years: skill.experience || 1,
+              projects: skill.projects || 1,
+              proficiency: skill.proficiency || "Beginner"
+            };
+          }
+        });
+      }
+
       setForm({
         name: profile.username?.username || "",
         username: profile.username?.username || "",
@@ -158,9 +176,9 @@ const EditProfilePage = () => {
         linkedin: profile.user_profile_linkedIn || "",
         instagram: profile.user_profile_instagram || "",
         website: profile.user_profile_website || "",
-        skills: profile.user_profile_skills || [],
+        skills: processedSkills,
+        skillExperience: processedSkillExperience,
         avatar: null,
-        coverPhoto: null,
       });
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -175,19 +193,21 @@ const EditProfilePage = () => {
 
   const handleSkillToggle = (skill) => {
     setForm(prev => {
-      const isSkillSelected = prev.skills.includes(skill);
+      // Ensure skill is a string for comparison
+      const skillName = typeof skill === 'string' ? skill : (skill?.name || skill);
+      const isSkillSelected = prev.skills.includes(skillName);
       const newSkills = isSkillSelected
-        ? prev.skills.filter(s => s !== skill)
-        : [...prev.skills, skill];
+        ? prev.skills.filter(s => s !== skillName)
+        : [...prev.skills, skillName];
       
       // Update skill experience when adding/removing skills
       const newSkillExperience = { ...prev.skillExperience };
       if (isSkillSelected) {
         // Remove skill experience when deselecting
-        delete newSkillExperience[skill];
+        delete newSkillExperience[skillName];
       } else {
         // Initialize skill experience when selecting
-        newSkillExperience[skill] = {
+        newSkillExperience[skillName] = {
           years: 1,
           projects: 1,
           proficiency: "Beginner"
@@ -220,8 +240,51 @@ const EditProfilePage = () => {
   const handleFileUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file size (5MB for avatar)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setMessage(`File too large. Maximum size for avatar is 5MB`);
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setMessage('Invalid file type. Please upload JPEG, PNG, GIF, or WebP images.');
+        return;
+      }
+
       setForm(prev => ({ ...prev, [type]: file }));
       setAutoSaveStatus("saving");
+      setMessage(""); // Clear any previous error messages
+    }
+  };
+
+  const uploadFile = async (file, type) => {
+    try {
+      const formData = new FormData();
+      formData.append(type, file);
+
+      const response = await axios.post(
+        `http://localhost:8000/api/uploads/single/${type}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.data.files && response.data.files.length > 0) {
+        const uploadedFile = response.data.files[0];
+        return uploadedFile.url; // Return the file URL
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error uploading ${type}:`, error);
+      setMessage(`Error uploading ${type}: ${error.response?.data?.message || error.message}`);
+      return null;
     }
   };
 
@@ -262,6 +325,17 @@ const EditProfilePage = () => {
     setMessage("");
 
     try {
+      // Upload avatar if it exists
+      let avatarUrl = null;
+
+      if (form.avatar) {
+        avatarUrl = await uploadFile(form.avatar, 'avatar');
+        if (!avatarUrl) {
+          setLoading(false);
+          return; // Stop if avatar upload failed
+        }
+      }
+
       const payload = {
         user_profile_skills: form.skills,
         user_profile_bio: form.bio,
@@ -274,6 +348,8 @@ const EditProfilePage = () => {
         user_profile_experience: form.experience,
         skillExperience: form.skillExperience,
         username: form.username,
+        // Add avatar URL if uploaded
+        ...(avatarUrl && { user_profile_avatar: avatarUrl }),
       };
 
       await axios.post("http://localhost:8000/api/editprofile", payload, {
@@ -322,12 +398,7 @@ const EditProfilePage = () => {
     switch (currentStep) {
       case 1:
         return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
+          <div className="space-y-8">
             {/* Personal Information Section */}
             <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -445,17 +516,12 @@ const EditProfilePage = () => {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         );
 
       case 2:
         return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
+          <div className="space-y-8">
             {/* Skills Section */}
             <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -467,10 +533,9 @@ const EditProfilePage = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {skillCategories.map((category) => (
-                  <motion.div
+                  <div
                     key={category.name}
                     className="bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300"
-                    whileHover={{ y: -4, scale: 1.02 }}
                   >
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`p-2 bg-${category.color}-500/20 rounded-lg`}>
@@ -481,30 +546,30 @@ const EditProfilePage = () => {
                     
                     <div className="space-y-2">
                       {category.skills.map((skill) => {
-                        const isSelected = form.skills.includes(skill);
-                        const SkillIcon = getSkillIcon(skill);
+                        // Ensure skill is a string
+                        const skillName = typeof skill === 'string' ? skill : (skill?.name || 'Unknown Skill');
+                        const isSelected = form.skills.includes(skillName);
+                        const SkillIcon = getSkillIcon(skillName);
                         
                         return (
-                          <motion.button
-                            key={skill}
+                          <button
+                            key={skillName}
                             type="button"
-                            onClick={() => handleSkillToggle(skill)}
+                            onClick={() => handleSkillToggle(skillName)}
                             className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 ${
                               isSelected
                                 ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
                                 : "bg-[#1a1a1a] border-gray-700/50 text-gray-300 hover:border-blue-500/30 hover:text-white"
                             }`}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
                           >
                             <SkillIcon className="text-lg" />
-                            <span className="font-medium">{skill}</span>
+                            <span className="font-medium">{skillName}</span>
                             {isSelected && <FaCheck className="ml-auto text-blue-400" />}
-                          </motion.button>
+                          </button>
                         );
                       })}
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
               
@@ -514,24 +579,25 @@ const EditProfilePage = () => {
                   <div className="p-4 bg-[#2a2a2a] rounded-xl border border-blue-500/20">
                     <h4 className="text-white font-semibold mb-3">Selected Skills ({form.skills.length})</h4>
                     <div className="flex flex-wrap gap-2">
-                      {form.skills.map((skill) => (
-                        <motion.span
-                          key={skill}
-                          className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0 }}
-                        >
-                          {skill}
-                          <button
-                            type="button"
-                            onClick={() => handleSkillToggle(skill)}
-                            className="hover:text-red-400 transition-colors"
+                      {form.skills.map((skill) => {
+                        // Ensure skill is a string
+                        const skillName = typeof skill === 'string' ? skill : (skill?.name || 'Unknown Skill');
+                        return (
+                          <span
+                            key={skillName}
+                            className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium"
                           >
-                            <FaTimes className="text-xs" />
-                          </button>
-                        </motion.span>
-                      ))}
+                            {skillName}
+                            <button
+                              type="button"
+                              onClick={() => handleSkillToggle(skillName)}
+                              className="hover:text-red-400 transition-colors"
+                            >
+                              <FaTimes className="text-xs" />
+                            </button>
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -547,11 +613,9 @@ const EditProfilePage = () => {
                         const skillExp = form.skillExperience[skill] || { years: 1, projects: 1, proficiency: "Beginner" };
                         
                         return (
-                          <motion.div
+                          <div
                             key={skill}
                             className="p-4 bg-[#1a1a1a] rounded-xl border border-gray-700/50"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
                           >
                             <div className="flex items-center gap-3 mb-4">
                               <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -622,7 +686,7 @@ const EditProfilePage = () => {
                                 </span>
                               </div>
                             </div>
-                          </motion.div>
+                          </div>
                         );
                       })}
                     </div>
@@ -630,17 +694,12 @@ const EditProfilePage = () => {
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
         );
 
       case 3:
         return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
+          <div className="space-y-8">
             {/* Social Links Section */}
             <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -719,58 +778,64 @@ const EditProfilePage = () => {
                 <div className="p-2 bg-pink-500/20 rounded-lg">
                   <FaCamera className="text-pink-400" />
                 </div>
-                <h2 className="text-xl font-bold text-white">Profile Media</h2>
+                <h2 className="text-xl font-bold text-white">Profile Avatar</h2>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-gray-300 mb-2 font-medium">Profile Avatar</label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'avatar')}
-                      className="hidden"
-                      id="avatar-upload"
-                    />
-                    <label
-                      htmlFor="avatar-upload"
-                      className="flex items-center justify-center w-full h-32 border-2 border-dashed border-blue-500/30 rounded-xl cursor-pointer hover:border-blue-500/50 transition-all duration-300"
-                    >
+              <div className="max-w-md">
+                <label className="block text-gray-300 mb-2 font-medium">Profile Avatar</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'avatar')}
+                    className="hidden"
+                    id="avatar-upload"
+                  />
+                  <label
+                    htmlFor="avatar-upload"
+                    className={`flex items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300 ${
+                      form.avatar 
+                        ? 'border-green-500/50 bg-green-500/10' 
+                        : 'border-blue-500/30 hover:border-blue-500/50'
+                    }`}
+                  >
+                    {form.avatar ? (
+                      <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden border-2 border-green-500/50">
+                          <img
+                            src={URL.createObjectURL(form.avatar)}
+                            alt="Avatar preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <p className="text-green-400 text-sm font-medium">Avatar selected</p>
+                        <p className="text-gray-500 text-xs">{form.avatar.name}</p>
+                      </div>
+                    ) : (
                       <div className="text-center">
                         <FaUpload className="mx-auto text-2xl text-blue-400 mb-2" />
                         <p className="text-gray-400 text-sm">Click to upload avatar</p>
                         <p className="text-gray-500 text-xs">PNG, JPG up to 5MB</p>
                       </div>
-                    </label>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-gray-300 mb-2 font-medium">Cover Photo</label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'coverPhoto')}
-                      className="hidden"
-                      id="cover-upload"
-                    />
-                    <label
-                      htmlFor="cover-upload"
-                      className="flex items-center justify-center w-full h-32 border-2 border-dashed border-blue-500/30 rounded-xl cursor-pointer hover:border-blue-500/50 transition-all duration-300"
-                    >
-                      <div className="text-center">
-                        <FaUpload className="mx-auto text-2xl text-blue-400 mb-2" />
-                        <p className="text-gray-400 text-sm">Click to upload cover</p>
-                        <p className="text-gray-500 text-xs">PNG, JPG up to 10MB</p>
-                      </div>
-                    </label>
-                  </div>
+                    )}
+                  </label>
                 </div>
               </div>
+
+              {/* File Upload Status */}
+              {form.avatar && (
+                <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-green-400 font-medium">Avatar Ready for Upload</span>
+                  </div>
+                  <p className="text-gray-400 text-sm">
+                    Your selected avatar will be uploaded when you save the profile.
+                  </p>
+                </div>
+              )}
             </div>
-          </motion.div>
+          </div>
         );
 
       default:
@@ -792,11 +857,7 @@ const EditProfilePage = () => {
         <div className="relative z-10 pt-24 pb-16 px-4">
           <div className="max-w-6xl mx-auto">
             {/* Header Section */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-8"
-            >
+            <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-white mb-4">
                 {isNewProfile ? "Create Your Profile" : "Edit Your Profile"}
               </h1>
@@ -814,11 +875,9 @@ const EditProfilePage = () => {
                   <span className="text-sm text-blue-400 font-medium">{Math.round(formProgress)}%</span>
                 </div>
                 <div className="w-full bg-gray-700/50 rounded-full h-2">
-                  <motion.div
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${formProgress}%` }}
-                    transition={{ duration: 0.5 }}
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${formProgress}%` }}
                   />
                 </div>
               </div>
@@ -839,13 +898,11 @@ const EditProfilePage = () => {
                   </span>
                 </div>
               )}
-            </motion.div>
+            </div>
 
             {/* Message Display */}
             {message && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
+              <div
                 className={`max-w-2xl mx-auto mb-8 p-4 rounded-xl text-center ${
                   message.startsWith("Error") 
                     ? "bg-red-500/10 border border-red-500/20 text-red-400"
@@ -853,7 +910,7 @@ const EditProfilePage = () => {
                 }`}
               >
                 {message}
-              </motion.div>
+              </div>
             )}
 
             {/* Step Navigation */}
@@ -884,9 +941,9 @@ const EditProfilePage = () => {
             {/* Form Content */}
             <div className="max-w-4xl mx-auto">
               <form onSubmit={handleSubmit}>
-                <AnimatePresence mode="wait">
+                <div>
                   {renderFormSection()}
-                </AnimatePresence>
+                </div>
 
                 {/* Action Buttons */}
                 <div className="flex items-center justify-between mt-8">

@@ -43,6 +43,7 @@ const AppRoutes = () => {
         <Route path="/bidingproposal/:_id" element={<BidingProporsalPage />} />
         <Route path="/profile" element={<ProfilePage/>}/>
         <Route path="/editprofile" element={<EditProfilePage/>}/>
+        <Route path="/createprofile" element={<EditProfilePage/>}/>
         <Route path="/admin/" element={<AdminPage/>}/>
         <Route path="/editproject/:id" element={<ProjectListingPage />} />
         <Route path = "/contributionPage/:_id" element={<ContributionPage/>}/>

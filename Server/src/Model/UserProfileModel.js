@@ -85,8 +85,9 @@ const UserProfileSchema = new mongoose.Schema({
     required: true,
     default: 0,
   },
-  user_profile_cover_photo: {
+  user_profile_avatar: {
     type: String,
+    default: "",
   },
   user_profile_linkedIn: {
     type: String,

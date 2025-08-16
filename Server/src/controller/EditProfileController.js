@@ -8,7 +8,7 @@ export const editUserProfile = async (req, res) => {
     const {
       user_profile_skills,
       user_profile_bio,
-      user_profile_cover_photo,
+      user_profile_avatar,
       user_profile_linkedIn,
       user_profile_github,
       user_profile_website,
@@ -28,7 +28,7 @@ export const editUserProfile = async (req, res) => {
         username: userId,
         user_profile_skills: [],
         user_profile_bio: user_profile_bio || "",
-        user_profile_cover_photo: user_profile_cover_photo || "",
+        user_profile_avatar: user_profile_avatar || "",
         user_profile_linkedIn: user_profile_linkedIn || "",
         user_profile_github: user_profile_github || "",
         user_profile_website: user_profile_website || "",
@@ -42,7 +42,7 @@ export const editUserProfile = async (req, res) => {
     } else {
       // If profile exists, update the fields
       profile.user_profile_bio = user_profile_bio || profile.user_profile_bio || "";
-      profile.user_profile_cover_photo = user_profile_cover_photo || profile.user_profile_cover_photo;
+      profile.user_profile_avatar = user_profile_avatar || profile.user_profile_avatar || "";
       profile.user_profile_linkedIn = user_profile_linkedIn || profile.user_profile_linkedIn || "";
       profile.user_profile_github = user_profile_github || profile.user_profile_github || "";
       profile.user_profile_website = user_profile_website || profile.user_profile_website || "";

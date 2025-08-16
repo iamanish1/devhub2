@@ -4,7 +4,25 @@ import path from 'path';
 // Controller to accept and process uploaded files
 export const acceptUpload = async (req, res) => {
   try {
-    const files = req.allFiles();
+    // Handle both single and multiple file uploads
+    let files = [];
+    
+    if (req.allFiles && typeof req.allFiles === 'function') {
+      files = req.allFiles();
+    } else {
+      // Fallback if normalizeFiles middleware wasn't applied
+      if (req.file) {
+        files = [req.file];
+      } else if (req.files) {
+        Object.values(req.files).forEach(fieldFiles => {
+          if (Array.isArray(fieldFiles)) {
+            files.push(...fieldFiles);
+          } else {
+            files.push(fieldFiles);
+          }
+        });
+      }
+    }
     
     if (!files || files.length === 0) {
       return res.status(400).json({
