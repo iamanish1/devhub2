@@ -34,72 +34,44 @@ import {
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Optimized Skill Card Component
-const SkillCard = React.memo(({ skill, getSkillIcon, getSkillLevel }) => {
+// Professional Skill Card Component
+const SkillCard = React.memo(({ skill, getSkillIcon }) => {
   const SkillIcon = getSkillIcon(skill.name);
-  const skillLevel = getSkillLevel(skill.proficiency);
 
   return (
-    <div className="group relative bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300">
-      {/* Skill Header */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl border border-blue-500/30">
-          <SkillIcon className="text-2xl text-blue-400" />
+    <motion.div 
+      className="group relative bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-xl border border-gray-700/50 p-5 hover:border-blue-500/40 transition-all duration-300 cursor-pointer"
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Skill Icon and Name */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2.5 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-all duration-300">
+          <SkillIcon className="text-xl text-blue-400" />
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition-colors">
             {skill.name}
           </h3>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${skillLevel.bg} ${skillLevel.color}`}
-            >
-              {skillLevel.label}
-            </span>
-            <span className="text-gray-400 text-xs">
-              • {skill.category}
-            </span>
-          </div>
+          <span className="text-gray-400 text-sm">
+            {skill.category}
+          </span>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-400">
-            Proficiency
-          </span>
-          <span className="text-sm font-semibold text-blue-400">
-            {skill.proficiency}%
+      {/* Experience Badge */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+          <span className="text-sm text-gray-300">
+            {skill.experience} year{skill.experience > 1 ? "s" : ""} experience
           </span>
         </div>
-        <div className="relative w-full bg-gray-700/50 rounded-full h-3 overflow-hidden">
-          <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 rounded-full transition-all duration-1000 ease-out"
-            style={{ width: `${skill.proficiency}%` }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
-        </div>
+        <span className="text-xs text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
+          {skill.projects} projects
+        </span>
       </div>
-
-      {/* Skill Stats */}
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-1 text-gray-400">
-          <span>📅</span>
-          <span>
-            {skill.experience} year
-            {skill.experience > 1 ? "s" : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-1 text-gray-400">
-          <span>📁</span>
-          <span>{skill.projects} projects</span>
-        </div>
-      </div>
-
-      {/* Hover Effect Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-    </div>
+    </motion.div>
   );
 });
 
@@ -148,7 +120,7 @@ const ContributionSquare = React.memo(({ contributionLevel, contributionCount, d
 });
 
 // Lazy Skills Section Component
-const SkillsSection = React.memo(({ skills, getSkillIcon, getSkillLevel, contributionData, selectedTimePeriod, setSelectedTimePeriod, showAnalytics, setShowAnalytics, isRealTimeEnabled, setIsRealTimeEnabled, analyticsData, getRealTimeData }) => {
+const SkillsSection = React.memo(({ skills, getSkillIcon, contributionData, selectedTimePeriod, setSelectedTimePeriod, showAnalytics, setShowAnalytics, isRealTimeEnabled, setIsRealTimeEnabled, analyticsData, getRealTimeData }) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -174,140 +146,166 @@ const SkillsSection = React.memo(({ skills, getSkillIcon, getSkillLevel, contrib
     );
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-8"
-    >
-      {/* Skills Overview Header */}
-      <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-3xl font-bold text-white mb-2">
-              Skills & Technologies
-            </h2>
-            <p className="text-gray-400 text-lg">
-              Professional expertise across multiple domains
+     return (
+     <motion.div
+       initial={{ opacity: 0, y: 20 }}
+       animate={{ opacity: 1, y: 0 }}
+       transition={{ duration: 0.5 }}
+       className="space-y-8"
+     >
+              {/* Skills by Domain Section */}
+        <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-8">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-white mb-2">
+              Skills by Domain
+            </h3>
+            <p className="text-gray-400">
+              Organized expertise across different technology areas
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-blue-400">
-              {skills.length}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Frontend Development */}
+            <div className="bg-gradient-to-br from-blue-500/5 to-blue-600/5 rounded-xl border border-blue-500/20 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <FaHtml5 className="text-xl text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-white">Frontend</h4>
+                  <p className="text-blue-400 text-sm">
+                    {skills.filter(skill => skill.category === "Frontend").length} technologies
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {skills
+                  .filter((skill) => skill.category === "Frontend")
+                  .map((skill, index) => (
+                    <div key={index} className="flex items-center justify-between py-1">
+                      <span className="text-gray-300 text-sm">
+                        {skill.name}
+                      </span>
+                      <span className="text-blue-400 text-xs bg-blue-500/10 px-2 py-1 rounded-full">
+                        {skill.experience}y
+                      </span>
+                    </div>
+                  ))}
+              </div>
             </div>
-            <div className="text-gray-400 text-sm">Technologies</div>
+
+            {/* Backend Development */}
+            <div className="bg-gradient-to-br from-green-500/5 to-green-600/5 rounded-xl border border-green-500/20 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-green-500/20 rounded-lg">
+                  <FaNodeJs className="text-xl text-green-400" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-white">Backend</h4>
+                  <p className="text-green-400 text-sm">
+                    {skills.filter(skill => skill.category === "Backend").length} technologies
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {skills
+                  .filter((skill) => skill.category === "Backend")
+                  .map((skill, index) => (
+                    <div key={index} className="flex items-center justify-between py-1">
+                      <span className="text-gray-300 text-sm">
+                        {skill.name}
+                      </span>
+                      <span className="text-green-400 text-xs bg-green-500/10 px-2 py-1 rounded-full">
+                        {skill.experience}y
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* DevOps & Tools */}
+            <div className="bg-gradient-to-br from-purple-500/5 to-purple-600/5 rounded-xl border border-purple-500/20 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <FaDocker className="text-xl text-purple-400" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-white">DevOps</h4>
+                  <p className="text-purple-400 text-sm">
+                    {skills.filter(skill => skill.category === "DevOps").length} technologies
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {skills
+                  .filter((skill) => skill.category === "DevOps")
+                  .map((skill, index) => (
+                    <div key={index} className="flex items-center justify-between py-1">
+                      <span className="text-gray-300 text-sm">
+                        {skill.name}
+                      </span>
+                      <span className="text-purple-400 text-xs bg-purple-500/10 px-2 py-1 rounded-full">
+                        {skill.experience}y
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Skills Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {skills.map((skill, index) => (
-            <SkillCard
-              key={index}
-              skill={skill}
-              getSkillIcon={getSkillIcon}
-              getSkillLevel={getSkillLevel}
-            />
-          ))}
-        </div>
-      </div>
+        {/* Professional Skills & Technologies Section */}
+        <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Technical Skills & Expertise
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Comprehensive knowledge across multiple technology domains with hands-on project experience
+            </p>
+          </div>
 
-      {/* Skills Summary & Categories */}
-      <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
-        <h3 className="text-2xl font-bold text-white mb-6">
-          Skills Overview
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Frontend Skills */}
-          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-2xl border border-blue-500/20 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
-                <FaHtml5 className="text-xl text-blue-400" />
-              </div>
-              <h4 className="text-lg font-semibold text-white">
-                Frontend
-              </h4>
+          {/* Skills Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-6 text-center">
+              <div className="text-3xl font-bold text-blue-400 mb-2">{skills.length}</div>
+              <div className="text-gray-300 font-medium">Technologies</div>
+              <div className="text-gray-500 text-sm mt-1">Mastered</div>
             </div>
-            <div className="space-y-2">
-              {skills
-                .filter((skill) => skill.category === "Frontend")
-                .map((skill, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="text-gray-300 text-sm">
-                      {skill.name}
-                    </span>
-                    <span className="text-blue-400 text-sm font-medium">
-                      {skill.proficiency}%
-                    </span>
-                  </div>
-                ))}
+            <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-6 text-center">
+              <div className="text-3xl font-bold text-green-400 mb-2">
+                {skills.reduce((acc, skill) => acc + skill.experience, 0)}
+              </div>
+              <div className="text-gray-300 font-medium">Years</div>
+              <div className="text-gray-500 text-sm mt-1">Total Experience</div>
+            </div>
+            <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-6 text-center">
+              <div className="text-3xl font-bold text-purple-400 mb-2">
+                {skills.reduce((acc, skill) => acc + skill.projects, 0)}
+              </div>
+              <div className="text-gray-300 font-medium">Projects</div>
+              <div className="text-gray-500 text-sm mt-1">Completed</div>
             </div>
           </div>
 
-          {/* Backend Skills */}
-          <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-2xl border border-green-500/20 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-green-500/20 rounded-lg">
-                <FaNodeJs className="text-xl text-green-400" />
-              </div>
-              <h4 className="text-lg font-semibold text-white">
-                Backend
-              </h4>
-            </div>
-            <div className="space-y-2">
-              {skills
-                .filter((skill) => skill.category === "Backend")
-                .map((skill, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="text-gray-300 text-sm">
-                      {skill.name}
-                    </span>
-                    <span className="text-green-400 text-sm font-medium">
-                      {skill.proficiency}%
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* DevOps Skills */}
-          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-2xl border border-purple-500/20 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
-                <FaDocker className="text-xl text-purple-400" />
-              </div>
-              <h4 className="text-lg font-semibold text-white">
-                DevOps
-              </h4>
-            </div>
-            <div className="space-y-2">
-              {skills
-                .filter((skill) => skill.category === "DevOps")
-                .map((skill, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="text-gray-300 text-sm">
-                      {skill.name}
-                    </span>
-                    <span className="text-purple-400 text-sm font-medium">
-                      {skill.proficiency}%
-                    </span>
-                  </div>
-                ))}
-            </div>
+          {/* Skills Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {skills.map((skill, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.05 }}
+              >
+                <SkillCard
+                  skill={skill}
+                  getSkillIcon={getSkillIcon}
+                />
+              </motion.div>
+            ))}
           </div>
         </div>
-      </div>
 
       {/* Professional Contribution Activity */}
       <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
@@ -834,56 +832,51 @@ const ProfilePage = () => {
   // Optimized skills data - memoized to prevent unnecessary re-renders
   const skills = useMemo(() => {
     if (userProfile.user_profile_skills && userProfile.user_profile_skills.length > 0) {
-      return userProfile.user_profile_skills.map((skill) => ({
-        name: skill,
-        proficiency: Math.floor(Math.random() * 40) + 60,
-        category: "Programming",
-        experience: Math.floor(Math.random() * 3) + 1,
-        projects: Math.floor(Math.random() * 10) + 2,
-      }));
+      return userProfile.user_profile_skills.map((skill) => {
+        // Handle both string and object skill formats
+        if (typeof skill === 'string') {
+          return {
+            name: skill,
+            category: "Programming",
+            experience: 1, // Default experience
+            projects: 1,   // Default projects
+          };
+        } else if (skill && typeof skill === 'object') {
+          return {
+            name: skill.skillName || skill.name || "Unknown Skill",
+            category: skill.category || "Programming",
+            experience: skill.experienceYears || skill.experience || 1,
+            projects: skill.projectsCount || skill.projects || 1,
+          };
+        }
+        return {
+          name: "Unknown Skill",
+          category: "Programming",
+          experience: 1,
+          projects: 1,
+        };
+      });
     }
+    
+    // Fallback skills if no skills are defined
     return [
       {
         name: "JavaScript",
-        proficiency: 85,
         category: "Frontend",
-        experience: 3,
-        projects: 8,
+        experience: 1,
+        projects: 1,
       },
       {
         name: "React",
-        proficiency: 80,
         category: "Frontend",
-        experience: 2,
-        projects: 6,
+        experience: 1,
+        projects: 1,
       },
       {
         name: "Node.js",
-        proficiency: 75,
         category: "Backend",
-        experience: 2,
-        projects: 5,
-      },
-      {
-        name: "Python",
-        proficiency: 70,
-        category: "Programming",
         experience: 1,
-        projects: 3,
-      },
-      {
-        name: "MongoDB",
-        proficiency: 65,
-        category: "Database",
-        experience: 1,
-        projects: 4,
-      },
-      {
-        name: "Docker",
-        proficiency: 60,
-        category: "DevOps",
-        experience: 1,
-        projects: 2,
+        projects: 1,
       },
     ];
   }, [userProfile.user_profile_skills]);
@@ -1604,22 +1597,21 @@ const ProfilePage = () => {
               </motion.div>
             )}
 
-            {activeTab === "skills" && (
-              <SkillsSection
-                skills={skills}
-                getSkillIcon={getSkillIcon}
-                getSkillLevel={getSkillLevel}
-                contributionData={contributionData}
-                selectedTimePeriod={selectedTimePeriod}
-                setSelectedTimePeriod={setSelectedTimePeriod}
-                showAnalytics={showAnalytics}
-                setShowAnalytics={setShowAnalytics}
-                isRealTimeEnabled={isRealTimeEnabled}
-                setIsRealTimeEnabled={setIsRealTimeEnabled}
-                analyticsData={analyticsData}
-                getRealTimeData={getRealTimeData}
-              />
-            )}
+                         {activeTab === "skills" && (
+               <SkillsSection
+                 skills={skills}
+                 getSkillIcon={getSkillIcon}
+                 contributionData={contributionData}
+                 selectedTimePeriod={selectedTimePeriod}
+                 setSelectedTimePeriod={setSelectedTimePeriod}
+                 showAnalytics={showAnalytics}
+                 setShowAnalytics={setShowAnalytics}
+                 isRealTimeEnabled={isRealTimeEnabled}
+                 setIsRealTimeEnabled={setIsRealTimeEnabled}
+                 analyticsData={analyticsData}
+                 getRealTimeData={getRealTimeData}
+               />
+             )}
 
             {activeTab === "activity" && (
               <motion.div

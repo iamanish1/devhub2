@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/NavBar";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -57,6 +57,7 @@ const EditProfilePage = () => {
     instagram: "",
     website: "",
     skills: [],
+    skillExperience: {}, // New: Detailed skill experience tracking
     avatar: null,
     coverPhoto: null,
   });
@@ -173,11 +174,45 @@ const EditProfilePage = () => {
   };
 
   const handleSkillToggle = (skill) => {
+    setForm(prev => {
+      const isSkillSelected = prev.skills.includes(skill);
+      const newSkills = isSkillSelected
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill];
+      
+      // Update skill experience when adding/removing skills
+      const newSkillExperience = { ...prev.skillExperience };
+      if (isSkillSelected) {
+        // Remove skill experience when deselecting
+        delete newSkillExperience[skill];
+      } else {
+        // Initialize skill experience when selecting
+        newSkillExperience[skill] = {
+          years: 1,
+          projects: 1,
+          proficiency: "Beginner"
+        };
+      }
+      
+      return {
+        ...prev,
+        skills: newSkills,
+        skillExperience: newSkillExperience
+      };
+    });
+    setAutoSaveStatus("saving");
+  };
+
+  const handleSkillExperienceChange = (skill, field, value) => {
     setForm(prev => ({
       ...prev,
-      skills: prev.skills.includes(skill)
-        ? prev.skills.filter(s => s !== skill)
-        : [...prev.skills, skill]
+      skillExperience: {
+        ...prev.skillExperience,
+        [skill]: {
+          ...prev.skillExperience[skill],
+          [field]: value
+        }
+      }
     }));
     setAutoSaveStatus("saving");
   };
@@ -473,27 +508,123 @@ const EditProfilePage = () => {
               </div>
               
               {form.skills.length > 0 && (
-                <div className="mt-6 p-4 bg-[#2a2a2a] rounded-xl border border-blue-500/20">
-                  <h4 className="text-white font-semibold mb-3">Selected Skills ({form.skills.length})</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {form.skills.map((skill) => (
-                      <motion.span
-                        key={skill}
-                        className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                      >
-                        {skill}
-                        <button
-                          type="button"
-                          onClick={() => handleSkillToggle(skill)}
-                          className="hover:text-red-400 transition-colors"
+                <div className="mt-6 space-y-6">
+                  {/* Selected Skills Summary */}
+                  <div className="p-4 bg-[#2a2a2a] rounded-xl border border-blue-500/20">
+                    <h4 className="text-white font-semibold mb-3">Selected Skills ({form.skills.length})</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {form.skills.map((skill) => (
+                        <motion.span
+                          key={skill}
+                          className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
                         >
-                          <FaTimes className="text-xs" />
-                        </button>
-                      </motion.span>
-                    ))}
+                          {skill}
+                          <button
+                            type="button"
+                            onClick={() => handleSkillToggle(skill)}
+                            className="hover:text-red-400 transition-colors"
+                          >
+                            <FaTimes className="text-xs" />
+                          </button>
+                        </motion.span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Skill Experience Details */}
+                  <div className="p-6 bg-[#2a2a2a] rounded-xl border border-blue-500/20">
+                    <h4 className="text-white font-semibold mb-4">Skill Experience Details</h4>
+                    <p className="text-gray-400 text-sm mb-6">
+                      Specify your experience level and project count for each selected skill
+                    </p>
+                    
+                    <div className="space-y-4">
+                      {form.skills.map((skill) => {
+                        const skillExp = form.skillExperience[skill] || { years: 1, projects: 1, proficiency: "Beginner" };
+                        
+                        return (
+                          <motion.div
+                            key={skill}
+                            className="p-4 bg-[#1a1a1a] rounded-xl border border-gray-700/50"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                          >
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="p-2 bg-blue-500/20 rounded-lg">
+                                {React.createElement(getSkillIcon(skill), { className: "text-blue-400" })}
+                              </div>
+                              <h5 className="text-white font-medium">{skill}</h5>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {/* Years of Experience */}
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-2">Years of Experience</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="20"
+                                  value={skillExp.years}
+                                  onChange={(e) => handleSkillExperienceChange(skill, 'years', parseInt(e.target.value) || 0)}
+                                  className="w-full px-3 py-2 rounded-lg bg-[#2a2a2a] text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                />
+                              </div>
+                              
+                              {/* Project Count */}
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-2">Projects Completed</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  value={skillExp.projects}
+                                  onChange={(e) => handleSkillExperienceChange(skill, 'projects', parseInt(e.target.value) || 0)}
+                                  className="w-full px-3 py-2 rounded-lg bg-[#2a2a2a] text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                />
+                              </div>
+                              
+                              {/* Proficiency Level */}
+                              <div>
+                                <label className="block text-gray-300 text-sm mb-2">Proficiency Level</label>
+                                <select
+                                  value={skillExp.proficiency}
+                                  onChange={(e) => handleSkillExperienceChange(skill, 'proficiency', e.target.value)}
+                                  className="w-full px-3 py-2 rounded-lg bg-[#2a2a2a] text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
+                                >
+                                  <option value="Beginner">Beginner (0-1 years)</option>
+                                  <option value="Intermediate">Intermediate (1-3 years)</option>
+                                  <option value="Advanced">Advanced (3-5 years)</option>
+                                  <option value="Expert">Expert (5+ years)</option>
+                                </select>
+                              </div>
+                            </div>
+                            
+                            {/* Experience Summary */}
+                            <div className="mt-3 p-3 bg-[#2a2a2a] rounded-lg">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-400">
+                                  {skillExp.years} year{skillExp.years !== 1 ? 's' : ''} experience
+                                </span>
+                                <span className="text-gray-400">
+                                  {skillExp.projects} project{skillExp.projects !== 1 ? 's' : ''} completed
+                                </span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  skillExp.proficiency === 'Expert' ? 'bg-purple-500/20 text-purple-400' :
+                                  skillExp.proficiency === 'Advanced' ? 'bg-blue-500/20 text-blue-400' :
+                                  skillExp.proficiency === 'Intermediate' ? 'bg-green-500/20 text-green-400' :
+                                  'bg-yellow-500/20 text-yellow-400'
+                                }`}>
+                                  {skillExp.proficiency}
+                                </span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
