@@ -14,6 +14,7 @@ import chatRoutes from "./Routes/ChatRoutes.js";
 import userNoteRoute from "./Routes/UserNotesRoute.js";
 import uploadRoutes from "./Routes/upload.routes.js";
 import savedProjectRoutes from "./Routes/SavedProjectRoutes.js";
+import userProjectsRoutes from "./Routes/UserProjectsRoutes.js";
 import path from "path";
 
 
@@ -57,6 +58,7 @@ app.use("/api/project",chatRoutes);
 app.use("/api/notes", userNoteRoute ) ;
 app.use("/api", uploadRoutes) ;
 app.use("/api/saved-projects", savedProjectRoutes);
+app.use("/api/user-projects", userProjectsRoutes);
  
 
 // Initialize chat socket
