@@ -1,11 +1,10 @@
 import UserProfile from "../Model/UserProfileModel.js";
 import user from "../Model/UserModel.js";
 import mongoose from "mongoose";
-import SkillProficiencyService from "../services/skillProficiencyService.js";
 
 export const editUserProfile = async (req, res) => {
   try {
-    const username = req.user?.username || req.body.username;
+    const userId = req.user._id; // Use authenticated user's ID
     const {
       user_profile_skills,
       user_profile_bio,
@@ -15,71 +14,108 @@ export const editUserProfile = async (req, res) => {
       user_profile_website,
       user_profile_instagram,
       user_profile_location,
+      user_profile_phone,
+      user_profile_experience,
+      skillExperience,
     } = req.body;
 
-    // Find the user first
-    const User = await user.findOne({ username });
-    if (!User) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Find the user's profile
-    let profile = await UserProfile.findOne({ username: User._id });
+    // Find the user's profile directly using userId
+    let profile = await UserProfile.findOne({ username: userId });
 
     if (!profile) {
       // If profile not found, create a new one
       profile = new UserProfile({
-        username: User._id,
+        username: userId,
         user_profile_skills: [],
-        user_profile_bio,
-        user_profile_cover_photo,
-        user_profile_linkedIn,
-        user_profile_github,
-        user_profile_website,
-        user_profile_instagram,
-        user_profile_location,
+        user_profile_bio: user_profile_bio || "",
+        user_profile_cover_photo: user_profile_cover_photo || "",
+        user_profile_linkedIn: user_profile_linkedIn || "",
+        user_profile_github: user_profile_github || "",
+        user_profile_website: user_profile_website || "",
+        user_profile_instagram: user_profile_instagram || "",
+        user_profile_location: user_profile_location || "",
+        user_profile_phone: user_profile_phone || "",
+        user_profile_experience: user_profile_experience || "",
         user_project_contribution: 0,
         user_completed_projects: 0,
       });
     } else {
       // If profile exists, update the fields
-      profile.user_profile_bio = user_profile_bio;
-      profile.user_profile_cover_photo = user_profile_cover_photo;
-      profile.user_profile_linkedIn = user_profile_linkedIn;
-      profile.user_profile_github = user_profile_github;
-      profile.user_profile_website = user_profile_website;
-      profile.user_profile_instagram = user_profile_instagram;
-      profile.user_profile_location = user_profile_location;
+      profile.user_profile_bio = user_profile_bio || profile.user_profile_bio || "";
+      profile.user_profile_cover_photo = user_profile_cover_photo || profile.user_profile_cover_photo;
+      profile.user_profile_linkedIn = user_profile_linkedIn || profile.user_profile_linkedIn || "";
+      profile.user_profile_github = user_profile_github || profile.user_profile_github || "";
+      profile.user_profile_website = user_profile_website || profile.user_profile_website || "";
+      profile.user_profile_instagram = user_profile_instagram || profile.user_profile_instagram || "";
+      profile.user_profile_location = user_profile_location || profile.user_profile_location || "";
+      profile.user_profile_phone = user_profile_phone || profile.user_profile_phone || "";
+      profile.user_profile_experience = user_profile_experience || profile.user_profile_experience || "";
     }
 
-    // Handle skills update - convert legacy format to new format
+    // Handle skills update with new structure
     if (user_profile_skills && Array.isArray(user_profile_skills)) {
-      // If it's the new format (array of objects)
-      if (user_profile_skills.length > 0 && typeof user_profile_skills[0] === 'object') {
-        profile.user_profile_skills = user_profile_skills.map(skill => ({
-          skillName: skill.name || skill.skillName,
-          proficiency: skill.proficiency || 60,
-          experienceYears: skill.experienceYears || skill.experience || 1,
-          projectsCount: skill.projectsCount || skill.projects || 1,
-          endorsements: skill.endorsements || 0,
-          category: skill.category || SkillProficiencyService.categorizeSkill(skill.name || skill.skillName),
-          lastUsed: skill.lastUsed || new Date(),
-          calculatedProficiency: skill.calculatedProficiency || 60
-        }));
-      } else {
-        // If it's the legacy format (array of strings)
-        profile.user_profile_skills_legacy = user_profile_skills;
-        // Migrate legacy skills to new format
-        await SkillProficiencyService.migrateLegacySkills(User._id);
+      // Convert skills to new format
+      const processedSkills = user_profile_skills.map(skill => {
+        // Handle both string and object formats
+        if (typeof skill === 'string') {
+          return {
+            name: skill,
+            category: categorizeSkill(skill),
+            experience: skillExperience && skillExperience[skill] ? skillExperience[skill].years : 1,
+            projects: skillExperience && skillExperience[skill] ? skillExperience[skill].projects : 1,
+            proficiency: 'Beginner',
+            lastUpdated: new Date()
+          };
+        } else if (skill && typeof skill === 'object') {
+          return {
+            name: skill.name || skill.skillName || "Unknown Skill",
+            category: skill.category || categorizeSkill(skill.name || skill.skillName),
+            experience: skill.experience || skill.experienceYears || 1,
+            projects: skill.projects || skill.projectsCount || 1,
+            proficiency: skill.proficiency || 'Beginner',
+            lastUpdated: new Date()
+          };
+        }
+        return null;
+      }).filter(skill => skill !== null);
+
+      profile.user_profile_skills = processedSkills;
+    }
+
+    // Helper function to categorize skills
+    function categorizeSkill(skillName) {
+      const skillNameLower = skillName.toLowerCase();
+      
+      const categories = {
+        'Frontend': ['html', 'css', 'javascript', 'react', 'vue', 'angular', 'typescript', 'tailwind', 'bootstrap', 'sass', 'less'],
+        'Backend': ['node', 'express', 'python', 'django', 'flask', 'java', 'spring', 'php', 'laravel', 'c#', 'asp.net'],
+        'Database': ['mongodb', 'postgresql', 'mysql', 'redis', 'firebase', 'supabase', 'sqlite', 'oracle'],
+        'DevOps': ['docker', 'kubernetes', 'aws', 'azure', 'gcp', 'jenkins', 'git', 'ci/cd', 'terraform', 'ansible'],
+        'Mobile': ['react native', 'flutter', 'swift', 'kotlin', 'ionic', 'xamarin'],
+        'AI/ML': ['tensorflow', 'pytorch', 'scikit-learn', 'openai', 'hugging face', 'pandas', 'numpy', 'matplotlib']
+      };
+
+      for (const [category, skills] of Object.entries(categories)) {
+        if (skills.some(skill => skillNameLower.includes(skill))) {
+          return category;
+        }
       }
+      
+      return 'Other';
     }
 
     // Save the new or updated profile
     await profile.save();
 
+    // Populate the user data before sending response
+    const populatedProfile = await UserProfile.findOne({ username: userId }).populate(
+      "username",
+      "-password"
+    );
+
     res.status(200).json({
       message: "Profile updated successfully",
-      profile: profile,
+      profile: populatedProfile,
     });
   } catch (error) {
     console.error("Error updating profile:", error);
@@ -90,11 +126,11 @@ export const editUserProfile = async (req, res) => {
   }
 };
 
-// New endpoint to update skill proficiency
-export const updateSkillProficiency = async (req, res) => {
+// New endpoint to update individual skill experience
+export const updateSkillExperience = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { skillName, proficiency, experienceYears, projectsCount } = req.body;
+    const { skillName, experience, projects } = req.body;
 
     const userProfile = await UserProfile.findOne({ username: userId });
     if (!userProfile) {
@@ -102,39 +138,33 @@ export const updateSkillProficiency = async (req, res) => {
     }
 
     // Find existing skill or create new one
-    let skill = userProfile.user_profile_skills.find(s => s.skillName === skillName);
+    let skill = userProfile.user_profile_skills.find(s => s.name === skillName);
     
     if (!skill) {
       skill = {
-        skillName,
-        proficiency: proficiency || 60,
-        experienceYears: experienceYears || 0,
-        projectsCount: projectsCount || 0,
-        endorsements: 0,
-        category: SkillProficiencyService.categorizeSkill(skillName),
-        lastUsed: new Date(),
-        calculatedProficiency: 0
+        name: skillName,
+        category: categorizeSkill(skillName),
+        experience: experience || 1,
+        projects: projects || 1,
+        proficiency: 'Beginner',
+        lastUpdated: new Date()
       };
       userProfile.user_profile_skills.push(skill);
     } else {
       // Update existing skill
-      if (proficiency !== undefined) skill.proficiency = proficiency;
-      if (experienceYears !== undefined) skill.experienceYears = experienceYears;
-      if (projectsCount !== undefined) skill.projectsCount = projectsCount;
-      skill.lastUsed = new Date();
+      if (experience !== undefined) skill.experience = experience;
+      if (projects !== undefined) skill.projects = projects;
+      skill.lastUpdated = new Date();
     }
-
-    // Recalculate proficiency
-    skill.calculatedProficiency = SkillProficiencyService.calculateSkillProficiency(skill);
     
     await userProfile.save();
 
     res.status(200).json({
-      message: "Skill proficiency updated successfully",
+      message: "Skill experience updated successfully",
       skill: skill,
     });
   } catch (error) {
-    console.error("Error updating skill proficiency:", error);
+    console.error("Error updating skill experience:", error);
     res.status(500).json({
       message: "Internal server error",
       error: error.message,
@@ -142,60 +172,27 @@ export const updateSkillProficiency = async (req, res) => {
   }
 };
 
-// New endpoint to get skill analysis
-export const getSkillAnalysis = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const { timePeriod } = req.query;
+// Helper function to categorize skills
+function categorizeSkill(skillName) {
+  const skillNameLower = skillName.toLowerCase();
+  
+  const categories = {
+    'Frontend': ['html', 'css', 'javascript', 'react', 'vue', 'angular', 'typescript', 'tailwind', 'bootstrap', 'sass', 'less'],
+    'Backend': ['node', 'express', 'python', 'django', 'flask', 'java', 'spring', 'php', 'laravel', 'c#', 'asp.net'],
+    'Database': ['mongodb', 'postgresql', 'mysql', 'redis', 'firebase', 'supabase', 'sqlite', 'oracle'],
+    'DevOps': ['docker', 'kubernetes', 'aws', 'azure', 'gcp', 'jenkins', 'git', 'ci/cd', 'terraform', 'ansible'],
+    'Mobile': ['react native', 'flutter', 'swift', 'kotlin', 'ionic', 'xamarin'],
+    'AI/ML': ['tensorflow', 'pytorch', 'scikit-learn', 'openai', 'hugging face', 'pandas', 'numpy', 'matplotlib']
+  };
 
-    const analysis = await SkillProficiencyService.analyzeSkillGrowth(userId, timePeriod);
-    
-    if (!analysis) {
-      return res.status(404).json({ message: "User profile not found" });
+  for (const [category, skills] of Object.entries(categories)) {
+    if (skills.some(skill => skillNameLower.includes(skill))) {
+      return category;
     }
-
-    res.status(200).json({
-      message: "Skill analysis retrieved successfully",
-      analysis: analysis,
-    });
-  } catch (error) {
-    console.error("Error getting skill analysis:", error);
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
   }
-};
-
-// New endpoint to endorse a skill
-export const endorseSkill = async (req, res) => {
-  try {
-    const { userId, skillName } = req.body;
-    const endorserId = req.user._id;
-
-    // Prevent self-endorsement
-    if (userId === endorserId.toString()) {
-      return res.status(400).json({ message: "Cannot endorse your own skills" });
-    }
-
-    const updatedProfile = await SkillProficiencyService.updateSkillProficiencyOnEndorsement(userId, skillName);
-    
-    if (!updatedProfile) {
-      return res.status(404).json({ message: "User profile not found" });
-    }
-
-    res.status(200).json({
-      message: "Skill endorsed successfully",
-      profile: updatedProfile,
-    });
-  } catch (error) {
-    console.error("Error endorsing skill:", error);
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
+  
+  return 'Other';
+}
 
 
 

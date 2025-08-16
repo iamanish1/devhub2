@@ -1210,11 +1210,20 @@ const ProfilePage = () => {
                       <div className="flex items-center gap-4 text-gray-400 text-sm">
                         <div className="flex items-center gap-1">
                           <FaMapMarkerAlt />
-                          <span>Mumbai, India</span>
+                          <span>
+                            {userProfile.user_profile_location || "Location not set"}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <FaCalendar />
-                          <span>Member since 2024</span>
+                          <span>
+                            Member since {userProfile.username?.createdAt 
+                              ? new Date(userProfile.username.createdAt).getFullYear()
+                              : userProfile.user_profile_created_at 
+                              ? new Date(userProfile.user_profile_created_at).getFullYear()
+                              : "2024"
+                            }
+                          </span>
                         </div>
                       </div>
                     </div>

@@ -272,6 +272,7 @@ const EditProfilePage = () => {
         user_profile_location: form.location,
         user_profile_phone: form.phone,
         user_profile_experience: form.experience,
+        skillExperience: form.skillExperience,
         username: form.username,
       };
 
