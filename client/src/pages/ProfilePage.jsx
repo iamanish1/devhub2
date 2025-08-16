@@ -948,26 +948,37 @@ const ProfilePage = () => {
     return () => clearInterval(interval);
   }, [activeTab, fetchUserProjects, fetchProjectStats]);
 
-  // Mock recent_projects if not present (for demo)
-  const recentProjects =
-    userProfile.recent_projects && userProfile.recent_projects.length > 0
-      ? userProfile.recent_projects
-      : [
-          {
-            name: "AI Chatbot",
-            date: "May 2025",
-            description: "A smart chatbot using NLP.",
-            tech: ["React", "Node.js", "OpenAI"],
-            status: "completed",
-          },
-          {
-            name: "Bug Tracker",
-            date: "Apr 2025",
-            description: "A collaborative bug tracking platform.",
-            tech: ["React", "Express", "MongoDB"],
-            status: "in-progress",
-          },
-        ];
+  // State for recent projects display
+  const [showAllRecentProjects, setShowAllRecentProjects] = useState(false);
+  
+  // Get recent projects from userProjects (real data)
+  const recentProjects = useMemo(() => {
+    if (userProjects && userProjects.length > 0) {
+      // Sort by assigned date (most recent first) and take first 4 or all if showAllRecentProjects is true
+      const sortedProjects = userProjects
+        .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))
+        .slice(0, showAllRecentProjects ? userProjects.length : 4);
+      
+      return sortedProjects.map(project => ({
+        _id: project._id,
+        name: project.projectTitle,
+        date: new Date(project.assignedDate).toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: 'numeric' 
+        }),
+        description: project.projectDescription,
+        tech: project.techStack ? project.techStack.split(',').map(tech => tech.trim()) : [],
+        status: project.projectStatus?.toLowerCase() || 'pending',
+        bidAmount: project.bidAmount,
+        progressPercentage: project.progressPercentage,
+        totalTasks: project.totalTasks,
+        completedTasks: project.completedTasks
+      }));
+    }
+    
+    // Fallback to empty array if no projects
+    return [];
+  }, [userProjects, showAllRecentProjects]);
 
   // Optimized skills data - memoized to prevent unnecessary re-renders
   const skills = useMemo(() => {
@@ -1663,61 +1674,133 @@ const ProfilePage = () => {
 
                 {/* Recent Projects Section */}
                 <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-green-500/20 rounded-lg">
-                      <FaRocket className="w-6 h-6 text-green-400" />
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-500/20 rounded-lg">
+                        <FaRocket className="w-6 h-6 text-green-400" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-white">
+                          Recent Projects
+                        </h2>
+                        <p className="text-gray-400 text-sm">
+                          Your recently participated projects
+                        </p>
+                      </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-white">
-                      Recent Projects
-                    </h2>
+                    {userProjects.length > 4 && (
+                      <button
+                        onClick={() => setShowAllRecentProjects(!showAllRecentProjects)}
+                        className="px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-all duration-300 border border-blue-500/30 rounded-lg text-sm font-medium"
+                      >
+                        {showAllRecentProjects ? "Show Less" : `See More (${userProjects.length - 4})`}
+                      </button>
+                    )}
                   </div>
 
-                  <div className="space-y-4">
-                    {recentProjects.map((project, index) => (
-                      <motion.div
-                        key={index}
-                        className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300"
-                        whileHover={{ x: 5 }}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-lg font-semibold text-white">
-                                {project.name}
-                              </h3>
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  project.status === "completed"
-                                    ? "bg-green-500/20 text-green-400"
-                                    : "bg-yellow-500/20 text-yellow-400"
-                                }`}
-                              >
-                                {project.status === "completed"
-                                  ? "Completed"
-                                  : "In Progress"}
-                              </span>
-                            </div>
-                            <p className="text-gray-400 text-sm mb-3">
-                              {project.description}
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {project.tech?.map((tech, techIndex) => (
+                  {recentProjects.length > 0 ? (
+                    <div className="space-y-4">
+                      {recentProjects.map((project, index) => (
+                        <motion.div
+                          key={project._id || index}
+                          className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300 cursor-pointer"
+                          whileHover={{ x: 5, scale: 1.01 }}
+                          onClick={() => {
+                            // Handle project click - could open modal or navigate to details
+                            console.log("Recent project clicked:", project);
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-3">
+                                <h3 className="text-lg font-semibold text-white">
+                                  {project.name}
+                                </h3>
                                 <span
-                                  key={techIndex}
-                                  className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full text-xs"
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    project.status === "completed"
+                                      ? "bg-green-500/20 text-green-400"
+                                      : project.status === "in progress"
+                                      ? "bg-yellow-500/20 text-yellow-400"
+                                      : "bg-gray-500/20 text-gray-400"
+                                  }`}
                                 >
-                                  {tech}
+                                  {project.status === "completed"
+                                    ? "Completed"
+                                    : project.status === "in progress"
+                                    ? "In Progress"
+                                    : "Pending"}
                                 </span>
-                              ))}
+                                {project.bidAmount && (
+                                  <span className="text-green-400 text-sm font-semibold">
+                                    ${project.bidAmount}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <p className="text-gray-400 text-sm mb-3" style={{ 
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}>
+                                {project.description}
+                              </p>
+                              
+                              {/* Progress Bar */}
+                              {project.totalTasks > 0 && (
+                                <div className="mb-3">
+                                  <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                                    <span>Progress</span>
+                                    <span>{project.completedTasks}/{project.totalTasks} tasks</span>
+                                  </div>
+                                  <div className="w-full bg-gray-700 rounded-full h-2">
+                                    <div
+                                      className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
+                                      style={{ width: `${project.progressPercentage || 0}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-wrap gap-2">
+                                  {project.tech?.slice(0, 3).map((tech, techIndex) => (
+                                    <span
+                                      key={techIndex}
+                                      className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full text-xs"
+                                    >
+                                      {tech}
+                                    </span>
+                                  ))}
+                                  {project.tech?.length > 3 && (
+                                    <span className="text-gray-500 text-xs">
+                                      +{project.tech.length - 3} more
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-gray-500 text-sm">
+                                  {project.date}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <span className="text-gray-500 text-sm">
-                            {project.date}
-                          </span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <FaRocket className="w-8 h-8 text-green-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-white mb-2">
+                        No recent projects yet
+                      </h3>
+                      <p className="text-gray-400">
+                        Start bidding on projects to see them here!
+                      </p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
