@@ -58,21 +58,25 @@ export const editUserProfile = async (req, res) => {
       const processedSkills = user_profile_skills.map(skill => {
         // Handle both string and object formats
         if (typeof skill === 'string') {
+          const experience = skillExperience && skillExperience[skill] ? skillExperience[skill].years : 1;
           return {
             name: skill,
             category: categorizeSkill(skill),
-            experience: skillExperience && skillExperience[skill] ? skillExperience[skill].years : 1,
+            experience: experience,
             projects: skillExperience && skillExperience[skill] ? skillExperience[skill].projects : 1,
-            proficiency: 'Beginner',
+            proficiency: skillExperience && skillExperience[skill] ? skillExperience[skill].proficiency : 
+              (experience >= 3 ? 'Experienced' : experience >= 1 ? 'Intermediate' : 'Beginner'),
             lastUpdated: new Date()
           };
         } else if (skill && typeof skill === 'object') {
+          const experience = skill.experience || skill.experienceYears || 1;
           return {
             name: skill.name || skill.skillName || "Unknown Skill",
             category: skill.category || categorizeSkill(skill.name || skill.skillName),
-            experience: skill.experience || skill.experienceYears || 1,
+            experience: experience,
             projects: skill.projects || skill.projectsCount || 1,
-            proficiency: skill.proficiency || 'Beginner',
+            proficiency: skill.proficiency || 
+              (experience >= 3 ? 'Experienced' : experience >= 1 ? 'Intermediate' : 'Beginner'),
             lastUpdated: new Date()
           };
         }
@@ -141,18 +145,23 @@ export const updateSkillExperience = async (req, res) => {
     let skill = userProfile.user_profile_skills.find(s => s.name === skillName);
     
     if (!skill) {
+      const exp = experience || 1;
       skill = {
         name: skillName,
         category: categorizeSkill(skillName),
-        experience: experience || 1,
+        experience: exp,
         projects: projects || 1,
-        proficiency: 'Beginner',
+        proficiency: exp >= 3 ? 'Experienced' : exp >= 1 ? 'Intermediate' : 'Beginner',
         lastUpdated: new Date()
       };
       userProfile.user_profile_skills.push(skill);
     } else {
       // Update existing skill
-      if (experience !== undefined) skill.experience = experience;
+      if (experience !== undefined) {
+        skill.experience = experience;
+        // Auto-update proficiency based on experience
+        skill.proficiency = experience >= 3 ? 'Experienced' : experience >= 1 ? 'Intermediate' : 'Beginner';
+      }
       if (projects !== undefined) skill.projects = projects;
       skill.lastUpdated = new Date();
     }

@@ -29,6 +29,7 @@ import {
   FaPython,
   FaGitAlt,
   FaAws,
+  FaSync,
 } from "react-icons/fa";
 
 import { Link } from "react-router-dom";
@@ -59,12 +60,20 @@ const SkillCard = React.memo(({ skill, getSkillIcon }) => {
         </div>
       </div>
 
-      {/* Experience Badge */}
+      {/* Proficiency Badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-          <span className="text-sm text-gray-300">
-            {skill.experience} year{skill.experience > 1 ? "s" : ""} experience
+          <div className={`w-2 h-2 rounded-full ${
+            skill.proficiency === 'Experienced' ? 'bg-green-400' : 
+            skill.proficiency === 'Intermediate' ? 'bg-yellow-400' : 
+            'bg-purple-400'
+          }`}></div>
+          <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+            skill.proficiency === 'Experienced' ? 'bg-green-500/20 text-green-400' : 
+            skill.proficiency === 'Intermediate' ? 'bg-yellow-500/20 text-yellow-400' : 
+            'bg-purple-500/20 text-purple-400'
+          }`}>
+            {skill.proficiency}
           </span>
         </div>
         <span className="text-xs text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
@@ -120,7 +129,7 @@ const ContributionSquare = React.memo(({ contributionLevel, contributionCount, d
 });
 
 // Lazy Skills Section Component
-const SkillsSection = React.memo(({ skills, getSkillIcon, contributionData, selectedTimePeriod, setSelectedTimePeriod, showAnalytics, setShowAnalytics, isRealTimeEnabled, setIsRealTimeEnabled, analyticsData, getRealTimeData }) => {
+const SkillsSection = React.memo(({ skills, getSkillIcon, contributionData, selectedTimePeriod, setSelectedTimePeriod, showAnalytics, setShowAnalytics, isRealTimeEnabled, setIsRealTimeEnabled, analyticsData, getRealTimeData, fetchUserProfile, loading }) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -257,17 +266,27 @@ const SkillsSection = React.memo(({ skills, getSkillIcon, contributionData, sele
         {/* Professional Skills & Technologies Section */}
         <div className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-8">
           {/* Header */}
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Technical Skills & Expertise
-            </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Comprehensive knowledge across multiple technology domains with hands-on project experience
-            </p>
+          <div className="flex items-center justify-between mb-12">
+            <div className="text-center flex-1">
+              <h2 className="text-3xl font-bold text-white mb-4">
+                Technical Skills & Expertise
+              </h2>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                Comprehensive knowledge across multiple technology domains with hands-on project experience
+              </p>
+            </div>
+            <button
+              onClick={fetchUserProfile}
+              disabled={loading}
+              className="p-3 rounded-xl bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-all duration-300 border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh skills data"
+            >
+              <FaSync className={`text-lg ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
           {/* Skills Overview Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
             <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl border border-blue-500/20 p-6 text-center">
               <div className="text-3xl font-bold text-blue-400 mb-2">{skills.length}</div>
               <div className="text-gray-300 font-medium">Technologies</div>
@@ -275,17 +294,24 @@ const SkillsSection = React.memo(({ skills, getSkillIcon, contributionData, sele
             </div>
             <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl border border-green-500/20 p-6 text-center">
               <div className="text-3xl font-bold text-green-400 mb-2">
-                {skills.reduce((acc, skill) => acc + skill.experience, 0)}
+                {skills.filter(skill => skill.proficiency === 'Experienced').length}
               </div>
-              <div className="text-gray-300 font-medium">Years</div>
-              <div className="text-gray-500 text-sm mt-1">Total Experience</div>
+              <div className="text-gray-300 font-medium">Experienced</div>
+              <div className="text-gray-500 text-sm mt-1">3+ Years</div>
+            </div>
+            <div className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 rounded-xl border border-yellow-500/20 p-6 text-center">
+              <div className="text-3xl font-bold text-yellow-400 mb-2">
+                {skills.filter(skill => skill.proficiency === 'Intermediate').length}
+              </div>
+              <div className="text-gray-300 font-medium">Intermediate</div>
+              <div className="text-gray-500 text-sm mt-1">1-2 Years</div>
             </div>
             <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl border border-purple-500/20 p-6 text-center">
               <div className="text-3xl font-bold text-purple-400 mb-2">
-                {skills.reduce((acc, skill) => acc + skill.projects, 0)}
+                {skills.filter(skill => skill.proficiency === 'Beginner').length}
               </div>
-              <div className="text-gray-300 font-medium">Projects</div>
-              <div className="text-gray-500 text-sm mt-1">Completed</div>
+              <div className="text-gray-300 font-medium">Beginner</div>
+              <div className="text-gray-500 text-sm mt-1">Under 1 Year</div>
             </div>
           </div>
 
@@ -761,26 +787,39 @@ const ProfilePage = () => {
 
   const [isPrintMode, setIsPrintMode] = useState(false);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await axios.get("http://localhost:8000/api/profile", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        setUserProfile(response.data.profile);
-        console.log("User profile fetched:", response.data);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUserProfile();
+  // Function to fetch user profile - defined early to avoid scope issues
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get("http://localhost:8000/api/profile", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setUserProfile(response.data.profile);
+      console.log("User profile fetched:", response.data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
+
+  // Refresh profile data when component comes into focus
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchUserProfile();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchUserProfile]);
 
   // Fetch saved projects
   useEffect(() => {
@@ -840,6 +879,7 @@ const ProfilePage = () => {
             category: "Programming",
             experience: 1, // Default experience
             projects: 1,   // Default projects
+            proficiency: "Beginner", // Default proficiency
           };
         } else if (skill && typeof skill === 'object') {
           return {
@@ -847,6 +887,7 @@ const ProfilePage = () => {
             category: skill.category || "Programming",
             experience: skill.experienceYears || skill.experience || 1,
             projects: skill.projectsCount || skill.projects || 1,
+            proficiency: skill.proficiency || "Beginner", // Include proficiency from database
           };
         }
         return {
@@ -854,6 +895,7 @@ const ProfilePage = () => {
           category: "Programming",
           experience: 1,
           projects: 1,
+          proficiency: "Beginner",
         };
       });
     }
@@ -865,18 +907,21 @@ const ProfilePage = () => {
         category: "Frontend",
         experience: 1,
         projects: 1,
+        proficiency: "Beginner",
       },
       {
         name: "React",
         category: "Frontend",
         experience: 1,
         projects: 1,
+        proficiency: "Beginner",
       },
       {
         name: "Node.js",
         category: "Backend",
         experience: 1,
         projects: 1,
+        proficiency: "Beginner",
       },
     ];
   }, [userProfile.user_profile_skills]);
@@ -1630,6 +1675,8 @@ const ProfilePage = () => {
                  setIsRealTimeEnabled={setIsRealTimeEnabled}
                  analyticsData={analyticsData}
                  getRealTimeData={getRealTimeData}
+                 fetchUserProfile={fetchUserProfile}
+                 loading={loading}
                />
              )}
 

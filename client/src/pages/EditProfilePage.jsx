@@ -659,10 +659,9 @@ const EditProfilePage = () => {
                                   onChange={(e) => handleSkillExperienceChange(skill, 'proficiency', e.target.value)}
                                   className="w-full px-3 py-2 rounded-lg bg-[#2a2a2a] text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
                                 >
-                                  <option value="Beginner">Beginner (0-1 years)</option>
-                                  <option value="Intermediate">Intermediate (1-3 years)</option>
-                                  <option value="Advanced">Advanced (3-5 years)</option>
-                                  <option value="Expert">Expert (5+ years)</option>
+                                  <option value="Beginner">Beginner (Under 1 year)</option>
+                                  <option value="Intermediate">Intermediate (1-2 years)</option>
+                                  <option value="Experienced">Experienced (3+ years)</option>
                                 </select>
                               </div>
                             </div>
@@ -677,10 +676,9 @@ const EditProfilePage = () => {
                                   {skillExp.projects} project{skillExp.projects !== 1 ? 's' : ''} completed
                                 </span>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  skillExp.proficiency === 'Expert' ? 'bg-purple-500/20 text-purple-400' :
-                                  skillExp.proficiency === 'Advanced' ? 'bg-blue-500/20 text-blue-400' :
-                                  skillExp.proficiency === 'Intermediate' ? 'bg-green-500/20 text-green-400' :
-                                  'bg-yellow-500/20 text-yellow-400'
+                                  skillExp.proficiency === 'Experienced' ? 'bg-green-500/20 text-green-400' :
+                                  skillExp.proficiency === 'Intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-purple-500/20 text-purple-400'
                                 }`}>
                                   {skillExp.proficiency}
                                 </span>

@@ -27,7 +27,7 @@ const SkillSchema = new mongoose.Schema({
   },
   proficiency: {
     type: String,
-    enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert', 'Experienced'],
     default: 'Beginner'
   },
   lastUpdated: {
@@ -118,27 +118,7 @@ const UserProfileSchema = new mongoose.Schema({
   },
 });
 
-// Pre-save middleware to update skill proficiency based on experience
-UserProfileSchema.pre('save', function(next) {
-  if (this.user_profile_skills && this.user_profile_skills.length > 0) {
-    this.user_profile_skills.forEach(skill => {
-      // Update proficiency level based on experience years
-      if (skill.experience >= 5) {
-        skill.proficiency = 'Expert';
-      } else if (skill.experience >= 3) {
-        skill.proficiency = 'Advanced';
-      } else if (skill.experience >= 1) {
-        skill.proficiency = 'Intermediate';
-      } else {
-        skill.proficiency = 'Beginner';
-      }
-      
-      // Update last updated timestamp
-      skill.lastUpdated = new Date();
-    });
-  }
-  next();
-});
+// Removed pre-save middleware to allow manual proficiency setting
 
 const UserProfile = mongoose.model("UserProfile", UserProfileSchema);
 
