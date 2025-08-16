@@ -4,6 +4,21 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import userProjectsApi from "../utils/userProjectsApi.js";
 import ProjectStatsSection from "../components/ProjectStatsSection.jsx";
 import UserProjectCard from "../components/UserProjectCard.jsx";
+import { db } from "../Config/firebase";
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  orderBy, 
+  limit,
+  serverTimestamp,
+  updateDoc,
+  increment
+} from "firebase/firestore";
 import {
   FaGithub,
   FaLinkedin,
@@ -146,6 +161,7 @@ const SkillsSection = React.memo(
     skills,
     getSkillIcon,
     contributionData,
+    contributionStats,
     selectedTimePeriod,
     setSelectedTimePeriod,
     showAnalytics,
@@ -156,6 +172,8 @@ const SkillsSection = React.memo(
     getRealTimeData,
     fetchUserProfile,
     loading,
+    loadingProjects,
+    isFirebaseConnected,
   }) => {
     const [isLoaded, setIsLoaded] = useState(false);
 
@@ -398,16 +416,44 @@ const SkillsSection = React.memo(
                 Contribution Activity
               </h3>
               <p className="text-gray-400">
-                Your coding activity over the past year
+                Your project activity over the past year
               </p>
+                             {!loadingProjects && (
+                 <div className="flex items-center gap-2 mt-2">
+                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                   <span className="text-green-400 text-sm font-medium">
+                     Live Data from Projects
+                   </span>
+                 </div>
+               )}
+               {isFirebaseConnected && (
+                 <div className="flex items-center gap-2 mt-1">
+                   <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                   <span className="text-blue-400 text-sm font-medium">
+                     Firebase Real-time Sync
+                   </span>
+                 </div>
+               )}
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="text-2xl font-bold text-green-400">1,247</div>
+                <div className="text-2xl font-bold text-green-400">
+                  {loadingProjects ? (
+                    <div className="animate-pulse bg-green-400/20 h-8 w-16 rounded"></div>
+                  ) : (
+                    contributionStats.totalContributions
+                  )}
+                </div>
                 <div className="text-gray-400 text-sm">Total Contributions</div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-blue-400">156</div>
+                <div className="text-2xl font-bold text-blue-400">
+                  {loadingProjects ? (
+                    <div className="animate-pulse bg-blue-400/20 h-8 w-16 rounded"></div>
+                  ) : (
+                    contributionStats.thisYearContributions
+                  )}
+                </div>
                 <div className="text-gray-400 text-sm">This Year</div>
               </div>
             </div>
@@ -539,7 +585,9 @@ const SkillsSection = React.memo(
                   <FaCode className="text-green-400" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-green-400">156</div>
+                  <div className="text-lg font-bold text-green-400">
+                    {contributionStats.thisYearContributions}
+                  </div>
                   <div className="text-gray-400 text-sm">This Year</div>
                 </div>
               </div>
@@ -551,7 +599,9 @@ const SkillsSection = React.memo(
                   <FaCalendar className="text-blue-400" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-blue-400">23</div>
+                  <div className="text-lg font-bold text-blue-400">
+                    {contributionStats.currentStreak}
+                  </div>
                   <div className="text-gray-400 text-sm">Current Streak</div>
                 </div>
               </div>
@@ -563,7 +613,9 @@ const SkillsSection = React.memo(
                   <FaTrophy className="text-purple-400" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-purple-400">45</div>
+                  <div className="text-lg font-bold text-purple-400">
+                    {contributionStats.bestDay}
+                  </div>
                   <div className="text-gray-400 text-sm">Best Day</div>
                 </div>
               </div>
@@ -575,7 +627,9 @@ const SkillsSection = React.memo(
                   <FaRocket className="text-orange-400" />
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-orange-400">89%</div>
+                  <div className="text-lg font-bold text-orange-400">
+                    {contributionStats.consistency}%
+                  </div>
                   <div className="text-gray-400 text-sm">Consistency</div>
                 </div>
               </div>
@@ -1118,50 +1172,308 @@ const ProfilePage = () => {
     };
   }, []);
 
-  // Optimized contribution data - memoized to prevent recalculation
+  // Firebase real-time contribution tracking
+  const [firebaseContributionData, setFirebaseContributionData] = useState({});
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState(false);
+
+  // Initialize Firebase real-time listener for contribution data
+  useEffect(() => {
+    if (!userProfile._id) return;
+
+    const userId = userProfile._id;
+    const contributionRef = doc(db, 'userContributions', userId);
+    
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(contributionRef, (doc) => {
+      if (doc.exists()) {
+        setFirebaseContributionData(doc.data());
+        setIsFirebaseConnected(true);
+      } else {
+        // Initialize empty contribution data if document doesn't exist
+        setFirebaseContributionData({});
+        setIsFirebaseConnected(false);
+      }
+    }, (error) => {
+      console.error("Firebase contribution listener error:", error);
+      setIsFirebaseConnected(false);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile._id]);
+
+  // Function to add contribution to Firebase
+  const addContributionToFirebase = useCallback(async (contributionType, projectId = null) => {
+    if (!userProfile._id) return;
+
+    try {
+      const userId = userProfile._id;
+      // Use consistent date key format
+      const today = new Date();
+      const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const contributionRef = doc(db, 'userContributions', userId);
+      
+      // Get current data
+      const docSnap = await getDoc(contributionRef);
+      
+      if (docSnap.exists()) {
+        const currentData = docSnap.data();
+        const todayContributions = currentData[todayKey] || 0;
+        
+        // Update contribution count for today
+        await updateDoc(contributionRef, {
+          [todayKey]: increment(1),
+          lastUpdated: serverTimestamp(),
+          [`${todayKey}_details`]: {
+            count: todayContributions + 1,
+            lastActivity: contributionType,
+            projectId: projectId,
+            timestamp: serverTimestamp()
+          }
+        });
+      } else {
+        // Create new document
+        await setDoc(contributionRef, {
+          [todayKey]: 1,
+          lastUpdated: serverTimestamp(),
+          [`${todayKey}_details`]: {
+            count: 1,
+            lastActivity: contributionType,
+            projectId: projectId,
+            timestamp: serverTimestamp()
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error adding contribution to Firebase:", error);
+    }
+  }, [userProfile._id]);
+
+  // Calculate real contribution data based on user projects and Firebase data
   const contributionData = useMemo(() => {
     const data = [];
     const today = new Date();
     const startDate = new Date(today.getFullYear(), 0, 1); // Start of year
 
-    // Generate data for 52 weeks (364 days) instead of 365 for better performance
+    // Create a map of dates with contribution counts from real project data
+    const contributionMap = new Map();
+    
+    // Helper function to get consistent date key (YYYY-MM-DD format)
+    const getDateKey = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    // Add contributions from Firebase real-time data
+    if (firebaseContributionData && Object.keys(firebaseContributionData).length > 0) {
+      Object.entries(firebaseContributionData).forEach(([dateKey, count]) => {
+        if (dateKey !== 'lastUpdated' && typeof count === 'number') {
+          contributionMap.set(dateKey, count);
+        }
+      });
+    }
+    
+    // Add contributions from completed tasks in projects (fallback)
+    if (userProjects && userProjects.length > 0) {
+      userProjects.forEach(project => {
+        // Add contribution for project assignment date
+        const assignedDate = new Date(project.assignedDate);
+        const assignedDateKey = getDateKey(assignedDate);
+        const existingCount = contributionMap.get(assignedDateKey) || 0;
+        contributionMap.set(assignedDateKey, existingCount + 1);
+        
+        // Add contributions for completed tasks
+        if (project.completedTasks > 0) {
+          const projectStart = new Date(project.assignedDate);
+          const projectEnd = new Date();
+          
+          // Distribute completed tasks across project timeline
+          for (let i = 0; i < project.completedTasks; i++) {
+            const taskDate = new Date(projectStart.getTime() + Math.random() * (projectEnd.getTime() - projectStart.getTime()));
+            const taskDateKey = getDateKey(taskDate);
+            const existingTaskCount = contributionMap.get(taskDateKey) || 0;
+            contributionMap.set(taskDateKey, existingTaskCount + 1);
+          }
+        }
+      });
+    }
+
+    // Generate data for 52 weeks (364 days)
     for (let i = 0; i < 364; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
-
-      const dayOfWeek = date.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const isRecent = i >= 334; // Last 30 days
-
+      const dateKey = getDateKey(date);
+      
+      // Get real contribution count for this date
+      const realContributions = contributionMap.get(dateKey) || 0;
+      
+      // Calculate contribution level based on real data
       let contributionLevel;
-      if (isRecent) {
-        contributionLevel =
-          Math.random() > 0.3
-            ? Math.floor(Math.random() * 3) + 2
-            : Math.floor(Math.random() * 2);
-      } else if (isWeekend) {
-        contributionLevel =
-          Math.random() > 0.7 ? Math.floor(Math.random() * 2) + 1 : 0;
+      if (realContributions === 0) {
+        contributionLevel = 0;
+      } else if (realContributions <= 2) {
+        contributionLevel = 1;
+      } else if (realContributions <= 4) {
+        contributionLevel = 2;
+      } else if (realContributions <= 6) {
+        contributionLevel = 3;
       } else {
-        contributionLevel =
-          Math.random() > 0.4 ? Math.floor(Math.random() * 4) + 1 : 0;
+        contributionLevel = 4;
       }
-
-      const contributionCount =
-        contributionLevel === 0 ? 0 : Math.floor(Math.random() * 8) + 1;
 
       data.push({
         date,
         contributionLevel,
-        contributionCount,
+        contributionCount: realContributions,
         index: i,
       });
     }
 
     return data;
-  }, []);
+  }, [userProjects, firebaseContributionData]);
 
-  // Mock activity feed
+  // Calculate real contribution statistics
+  const contributionStats = useMemo(() => {
+    if (!contributionData || contributionData.length === 0) {
+      return {
+        totalContributions: 0,
+        thisYearContributions: 0,
+        currentStreak: 0,
+        bestDay: 0,
+        consistency: 0
+      };
+    }
+
+    const today = new Date();
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    
+    // Filter data based on selected time period
+    let filteredData = contributionData;
+    if (selectedTimePeriod === "7D") {
+      const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      filteredData = contributionData.filter(item => item.date >= sevenDaysAgo);
+    } else if (selectedTimePeriod === "30D") {
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      filteredData = contributionData.filter(item => item.date >= thirtyDaysAgo);
+    } else if (selectedTimePeriod === "90D") {
+      const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+      filteredData = contributionData.filter(item => item.date >= ninetyDaysAgo);
+    }
+    // 1Y uses all data
+
+    const totalContributions = filteredData.reduce((sum, item) => sum + item.contributionCount, 0);
+    const thisYearContributions = contributionData.filter(item => item.date >= startOfYear).reduce((sum, item) => sum + item.contributionCount, 0);
+    
+    // Calculate current streak
+    let currentStreak = 0;
+    for (let i = contributionData.length - 1; i >= 0; i--) {
+      if (contributionData[i].contributionCount > 0) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+    
+    // Find best day
+    const bestDay = Math.max(...filteredData.map(item => item.contributionCount));
+    
+    // Calculate consistency (percentage of days with contributions)
+    const daysWithContributions = filteredData.filter(item => item.contributionCount > 0).length;
+    const consistency = filteredData.length > 0 ? Math.round((daysWithContributions / filteredData.length) * 100) : 0;
+
+    return {
+      totalContributions,
+      thisYearContributions,
+      currentStreak,
+      bestDay,
+      consistency
+    };
+  }, [contributionData, selectedTimePeriod]);
+
+  // Real-time activity feed from Firebase
+  const [realTimeActivityFeed, setRealTimeActivityFeed] = useState([]);
+  const [loadingActivityFeed, setLoadingActivityFeed] = useState(false);
+
+  // Initialize Firebase real-time listener for activity feed
+  useEffect(() => {
+    if (!userProfile._id) return;
+
+    setLoadingActivityFeed(true);
+    const userId = userProfile._id;
+    const activityRef = collection(db, 'userActivity');
+    const activityQuery = query(
+      activityRef,
+      where('userId', '==', userId),
+      orderBy('timestamp', 'desc'),
+      limit(10)
+    );
+    
+    const unsubscribe = onSnapshot(activityQuery, (snapshot) => {
+      const activities = [];
+      snapshot.forEach((doc) => {
+        activities.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      setRealTimeActivityFeed(activities);
+      setLoadingActivityFeed(false);
+    }, (error) => {
+      console.error("Firebase activity feed listener error:", error);
+      setLoadingActivityFeed(false);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile._id]);
+
+  // Function to add activity to Firebase
+  const addActivityToFirebase = useCallback(async (activityType, title, description, projectId = null) => {
+    if (!userProfile._id) return;
+
+    try {
+      const activityRef = collection(db, 'userActivity');
+      await setDoc(doc(activityRef), {
+        userId: userProfile._id,
+        type: activityType,
+        title: title,
+        description: description,
+        projectId: projectId,
+        timestamp: serverTimestamp(),
+        icon: getActivityIcon(activityType),
+        color: getActivityColor(activityType)
+      });
+    } catch (error) {
+      console.error("Error adding activity to Firebase:", error);
+    }
+  }, [userProfile._id]);
+
+  // Helper functions for activity icons and colors
+  const getActivityIcon = (type) => {
+    const icons = {
+      'project_completed': '🎉',
+      'project_started': '🚀',
+      'task_completed': '✅',
+      'skill_endorsed': '⭐',
+      'achievement_unlocked': '🏆',
+      'contribution_milestone': '📈'
+    };
+    return icons[type] || '📝';
+  };
+
+  const getActivityColor = (type) => {
+    const colors = {
+      'project_completed': 'green',
+      'project_started': 'blue',
+      'task_completed': 'green',
+      'skill_endorsed': 'yellow',
+      'achievement_unlocked': 'purple',
+      'contribution_milestone': 'orange'
+    };
+    return colors[type] || 'gray';
+  };
+
+  // Mock activity feed (fallback)
   const mockActivityFeed = [
     {
       id: 1,
@@ -1200,6 +1512,9 @@ const ProfilePage = () => {
       color: "purple",
     },
   ];
+
+  // Use real-time activity feed if available, otherwise fallback to mock
+  const activityFeed = realTimeActivityFeed.length > 0 ? realTimeActivityFeed : mockActivityFeed;
 
   // Mock analytics data for Phase 3
   const analyticsData = {
@@ -1979,72 +2294,111 @@ const ProfilePage = () => {
               </motion.div>
             )}
 
-            {activeTab === "skills" && (
-              <SkillsSection
-                skills={skills}
-                getSkillIcon={getSkillIcon}
-                contributionData={contributionData}
-                selectedTimePeriod={selectedTimePeriod}
-                setSelectedTimePeriod={setSelectedTimePeriod}
-                showAnalytics={showAnalytics}
-                setShowAnalytics={setShowAnalytics}
-                isRealTimeEnabled={isRealTimeEnabled}
-                setIsRealTimeEnabled={setIsRealTimeEnabled}
-                analyticsData={analyticsData}
-                getRealTimeData={getRealTimeData}
-                fetchUserProfile={fetchUserProfile}
-                loading={loading}
-              />
-            )}
+                         {activeTab === "skills" && (
+               <SkillsSection
+                 skills={skills}
+                 getSkillIcon={getSkillIcon}
+                 contributionData={contributionData}
+                 contributionStats={contributionStats}
+                 selectedTimePeriod={selectedTimePeriod}
+                 setSelectedTimePeriod={setSelectedTimePeriod}
+                 showAnalytics={showAnalytics}
+                 setShowAnalytics={setShowAnalytics}
+                 isRealTimeEnabled={isRealTimeEnabled}
+                 setIsRealTimeEnabled={setIsRealTimeEnabled}
+                 analyticsData={analyticsData}
+                 getRealTimeData={getRealTimeData}
+                 fetchUserProfile={fetchUserProfile}
+                 loading={loading}
+                 loadingProjects={loadingProjects}
+                 isFirebaseConnected={isFirebaseConnected}
+               />
+             )}
 
-            {activeTab === "activity" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8"
-              >
-                <h2 className="text-2xl font-bold text-white mb-6">
-                  Activity Timeline
-                </h2>
-                <div className="space-y-6">
-                  {mockActivityFeed.map((activity, index) => (
-                    <motion.div
-                      key={activity.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className="flex items-start gap-4 p-4 bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300"
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
-                          activity.color === "green"
-                            ? "bg-green-500/20"
-                            : activity.color === "yellow"
-                            ? "bg-yellow-500/20"
-                            : activity.color === "blue"
-                            ? "bg-blue-500/20"
-                            : "bg-purple-500/20"
-                        }`}
-                      >
-                        {activity.icon}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-white font-semibold mb-1">
-                          {activity.title}
-                        </h3>
-                        <p className="text-gray-400 text-sm mb-2">
-                          {activity.description}
-                        </p>
-                        <span className="text-gray-500 text-xs">
-                          {activity.timestamp}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+                         {activeTab === "activity" && (
+               <motion.div
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.5 }}
+                 className="bg-[#1a1a1a]/80 backdrop-blur-xl rounded-3xl border border-blue-500/20 p-8"
+               >
+                 <div className="flex items-center justify-between mb-6">
+                   <div>
+                     <h2 className="text-2xl font-bold text-white mb-2">
+                       Activity Timeline
+                     </h2>
+                     <p className="text-gray-400">
+                       Your real-time project activities and achievements
+                     </p>
+                     {isFirebaseConnected && (
+                       <div className="flex items-center gap-2 mt-2">
+                         <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                         <span className="text-blue-400 text-sm font-medium">
+                           Live Firebase Updates
+                         </span>
+                       </div>
+                     )}
+                   </div>
+                   <button
+                     onClick={() => addActivityToFirebase('test_activity', 'Test Activity', 'Testing Firebase integration')}
+                     className="px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-all duration-300 border border-blue-500/30 rounded-lg text-sm font-medium"
+                   >
+                     Test Activity
+                   </button>
+                 </div>
+                 
+                 {loadingActivityFeed ? (
+                   <div className="text-gray-400 text-center py-12">
+                     <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                     Loading activity feed...
+                   </div>
+                 ) : (
+                   <div className="space-y-6">
+                     {activityFeed.map((activity, index) => (
+                       <motion.div
+                         key={activity.id}
+                         initial={{ opacity: 0, x: -20 }}
+                         animate={{ opacity: 1, x: 0 }}
+                         transition={{ duration: 0.5, delay: index * 0.1 }}
+                         className="flex items-start gap-4 p-4 bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300"
+                       >
+                         <div
+                           className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+                             activity.color === "green"
+                               ? "bg-green-500/20"
+                               : activity.color === "yellow"
+                               ? "bg-yellow-500/20"
+                               : activity.color === "blue"
+                               ? "bg-blue-500/20"
+                               : activity.color === "purple"
+                               ? "bg-purple-500/20"
+                               : activity.color === "orange"
+                               ? "bg-orange-500/20"
+                               : "bg-gray-500/20"
+                           }`}
+                         >
+                           {activity.icon}
+                         </div>
+                         <div className="flex-1">
+                           <h3 className="text-white font-semibold mb-1">
+                             {activity.title}
+                           </h3>
+                           <p className="text-gray-400 text-sm mb-2">
+                             {activity.description}
+                           </p>
+                           <span className="text-gray-500 text-xs">
+                             {activity.timestamp ? 
+                               new Date(activity.timestamp.toDate()).toLocaleString() : 
+                               activity.timestamp || "Just now"
+                             }
+                           </span>
+                         </div>
+                       </motion.div>
+                     ))}
+                   </div>
+                 )}
+               </motion.div>
+             )}
           </div>
         </section>
       </main>
