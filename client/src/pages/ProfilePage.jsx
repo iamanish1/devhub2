@@ -50,7 +50,7 @@ import {
   FaSync,
 } from "react-icons/fa";
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Professional Skill Card Component
@@ -177,6 +177,7 @@ const SkillsSection = React.memo(
     syncAnalyticsToFirebase,
     loadingAnalytics,
   }) => {
+    const [showAllSkills, setShowAllSkills] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
@@ -395,19 +396,47 @@ const SkillsSection = React.memo(
             </div>
           </div>
 
-          {/* Skills Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {skills.map((skill, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.05 }}
-              >
-                <SkillCard skill={skill} getSkillIcon={getSkillIcon} />
-              </motion.div>
-            ))}
-          </div>
+                     {/* Skills Grid */}
+           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+             {skills.slice(0, showAllSkills ? skills.length : 8).map((skill, index) => (
+               <motion.div
+                 key={index}
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.5, delay: index * 0.05 }}
+               >
+                 <SkillCard skill={skill} getSkillIcon={getSkillIcon} />
+               </motion.div>
+             ))}
+           </div>
+           
+           {/* Show More/Less Button */}
+           {skills.length > 8 && (
+             <div className="flex justify-center mt-8">
+               <motion.button
+                 onClick={() => setShowAllSkills(!showAllSkills)}
+                 className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
+                 whileHover={{ scale: 1.05 }}
+                 whileTap={{ scale: 0.95 }}
+               >
+                 {showAllSkills ? (
+                   <>
+                     <span>Show Less</span>
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                     </svg>
+                   </>
+                 ) : (
+                   <>
+                     <span>Show More ({skills.length - 8} more)</span>
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                     </svg>
+                   </>
+                 )}
+               </motion.button>
+             </div>
+           )}
         </div>
 
         {/* Professional Contribution Activity */}
@@ -823,49 +852,65 @@ const SkillsSection = React.memo(
                     </div>
                   </div>
 
-                  {/* Skill Growth Chart */}
-                  <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h4 className="text-lg font-semibold text-white">
-                        Skill Growth (6 months)
-                      </h4>
-                      <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span>Progress</span>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      {Object.entries(getRealTimeData().skillGrowth).map(
-                        ([skill, growth], index) => (
-                          <div key={skill} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-300 text-sm font-medium">
-                                {skill}
-                              </span>
-                              <span className="text-blue-400 text-sm font-semibold">
-                                {growth[growth.length - 1]}%
-                              </span>
-                            </div>
-                            <div className="relative bg-gray-700 rounded-full h-3 overflow-hidden">
-                              <motion.div
-                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-500 to-blue-500 rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{
-                                  width: `${growth[growth.length - 1]}%`,
-                                }}
-                                transition={{
-                                  duration: 1.5,
-                                  delay: index * 0.2,
-                                  ease: "easeOut",
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
+                                     {/* Skill Growth Chart with Smooth Scrolling */}
+                   <div className="bg-[#2a2a2a] rounded-2xl border border-blue-500/20 p-6">
+                     <div className="flex items-center justify-between mb-6">
+                       <h4 className="text-lg font-semibold text-white">
+                         Skill Growth (6 months)
+                       </h4>
+                       <div className="flex items-center gap-2 text-sm text-gray-400">
+                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                         <span>Progress</span>
+                       </div>
+                     </div>
+                     <div className="max-h-64 overflow-y-auto skill-growth-scroll" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                       <div className="space-y-4 pr-2">
+                         {Object.entries(getRealTimeData().skillGrowth).map(
+                           ([skill, growth], index) => (
+                             <motion.div 
+                               key={skill} 
+                               className="space-y-2 bg-[#1a1a1a]/30 rounded-lg p-3 border border-gray-700/30 hover:border-green-500/30 transition-all duration-300"
+                               initial={{ opacity: 0, x: -20 }}
+                               animate={{ opacity: 1, x: 0 }}
+                               transition={{
+                                 duration: 0.6,
+                                 delay: index * 0.1,
+                                 ease: "easeOut"
+                               }}
+                               whileHover={{ 
+                                 scale: 1.02,
+                                 transition: { duration: 0.2 }
+                               }}
+                             >
+                               <div className="flex items-center justify-between">
+                                 <span className="text-gray-300 text-sm font-medium">
+                                   {skill}
+                                 </span>
+                                 <span className="text-blue-400 text-sm font-semibold">
+                                   {growth[growth.length - 1]}%
+                                 </span>
+                               </div>
+                               <div className="relative bg-gray-700 rounded-full h-3 overflow-hidden">
+                                 <motion.div
+                                   className="absolute inset-y-0 left-0 bg-gradient-to-r from-green-500 to-blue-500 rounded-full"
+                                   initial={{ width: 0 }}
+                                   animate={{
+                                     width: `${growth[growth.length - 1]}%`,
+                                   }}
+                                   transition={{
+                                     duration: 1.5,
+                                     delay: index * 0.1 + 0.3,
+                                     ease: "easeOut",
+                                   }}
+                                 />
+                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
+                               </div>
+                             </motion.div>
+                           )
+                         )}
+                       </div>
+                     </div>
+                   </div>
                 </div>
               </motion.div>
             )}
@@ -877,6 +922,7 @@ const SkillsSection = React.memo(
 );
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState({});
   const [savedProjects, setSavedProjects] = useState([]);
   const [loadingSavedProjects, setLoadingSavedProjects] = useState(false);
@@ -1688,30 +1734,44 @@ const ProfilePage = () => {
     return () => clearInterval(interval);
   }, [isRealTimeEnabled, analyticsData]);
 
-  // Print styles
-  useEffect(() => {
-    if (isPrintMode) {
-      const style = document.createElement("style");
-      style.textContent = `
-        @media print {
-          .print-mode {
-            background: white !important;
-            color: black !important;
-          }
-          .print-mode * {
-            color: black !important;
-            background: white !important;
-          }
-          .print-mode .bg-gradient-to-br {
-            background: #f8f9fa !important;
-            border: 1px solid #dee2e6 !important;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-      return () => document.head.removeChild(style);
-    }
-  }, [isPrintMode]);
+     // Print styles and custom scrollbar
+   useEffect(() => {
+     const style = document.createElement("style");
+     style.textContent = `
+       @media print {
+         .print-mode {
+           background: white !important;
+           color: black !important;
+         }
+         .print-mode * {
+           color: black !important;
+           background: white !important;
+         }
+         .print-mode .bg-gradient-to-br {
+           background: #f8f9fa !important;
+           border: 1px solid #dee2e6 !important;
+         }
+       }
+       
+       /* Hide scrollbar for skill growth section */
+       .skill-growth-scroll::-webkit-scrollbar {
+         display: none;
+       }
+       
+       .skill-growth-scroll {
+         scrollbar-width: none;
+         -ms-overflow-style: none;
+         scroll-behavior: smooth;
+       }
+       
+       /* Smooth scrolling for all elements */
+       * {
+         scroll-behavior: smooth;
+       }
+     `;
+     document.head.appendChild(style);
+     return () => document.head.removeChild(style);
+   }, [isPrintMode]);
 
   if (loading)
     return (
@@ -2052,12 +2112,9 @@ const ProfilePage = () => {
                           key={savedProject._id}
                           className="bg-gradient-to-br from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-300 cursor-pointer group"
                           whileHover={{ y: -5, scale: 1.02 }}
-                          onClick={() =>
-                            window.open(
-                              `/biding/${savedProject.project._id}`,
-                              "_blank"
-                            )
-                          }
+                                                     onClick={() =>
+                             navigate(`/bidingPage/${savedProject.project._id}`)
+                           }
                         >
                           {savedProject.project.Project_cover_photo && (
                             <div className="relative overflow-hidden rounded-t-2xl">
@@ -2145,15 +2202,15 @@ const ProfilePage = () => {
                   {recentProjects.length > 0 ? (
                     <div className="space-y-4">
                       {recentProjects.map((project, index) => (
-                        <motion.div
-                          key={project._id || index}
-                          className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300 cursor-pointer"
-                          whileHover={{ x: 5, scale: 1.01 }}
-                          onClick={() => {
-                            // Handle project click - could open modal or navigate to details
-                            console.log("Recent project clicked:", project);
-                          }}
-                        >
+                                                 <motion.div
+                           key={project._id || index}
+                           className="bg-gradient-to-r from-[#2a2a2a] to-[#1a1a1a] rounded-2xl border border-blue-500/20 p-6 hover:border-blue-500/40 transition-all duration-300 cursor-pointer"
+                           whileHover={{ x: 5, scale: 1.01 }}
+                                                       onClick={() => {
+                              // Navigate to project detail page
+                              navigate(`/bidingPage/${project._id}`);
+                            }}
+                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-3 mb-3">
@@ -2338,14 +2395,14 @@ const ProfilePage = () => {
                           return true;
                         })
                         .map((project, index) => (
-                          <UserProjectCard
-                            key={project._id}
-                            project={project}
-                            onClick={(project) => {
-                              // Handle project click - could open modal or navigate to details
-                              console.log("Project clicked:", project);
-                            }}
-                          />
+                                                     <UserProjectCard
+                             key={project._id}
+                             project={project}
+                             onClick={(project) => {
+                               // Navigate to project detail page
+                               navigate(`/bidingPage/${project._id}`);
+                             }}
+                           />
                         ))}
                     </div>
                   ) : (
