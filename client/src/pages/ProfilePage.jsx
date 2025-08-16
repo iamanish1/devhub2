@@ -951,6 +951,29 @@ const ProfilePage = () => {
   // State for recent projects display
   const [showAllRecentProjects, setShowAllRecentProjects] = useState(false);
   
+  // Calculate total completed tasks (contributions) and completed projects
+  const userStats = useMemo(() => {
+    if (userProjects && userProjects.length > 0) {
+      const totalCompletedTasks = userProjects.reduce((sum, project) => {
+        return sum + (project.completedTasks || 0);
+      }, 0);
+      
+      const completedProjects = userProjects.filter(project => 
+        project.projectStatus === "Completed"
+      ).length;
+      
+      return {
+        totalContributions: totalCompletedTasks,
+        completedProjects: completedProjects
+      };
+    }
+    
+    return {
+      totalContributions: 0,
+      completedProjects: 0
+    };
+  }, [userProjects]);
+
   // Get recent projects from userProjects (real data)
   const recentProjects = useMemo(() => {
     if (userProjects && userProjects.length > 0) {
@@ -1520,15 +1543,33 @@ const ProfilePage = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {lastRefreshTime && (
+                <div className="col-span-2 text-center mb-2">
+                  <p className="text-xs text-gray-500">
+                    Last updated: {lastRefreshTime.toLocaleTimeString()}
+                  </p>
+                </div>
+              )}
               <motion.div
                 className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-xl rounded-2xl border border-blue-500/30 p-6 text-center"
                 whileHover={{ y: -5, scale: 1.02 }}
                 transition={{ duration: 0.3 }}
               >
                 <div className="text-3xl font-bold text-blue-400 mb-2">
-                  {userProfile.user_project_contribution || 12}
+                  {loadingProjects ? (
+                    <div className="animate-pulse bg-blue-400/20 h-8 w-16 rounded mx-auto"></div>
+                  ) : (
+                    userStats.totalContributions
+                  )}
                 </div>
                 <div className="text-gray-300">Contributions</div>
+                <div className="text-gray-500 text-xs mt-1">Completed Tasks</div>
+                {!loadingProjects && (
+                  <div className="flex items-center justify-center gap-1 mt-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-green-400 text-xs">Live Data</span>
+                  </div>
+                )}
               </motion.div>
 
               <motion.div
@@ -1537,9 +1578,20 @@ const ProfilePage = () => {
                 transition={{ duration: 0.3 }}
               >
                 <div className="text-3xl font-bold text-green-400 mb-2">
-                  {userProfile.user_completed_projects || 8}
+                  {loadingProjects ? (
+                    <div className="animate-pulse bg-green-400/20 h-8 w-16 rounded mx-auto"></div>
+                  ) : (
+                    userStats.completedProjects
+                  )}
                 </div>
                 <div className="text-gray-300">Completed Projects</div>
+                <div className="text-gray-500 text-xs mt-1">Successfully Delivered</div>
+                {!loadingProjects && (
+                  <div className="flex items-center justify-center gap-1 mt-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-green-400 text-xs">Live Data</span>
+                  </div>
+                )}
               </motion.div>
             </div>
           </div>
