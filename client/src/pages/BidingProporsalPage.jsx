@@ -371,7 +371,7 @@ const BidingProporsalPage = () => {
           >
             <div className="absolute -top-4 -left-4 w-24 h-24 bg-[#00A8E8]/20 rounded-full blur-xl"></div>
             <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-[#0062E6]/20 rounded-full blur-xl"></div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 relative z-10 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] bg-clip-t">
+            <h1 className="text-4xl  mt-[6vmin] md:text-4xl font-bold text-white mb-4 relative z-10 ">
               Submit Your Proposal
             </h1>
             <p className="text-xl text-gray-300 mb-2">{project.project_Title}</p>
