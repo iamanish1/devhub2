@@ -97,8 +97,14 @@ const ProjectListingSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-  
-
+  Project_images: [{
+    filename: String,
+    originalName: String,
+    url: String,
+    size: Number
+  }]
+}, {
+  timestamps: true // This will automatically add createdAt and updatedAt fields
 });
 
 const ProjectListing = mongoose.model("ProjectListing", ProjectListingSchema); // Capital "P" and "L"
