@@ -70,25 +70,31 @@ export const createBid = async (req, res) => {
       Project_Bid_Amount: currentBidAmount,
     });
 
-    // sync the data to the firebase fire store
-    await firestoreDb
-      .collection("project_summaries")
-      .doc(String(projectObjectId))
-      .set(
-        {
-          current_bid_amount: currentBidAmount,
+    // sync the data to the firebase fire store (if available)
+    if (firestoreDb) {
+      try {
+        await firestoreDb
+          .collection("project_summaries")
+          .doc(String(projectObjectId))
+          .set(
+            {
+              current_bid_amount: currentBidAmount,
+              total_bids: totalBids,
+              number_of_contributors: uniqueContributors,
+              updated_at: new Date(),
+            },
+            { merge: true }
+          );
+
+        console.log("Firebase Sync Data:", {
           total_bids: totalBids,
           number_of_contributors: uniqueContributors,
-          updated_at: new Date(),
-        },
-        { merge: true } // This will create the document if it doesn't exist
-      );
-
-    console.log("Firebase Sync Data:", {
-      total_bids: totalBids,
-      number_of_contributors: uniqueContributors,
-      current_bid_amount: currentBidAmount,
-    });
+          current_bid_amount: currentBidAmount,
+        });
+      } catch (firestoreError) {
+        console.warn("Firestore sync failed:", firestoreError.message);
+      }
+    }
 
     res.status(201).json({ message: "Bid created successfully", bid: newBid });
   } catch (error) {

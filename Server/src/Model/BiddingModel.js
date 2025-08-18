@@ -41,6 +41,12 @@ const BiddingSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // Payment related fields
+  feePayment: { 
+    provider: String, 
+    orderId: String, 
+    status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' } 
+  }
 });
 
 // Add a unique compound index for safety

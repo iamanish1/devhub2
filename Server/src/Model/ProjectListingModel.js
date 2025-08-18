@@ -102,7 +102,22 @@ const ProjectListingSchema = new mongoose.Schema({
     originalName: String,
     url: String,
     size: Number
-  }]
+  }],
+  // Payment and bonus related fields
+  selectedContributors: [{ 
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' }, 
+    bidAmount: Number, 
+    linkedAccountId: String 
+  }],
+  bonus: { 
+    minRequired: Number, 
+    funded: { type: Boolean, default: false }, 
+    razorpayOrderId: String 
+  },
+  escrow: { 
+    totalBidLocked: { type: Number, default: 0 }, 
+    status: { type: String, enum: ['locked', 'released', 'refunded'], default: 'locked' } 
+  }
 }, {
   timestamps: true // This will automatically add createdAt and updatedAt fields
 });

@@ -22,24 +22,30 @@ export const createProjectTask = async (req, res) => {
 
     // Save the task to the database
     const savedTask = await newTask.save();
-    // Sync the updated task status to Firestore
-    await firestoreDb
-      .collection("project_tasks")
-      .doc(savedTask._id.toString())
-      .set(
-        {
+    // Sync the updated task status to Firestore (if available)
+    if (firestoreDb) {
+      try {
+        await firestoreDb
+          .collection("project_tasks")
+          .doc(savedTask._id.toString())
+          .set(
+            {
+              task_status: savedTask.task_status,
+              updated_at: new Date(),
+              projectId: savedTask.projectId.toString(),
+              task_title: savedTask.task_title,
+              task_description: savedTask.task_description,
+            },
+            { merge: true }
+          );
+        console.log("Firestore Sync Data:", {
           task_status: savedTask.task_status,
           updated_at: new Date(),
-          projectId: savedTask.projectId.toString(), // <-- Add this line!
-          task_title: savedTask.task_title, // (optional, for full sync)
-          task_description: savedTask.task_description, // (optional)
-        },
-        { merge: true } // This will create the document if it doesn't exist
-      );
-    console.log("Firestore Sync Data:", {
-      task_status: savedTask.task_status,
-      updated_at: new Date(),
-    });
+        });
+      } catch (firestoreError) {
+        console.warn("Firestore sync failed:", firestoreError.message);
+      }
+    }
 
     res
       .status(201)

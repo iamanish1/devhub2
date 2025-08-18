@@ -1,21 +1,37 @@
 import admin from 'firebase-admin';
-import { readFile } from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-// Fix __dirname in ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config();
 
-// Load JSON manually
-const jsonPath = path.resolve(__dirname, '../config/firebase.json');
-const serviceAccount = JSON.parse(await readFile(jsonPath, 'utf8'));
-
+// Initialize Firebase Admin SDK (only once)
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  // Check if Firebase environment variables are set
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+    const serviceAccount = {
+      type: "service_account",
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID || "",
+      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      client_id: process.env.FIREBASE_CLIENT_ID || "",
+      auth_uri: "https://accounts.google.com/o/oauth2/auth",
+      token_uri: "https://oauth2.googleapis.com/token",
+      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+      client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${process.env.FIREBASE_CLIENT_EMAIL}`
+    };
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } else {
+    console.log("Firebase environment variables not set. Firebase Admin SDK not initialized.");
+  }
 }
 
-const firestoreDb = admin.firestore();
+// Initialize Firestore only if Firebase is initialized
+let firestoreDb = null;
+if (admin.apps.length > 0) {
+  firestoreDb = admin.firestore();
+}
+
 export { firestoreDb };

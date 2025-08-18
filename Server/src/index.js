@@ -15,6 +15,9 @@ import userNoteRoute from "./Routes/UserNotesRoute.js";
 import uploadRoutes from "./Routes/upload.routes.js";
 import savedProjectRoutes from "./Routes/SavedProjectRoutes.js";
 import userProjectsRoutes from "./Routes/UserProjectsRoutes.js";
+import paymentsRoutes from "./Routes/paymentsRoutes.js";
+import webhooksRoutes from "./Routes/webhooksRoutes.js";
+import projectsPaymentRoutes from "./Routes/projectsPaymentRoutes.js";
 import path from "path";
 
 
@@ -59,6 +62,21 @@ app.use("/api/notes", userNoteRoute ) ;
 app.use("/api", uploadRoutes) ;
 app.use("/api/saved-projects", savedProjectRoutes);
 app.use("/api/user-projects", userProjectsRoutes);
+
+// Payment routes
+app.use("/api/payments", paymentsRoutes);
+app.use("/webhooks", webhooksRoutes);
+app.use("/api/projects", projectsPaymentRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
  
 
 // Initialize chat socket
