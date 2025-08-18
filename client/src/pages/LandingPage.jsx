@@ -1063,24 +1063,24 @@ const LandingPage = () => {
               <h4 className="font-bold text-white mb-4">Product</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="/dashboard" className="hover:text-blue-400">
+                  <Link to="/dashboard" className="hover:text-blue-400">
                     Explore Projects
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/dashboard" className="hover:text-blue-400">
+                  <Link to="/dashboard" className="hover:text-blue-400">
                     Dashboard
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/createaccount" className="hover:text-blue-400">
+                  <Link to="/createaccount" className="hover:text-blue-400">
                     Join as Developer
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/createaccount" className="hover:text-blue-400">
+                  <Link to="/createaccount" className="hover:text-blue-400">
                     Join as Project Owner
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -1089,24 +1089,24 @@ const LandingPage = () => {
               <h4 className="font-bold text-white mb-4">Company</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="/about" className="hover:text-blue-400">
+                  <Link to="/about" className="hover:text-blue-400">
                     About Us
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/careers" className="hover:text-blue-400">
+                  <Link to="/careers" className="hover:text-blue-400">
                     Careers
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/blog" className="hover:text-blue-400">
+                  <Link to="/blog" className="hover:text-blue-400">
                     Blog
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/contact" className="hover:text-blue-400">
+                  <Link to="/contact" className="hover:text-blue-400">
                     Contact
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -1115,24 +1115,24 @@ const LandingPage = () => {
               <h4 className="font-bold text-white mb-4">Legal</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="/privacy-policy" className="hover:text-blue-400">
+                  <Link to="/privacy-policy" className="hover:text-blue-400">
                     Privacy Policy
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/terms-and-service" className="hover:text-blue-400">
+                  <Link to="/terms-and-service" className="hover:text-blue-400">
                     Terms of Service
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/cookie-policy" className="hover:text-blue-400">
+                  <Link to="/cookie-policy" className="hover:text-blue-400">
                     Cookie Policy
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/community-guidelines" className="hover:text-blue-400">
+                  <Link to="/community-guidelines" className="hover:text-blue-400">
                     Community Guidelines
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
