@@ -28,7 +28,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL, // or your frontend URL
+    origin: [
+      'https://www.devhubs.in',
+      'https://www.devhubs.in/',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ],
     credentials: true,
   },
 });
@@ -40,7 +45,23 @@ app.use(cookieParser());
 
 
 const CorsOption = {
-  origin: process.env.CLIENT_URL,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'https://www.devhubs.in',
+      'https://www.devhubs.in/',
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }
   console.log("Frontend_Uri: " + process.env.CLIENT_URL);
@@ -48,6 +69,12 @@ const CorsOption = {
   console.log("CLIENT_URL:", process.env.CLIENT_URL);
   console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
   console.log("NODE_ENV:", process.env.NODE_ENV);
+  console.log("CORS Configuration: Allowing origins:", [
+    'https://www.devhubs.in',
+    'https://www.devhubs.in/',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ]);
 app.use(cors(CorsOption)) ;
 
 // Serve uploaded files statically
