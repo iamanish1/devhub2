@@ -20,7 +20,7 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 
 const Socket_URl =
-  import.meta.env.VITE_SOCKET_SERVER || "http://localhost:8000";
+  import.meta.env.VITE_SOCKET_SERVER || `${import.meta.env.VITE_API_URL}`;
 console.log("Socket URL:", Socket_URl);
 
 // Dummy data
@@ -57,7 +57,7 @@ const ContributionPage = () => {
     const fetchproject = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8000/api/project/getlistproject/${_id}`,
+          `${import.meta.env.VITE_API_URL}/api/project/getlistproject/${_id}`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -95,7 +95,7 @@ const ContributionPage = () => {
   const handleAddNote = async () => {
     try {
       const res = await axios.post(
-        `http://localhost:8000/api/notes/usernotes/${_id}`,
+        `${import.meta.env.VITE_API_URL}/api/notes/usernotes/${_id}`,
         { note: notes, senderId: user?._id }, // send only the new note
         {
           headers: {
@@ -118,7 +118,7 @@ const ContributionPage = () => {
     const fetchNotes = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:8000/api/notes/getusernotes/${_id}?senderId=${user?._id}`,
+          `${import.meta.env.VITE_API_URL}/api/notes/getusernotes/${_id}?senderId=${user?._id}`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -143,7 +143,7 @@ const ContributionPage = () => {
       const fetchTask = async () => {
         try {
           const response = await axios.get(
-            `http://localhost:8000/api/admin/getprojecttask/${_id}`,
+            `${import.meta.env.VITE_API_URL}/api/admin/getprojecttask/${_id}`,
             {
               headers: {
                 "Content-Type": "application/json",
@@ -167,7 +167,7 @@ const ContributionPage = () => {
   useEffect(() => {
     if (!_id) return;
     axios
-      .get(`http://localhost:8000/api/project/chat/${_id}`, {
+              .get(`${import.meta.env.VITE_API_URL}/api/project/chat/${_id}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -230,7 +230,7 @@ const ContributionPage = () => {
   const updateTaskStatus = async (taskId, newStatus) => {
     try {
       const response = await axios.put(
-        `http://localhost:8000/api/admin/updatedprojecttask/${taskId}`,
+        `${import.meta.env.VITE_API_URL}/api/admin/updatedprojecttask/${taskId}`,
         { task_status: newStatus },
         {
           headers: {
@@ -264,7 +264,7 @@ const ContributionPage = () => {
   const handleDeleteNote = async () => {
   try {
     const res = await axios.delete(
-      `http://localhost:8000/api/notes/deleteusernote/${_id}/?senderId=${user._id}`,
+              `${import.meta.env.VITE_API_URL}/api/notes/deleteusernote/${_id}/?senderId=${user._id}`,
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,

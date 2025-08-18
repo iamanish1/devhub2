@@ -100,7 +100,7 @@ const AdminPage = () => {
     if (view === "applicants") {
       setApplicantsLoading(true);
       axios
-        .get("http://localhost:8000/api/admin/applicant", {
+        .get(`${import.meta.env.VITE_API_URL}/api/admin/applicant`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -122,7 +122,7 @@ const AdminPage = () => {
     if (view === "projects") {
       setProjectsLoading(true);
       axios
-        .get("http://localhost:8000/api/admin/myproject", {
+        .get(`${import.meta.env.VITE_API_URL}/api/admin/myproject`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -152,7 +152,7 @@ const AdminPage = () => {
     const fetchStats = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/admin/overview",
+          `${import.meta.env.VITE_API_URL}/api/admin/overview`,
           {
             headers: {
               "Content-Type": "application/json",
@@ -205,7 +205,7 @@ const AdminPage = () => {
       return;
     try {
       const response = await axios.delete(
-        `http://localhost:8000/api/admin/deleteproject/${projectId}`,
+        `${import.meta.env.VITE_API_URL}/api/admin/deleteproject/${projectId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -228,7 +228,7 @@ const AdminPage = () => {
   const handleApplicantStatus = async (id, status) => {
     try {
       await axios.put(
-        `http://localhost:8000/api/admin/applicant/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/admin/applicant/${id}`,
         { status },
         {
           headers: {

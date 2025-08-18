@@ -74,7 +74,7 @@ const LandingPage = () => {
         setProjectsError(null);
         
         const response = await axios.get(
-          "http://localhost:8000/api/project/getlistproject"
+          `${import.meta.env.VITE_API_URL}/api/project/getlistproject`
         );
         
         if (response.data.projects && response.data.projects.length > 0) {

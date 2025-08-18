@@ -208,7 +208,7 @@ const BidingProporsalPage = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:8000/api/project/getlistproject/${_id}`
+          `${import.meta.env.VITE_API_URL}/api/project/getlistproject/${_id}`
         );
         const projectData = response.data.project;
         setProject(projectData);
@@ -301,7 +301,7 @@ const BidingProporsalPage = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:8000/api/bid/createBid/${_id}`,
+        `${import.meta.env.VITE_API_URL}/api/bid/createBid/${_id}`,
         payload,
         {
           headers: {
@@ -387,7 +387,7 @@ const BidingProporsalPage = () => {
               <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                                  <div className="relative">
                    <img
-                     src={project.Project_cover_photo ? `http://localhost:8000${project.Project_cover_photo}` : "https://techvidvan.com/tutorials/wp-content/uploads/2021/12/python-chatbot-project-nltk-ai.webp"}
+                     src={project.Project_cover_photo ? `${import.meta.env.VITE_API_URL}${project.Project_cover_photo}` : "https://techvidvan.com/tutorials/wp-content/uploads/2021/12/python-chatbot-project-nltk-ai.webp"}
                      alt={project.project_Title || "Project"}
                      className="w-20 h-20 rounded-xl object-cover shadow-lg"
                      onError={(e) => {

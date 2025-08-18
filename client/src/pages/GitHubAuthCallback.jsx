@@ -19,7 +19,7 @@ const GitHubAuthCallback = () => {
         }
 
         // Send the GitHub code to backend for token & user data
-        const response = await axios.post("http://localhost:8000/api/github/login", { code });
+        const response = await axios.post(`${import.meta.env.VITE_GITHUB_LOGIN_API}`, { code });
 
         const { token, user } = response.data;
 

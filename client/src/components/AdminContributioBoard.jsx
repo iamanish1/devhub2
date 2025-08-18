@@ -21,7 +21,7 @@ import { db } from "../Config/firebase";
 import io from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 const Socket_URl =
-  import.meta.env.VITE_SOCKET_SERVER || "http://localhost:8000";
+  import.meta.env.VITE_SOCKET_SERVER || `${import.meta.env.VITE_API_URL}`;
 
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
@@ -58,7 +58,7 @@ const AdminContributionBoard = ({
     setProjectsLoading(true);
     setProjectsError(null);
     axios
-      .get("http://localhost:8000/api/admin/myproject", {
+      .get(`${import.meta.env.VITE_API_URL}/api/admin/myproject`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -127,7 +127,7 @@ const AdminContributionBoard = ({
   useEffect(() => {
     if (!selectedProjectId) return;
     axios
-      .get(`http://localhost:8000/api/project/chat/${selectedProjectId}`, {
+      .get(`${import.meta.env.VITE_API_URL}/api/project/chat/${selectedProjectId}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -204,7 +204,7 @@ const AdminContributionBoard = ({
       // Edit logic: call update API
       try {
         const res = await axios.put(
-          `http://localhost:8000/api/admin/editprojecttask/${
+          `${import.meta.env.VITE_API_URL}/api/admin/editprojecttask/${
             editTask.id || editTask._id
           }`,
           {
@@ -245,7 +245,7 @@ const AdminContributionBoard = ({
       // Create new task via API call
       try {
         const res = await axios.post(
-          `http://localhost:8000/api/admin/projecttask`,
+          `${import.meta.env.VITE_API_URL}/api/admin/projecttask`,
           {
             task_title: taskForm.title,
             task_description: taskForm.desc,
@@ -293,7 +293,7 @@ const AdminContributionBoard = ({
     if (!id) return;
     try {
       const res = await axios.delete(
-        `http://localhost:8000/api/admin/deleteprojecttask/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/admin/deleteprojecttask/${id}`,
         {
           headers: {
             "Content-Type": "application/json",

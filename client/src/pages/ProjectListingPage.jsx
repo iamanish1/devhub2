@@ -46,7 +46,7 @@ const ProjectListingPage = () => {
   useEffect(() => {
     if (!editingProject && params.id) {
       axios
-        .get(`http://localhost:8000/api/project/getlistproject/${params.id}`, {
+        .get(`${import.meta.env.VITE_API_URL}/api/project/getlistproject/${params.id}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -259,7 +259,7 @@ const ProjectListingPage = () => {
         };
         
         await axios.put(
-          `http://localhost:8000/api/admin/updateproject/${projectId}`,
+          `${import.meta.env.VITE_API_URL}/api/admin/updateproject/${projectId}`,
           editData,
           {
             withCredentials: true,
@@ -273,7 +273,7 @@ const ProjectListingPage = () => {
       } else {
         // CREATE MODE - Use FormData for file uploads
         const response = await axios.post(
-          "http://localhost:8000/api/project/listproject",
+          `${import.meta.env.VITE_API_URL}/api/project/listproject`,
           formDataToSend,
           {
             withCredentials: true,

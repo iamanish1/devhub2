@@ -17,7 +17,7 @@ const Navbar = () => {
   useEffect(() => {
     async function fetchUserProfile() {
       try {
-        const response = await axios.get("http://localhost:8000/api/profile", {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,

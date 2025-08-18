@@ -136,7 +136,7 @@ const EditProfilePage = () => {
 
   const loadExistingProfile = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/profile", {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -266,7 +266,7 @@ const EditProfilePage = () => {
       formData.append(type, file);
 
       const response = await axios.post(
-        `http://localhost:8000/api/uploads/single/${type}`,
+        `${import.meta.env.VITE_API_URL}/api/uploads/single/${type}`,
         formData,
         {
           headers: {
@@ -306,7 +306,7 @@ const EditProfilePage = () => {
         username: form.username,
       };
 
-      await axios.post("http://localhost:8000/api/editprofile", payload, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/editprofile`, payload, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -352,7 +352,7 @@ const EditProfilePage = () => {
         ...(avatarUrl && { user_profile_avatar: avatarUrl }),
       };
 
-      await axios.post("http://localhost:8000/api/editprofile", payload, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/editprofile`, payload, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,

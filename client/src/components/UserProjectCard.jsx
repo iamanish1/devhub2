@@ -50,7 +50,7 @@ const UserProjectCard = ({ project, onClick }) => {
       {project.coverPhoto && (
         <div className="relative overflow-hidden rounded-t-2xl">
           <img
-            src={`http://localhost:8000${project.coverPhoto}`}
+                            src={`${import.meta.env.VITE_API_URL}${project.coverPhoto}`}
             alt={project.projectTitle}
             className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
           />

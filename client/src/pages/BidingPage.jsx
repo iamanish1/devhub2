@@ -43,7 +43,7 @@ const BidingPage = () => {
         
         // Check bid status
         const bidRes = await axios.get(
-          `http://localhost:8000/api/bid/getBid/${_id}`,
+          `${import.meta.env.VITE_API_URL}/api/bid/getBid/${_id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -54,7 +54,7 @@ const BidingPage = () => {
         
         // Check if project is saved/bookmarked
         const savedRes = await axios.get(
-          `http://localhost:8000/api/saved-projects/check/${_id}`,
+          `${import.meta.env.VITE_API_URL}/api/saved-projects/check/${_id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -77,7 +77,7 @@ const BidingPage = () => {
     const fetchProject = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8000/api/project/getlistproject/${_id}`
+          `${import.meta.env.VITE_API_URL}/api/project/getlistproject/${_id}`
         );
         setProject(response.data.project);
         setLoading(false);
@@ -162,14 +162,14 @@ const BidingPage = () => {
       if (isBookmarked) {
         // Unsave project
         await axios.delete(
-          `http://localhost:8000/api/saved-projects/unsave/${_id}`,
+          `${import.meta.env.VITE_API_URL}/api/saved-projects/unsave/${_id}`,
           config
         );
         setIsBookmarked(false);
       } else {
         // Save project
         await axios.post(
-          `http://localhost:8000/api/saved-projects/save/${_id}`,
+          `${import.meta.env.VITE_API_URL}/api/saved-projects/save/${_id}`,
           {},
           config
         );
@@ -274,7 +274,7 @@ const BidingPage = () => {
           {/* Project Image with Overlay */}
           <div className="relative group overflow-hidden rounded-xl shadow-lg mb-6">
                                       <img
-               src={project.Project_cover_photo ? `http://localhost:8000${project.Project_cover_photo}` : "/api/placeholder/800/400"}
+                               src={project.Project_cover_photo ? `${import.meta.env.VITE_API_URL}${project.Project_cover_photo}` : "/api/placeholder/800/400"}
                alt={project.project_Title || "Project Cover"}
                className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
              />
@@ -457,10 +457,10 @@ const BidingPage = () => {
                  {project.Project_images.map((image, index) => (
                    <div key={index} className="relative group">
                      <img
-                       src={`http://localhost:8000${image.url}`}
+                                               src={`${import.meta.env.VITE_API_URL}${image.url}`}
                        alt={image.originalName}
                        className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                       onClick={() => window.open(`http://localhost:8000${image.url}`, '_blank')}
+                                               onClick={() => window.open(`${import.meta.env.VITE_API_URL}${image.url}`, '_blank')}
                      />
                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
                        <p className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity text-center px-2">

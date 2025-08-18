@@ -29,7 +29,7 @@ const CreateAccount = () => {
     setError(null);
     setSuccess(false);
 
-    const Acoount_Creation_API = "http://localhost:8000/api/user";
+    const Acoount_Creation_API = `${import.meta.env.VITE_ACCOUNT_CREATION_API}`;
 
     try {
       const response = await axios.post(
@@ -62,7 +62,7 @@ const CreateAccount = () => {
       const user = result.user;
       const firebasetoken = await user.getIdToken();
 
-      const response = await fetch("http://localhost:8000/api/github/login", {
+      const response = await fetch(`${import.meta.env.VITE_GITHUB_LOGIN_API}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -950,7 +950,7 @@ const ProfilePage = () => {
   const fetchUserProfile = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:8000/api/profile", {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -1032,7 +1032,7 @@ const ProfilePage = () => {
         if (!token) return;
 
         const response = await axios.get(
-          "http://localhost:8000/api/saved-projects/saved",
+          `${import.meta.env.VITE_API_URL}/api/saved-projects/saved`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -1827,7 +1827,7 @@ const ProfilePage = () => {
                   <div className="h-32 w-32 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl border-4 border-white/10 overflow-hidden">
                     {userProfile.user_profile_avatar ? (
                       <img
-                        src={`http://localhost:8000${userProfile.user_profile_avatar}`}
+                        src={`${import.meta.env.VITE_API_URL}${userProfile.user_profile_avatar}`}
                         alt={`${
                           userProfile.username?.username || "User"
                         } avatar`}
@@ -2119,7 +2119,7 @@ const ProfilePage = () => {
                           {savedProject.project.Project_cover_photo && (
                             <div className="relative overflow-hidden rounded-t-2xl">
                               <img
-                                src={`http://localhost:8000${savedProject.project.Project_cover_photo}`}
+                                src={`${import.meta.env.VITE_API_URL}${savedProject.project.Project_cover_photo}`}
                                 alt={savedProject.project.project_Title}
                                 className="w-full h-32 object-cover group-hover:scale-110 transition-transform duration-300"
                               />

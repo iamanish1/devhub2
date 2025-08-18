@@ -26,7 +26,7 @@ const LoginPage = () => {
     setError(null);
 
     try {
-      const Login_Api = "http://localhost:8000/api/login";
+      const Login_Api = `${import.meta.env.VITE_LOGIN_API}`;
       const response = await axios.post(
         Login_Api,
         {
@@ -56,7 +56,7 @@ const LoginPage = () => {
       const user = result.user;
       const firebasetoken = await user.getIdToken();
 
-      const response = await fetch("http://localhost:8000/api/github/login", {
+      const response = await fetch(`${import.meta.env.VITE_GITHUB_LOGIN_API}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ firebasetoken }),
