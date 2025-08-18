@@ -44,6 +44,10 @@ const CorsOption = {
   credentials: true,
 }
   console.log("Frontend_Uri: " + process.env.CLIENT_URL);
+  console.log("All Environment Variables:");
+  console.log("CLIENT_URL:", process.env.CLIENT_URL);
+  console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
+  console.log("NODE_ENV:", process.env.NODE_ENV);
 app.use(cors(CorsOption)) ;
 
 // Serve uploaded files statically
