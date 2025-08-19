@@ -33,7 +33,10 @@ const PaymentHistoryPage = () => {
   }, [refreshData]);
 
   useEffect(() => {
-    if (!paymentHistory) return;
+    if (!paymentHistory || !Array.isArray(paymentHistory)) {
+      setFilteredPayments([]);
+      return;
+    }
 
     let filtered = [...paymentHistory];
 

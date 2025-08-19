@@ -4,14 +4,21 @@ import {
   createBidFee,
   createListing,
   createBonus,
+  createSubscription,
+  createWithdrawal,
   getPaymentStatus,
-  getPaymentHistory
+  getPaymentHistory,
+  getSubscriptionStatus,
+  getBonusPools,
+  getWithdrawalHistory
 } from '../controller/paymentsController.js';
 import {
   validateRequest,
   bidFeeSchema,
   listingFeeSchema,
-  bonusSchema
+  bonusSchema,
+  subscriptionSchema,
+  withdrawalSchema
 } from '../utils/validate.js';
 
 const paymentsRoutes = express.Router();
@@ -37,6 +44,20 @@ paymentsRoutes.post('/bonus',
   createBonus
 );
 
+// Subscription payment (₹299/month)
+paymentsRoutes.post('/subscription', 
+  authMiddleware, 
+  validateRequest(subscriptionSchema),
+  createSubscription
+);
+
+// Withdrawal fee payment (₹15)
+paymentsRoutes.post('/withdrawal', 
+  authMiddleware, 
+  validateRequest(withdrawalSchema),
+  createWithdrawal
+);
+
 // Get payment status
 paymentsRoutes.get('/status/:intentId', 
   authMiddleware, 
@@ -47,6 +68,24 @@ paymentsRoutes.get('/status/:intentId',
 paymentsRoutes.get('/history', 
   authMiddleware, 
   getPaymentHistory
+);
+
+// Get subscription status
+paymentsRoutes.get('/subscription/status', 
+  authMiddleware, 
+  getSubscriptionStatus
+);
+
+// Get bonus pools
+paymentsRoutes.get('/bonus-pools', 
+  authMiddleware, 
+  getBonusPools
+);
+
+// Get withdrawal history
+paymentsRoutes.get('/withdrawal/history', 
+  authMiddleware, 
+  getWithdrawalHistory
 );
 
 export default paymentsRoutes;

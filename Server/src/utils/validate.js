@@ -30,6 +30,14 @@ export const bonusSchema = Joi.object({
   contributorsCount: Joi.number().integer().min(1).required()
 });
 
+export const subscriptionSchema = Joi.object({
+  planType: Joi.string().valid('monthly', 'yearly').default('monthly')
+});
+
+export const withdrawalSchema = Joi.object({
+  amount: Joi.number().positive().max(10000).required()
+});
+
 export const webhookSchema = Joi.object({
   id: Joi.string().required(),
   event: Joi.string().required(),

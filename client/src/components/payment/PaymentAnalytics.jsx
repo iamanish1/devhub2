@@ -18,7 +18,7 @@ const PaymentAnalytics = () => {
 
   // Calculate analytics data
   const calculateAnalytics = () => {
-    if (!paymentHistory) return {};
+    if (!paymentHistory || !Array.isArray(paymentHistory)) return {};
 
     const now = new Date();
     const timeRanges = {

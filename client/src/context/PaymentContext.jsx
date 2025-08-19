@@ -133,9 +133,10 @@ export const PaymentProvider = ({ children }) => {
   const loadSubscriptionStatus = async () => {
     try {
       const subscription = await paymentApi.getSubscriptionStatus();
-      dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: subscription });
+      dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: subscription || { isActive: false } });
     } catch (error) {
       console.error('Error loading subscription status:', error);
+      dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: { isActive: false } });
     }
   };
 
@@ -144,9 +145,10 @@ export const PaymentProvider = ({ children }) => {
     dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY_LOADING, payload: true });
     try {
       const history = await paymentApi.getPaymentHistory();
-      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY, payload: history });
+      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY, payload: Array.isArray(history) ? history : [] });
     } catch (error) {
       console.error('Error loading payment history:', error);
+      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY, payload: [] });
     } finally {
       dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY_LOADING, payload: false });
     }
@@ -157,9 +159,10 @@ export const PaymentProvider = ({ children }) => {
     dispatch({ type: PAYMENT_ACTIONS.SET_BONUS_POOLS_LOADING, payload: true });
     try {
       const pools = await paymentApi.getBonusPools();
-      dispatch({ type: PAYMENT_ACTIONS.SET_BONUS_POOLS, payload: pools });
+      dispatch({ type: PAYMENT_ACTIONS.SET_BONUS_POOLS, payload: Array.isArray(pools) ? pools : [] });
     } catch (error) {
       console.error('Error loading bonus pools:', error);
+      dispatch({ type: PAYMENT_ACTIONS.SET_BONUS_POOLS, payload: [] });
     } finally {
       dispatch({ type: PAYMENT_ACTIONS.SET_BONUS_POOLS_LOADING, payload: false });
     }
@@ -170,9 +173,10 @@ export const PaymentProvider = ({ children }) => {
     dispatch({ type: PAYMENT_ACTIONS.SET_WITHDRAWAL_HISTORY_LOADING, payload: true });
     try {
       const history = await paymentApi.getWithdrawalHistory();
-      dispatch({ type: PAYMENT_ACTIONS.SET_WITHDRAWAL_HISTORY, payload: history });
+      dispatch({ type: PAYMENT_ACTIONS.SET_WITHDRAWAL_HISTORY, payload: Array.isArray(history) ? history : [] });
     } catch (error) {
       console.error('Error loading withdrawal history:', error);
+      dispatch({ type: PAYMENT_ACTIONS.SET_WITHDRAWAL_HISTORY, payload: [] });
     } finally {
       dispatch({ type: PAYMENT_ACTIONS.SET_WITHDRAWAL_HISTORY_LOADING, payload: false });
     }

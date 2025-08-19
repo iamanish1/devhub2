@@ -43,7 +43,7 @@ const makeRequest = async (url, options = {}) => {
 export const paymentApi = {
   // Bid Fee Payment
   createBidFeePayment: async (projectId, bidId) => {
-    return makeRequest(PAYMENT_ENDPOINTS.BID_FEE, {
+    const response = await makeRequest(PAYMENT_ENDPOINTS.BID_FEE, {
       method: 'POST',
       body: JSON.stringify({
         projectId,
@@ -52,12 +52,13 @@ export const paymentApi = {
         purpose: 'bid_fee'
       })
     });
+    return response.data;
   },
 
   // Bonus Funding Payment
   createBonusFundingPayment: async (projectId, contributorCount) => {
     const amount = contributorCount * 200;
-    return makeRequest(PAYMENT_ENDPOINTS.BONUS, {
+    const response = await makeRequest(PAYMENT_ENDPOINTS.BONUS, {
       method: 'POST',
       body: JSON.stringify({
         projectId,
@@ -66,11 +67,12 @@ export const paymentApi = {
         purpose: 'bonus_funding'
       })
     });
+    return response.data;
   },
 
   // Subscription Payment
   createSubscriptionPayment: async (planType = 'monthly') => {
-    return makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION, {
+    const response = await makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION, {
       method: 'POST',
       body: JSON.stringify({
         amount: 299,
@@ -78,11 +80,12 @@ export const paymentApi = {
         purpose: 'subscription'
       })
     });
+    return response.data;
   },
 
   // Withdrawal Fee Payment
   createWithdrawalPayment: async (amount) => {
-    return makeRequest(PAYMENT_ENDPOINTS.WITHDRAWAL, {
+    const response = await makeRequest(PAYMENT_ENDPOINTS.WITHDRAWAL, {
       method: 'POST',
       body: JSON.stringify({
         amount,
@@ -90,31 +93,37 @@ export const paymentApi = {
         purpose: 'withdrawal_fee'
       })
     });
-  },
-
-  // Check Payment Status
-  getPaymentStatus: async (orderId) => {
-    return makeRequest(PAYMENT_ENDPOINTS.PAYMENT_STATUS(orderId));
+    return response.data;
   },
 
   // Get Payment History
   getPaymentHistory: async (page = 1, limit = 10) => {
-    return makeRequest(`${PAYMENT_ENDPOINTS.PAYMENT_HISTORY}?page=${page}&limit=${limit}`);
-  },
-
-  // Get Subscription Status
-  getSubscriptionStatus: async () => {
-    return makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION_STATUS);
-  },
-
-  // Get Bonus Pools
-  getBonusPools: async () => {
-    return makeRequest(PAYMENT_ENDPOINTS.BONUS_POOLS);
+    const response = await makeRequest(`${PAYMENT_ENDPOINTS.PAYMENT_HISTORY}?page=${page}&limit=${limit}`);
+    return response.data.payments || [];
   },
 
   // Get Withdrawal History
   getWithdrawalHistory: async (page = 1, limit = 10) => {
-    return makeRequest(`${PAYMENT_ENDPOINTS.WITHDRAWAL_HISTORY}?page=${page}&limit=${limit}`);
+    const response = await makeRequest(`${PAYMENT_ENDPOINTS.WITHDRAWAL_HISTORY}?page=${page}&limit=${limit}`);
+    return response.data.withdrawals || [];
+  },
+
+  // Get Bonus Pools
+  getBonusPools: async () => {
+    const response = await makeRequest(PAYMENT_ENDPOINTS.BONUS_POOLS);
+    return response.data || [];
+  },
+
+  // Get Subscription Status
+  getSubscriptionStatus: async () => {
+    const response = await makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION_STATUS);
+    return response.data;
+  },
+
+  // Check Payment Status
+  getPaymentStatus: async (orderId) => {
+    const response = await makeRequest(PAYMENT_ENDPOINTS.PAYMENT_STATUS(orderId));
+    return response.data;
   },
 
   // Cancel Subscription
