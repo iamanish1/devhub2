@@ -3,7 +3,7 @@ import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
 import WebhookEvent from '../Model/WebhookEventModel.js';
-import { verifyWebhookSignature as cfVerify } from '../services/cashfree.js';
+import { verifyWebhookSignature as cfVerify, verifyOrderWithCashfree } from '../services/cashfree.js';
 import { logWebhookEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 import mongoose from 'mongoose';
@@ -16,12 +16,13 @@ export const cashfreeWebhook = async (req, res) => {
     const signature = req.headers['x-webhook-signature'];
     const rawBody = req.rawBody || JSON.stringify(req.body);
     
-    // Verify signature
-    if (!cfVerify(rawBody, signature)) {
-      logWebhookEvent('cashfree', 'signature_verification_failed', 'unknown', {
-        signature: signature ? 'present' : 'missing'
+    // Verify webhook payload
+    if (!cfVerify(req.body, signature)) {
+      logWebhookEvent('cashfree', 'webhook_verification_failed', 'unknown', {
+        signature: signature ? 'present' : 'missing',
+        payloadKeys: req.body ? Object.keys(req.body) : []
       });
-      return res.status(400).send('Invalid signature');
+      return res.status(400).send('Invalid webhook payload');
     }
 
     const eventId = req.body.orderId || req.body.paymentId;
@@ -50,6 +51,14 @@ export const cashfreeWebhook = async (req, res) => {
       const orderId = req.body.orderId;
       
       if (orderId) {
+        // Optional: Verify order with Cashfree API for additional security
+        // This is recommended for production to prevent webhook spoofing
+        const orderVerified = await verifyOrderWithCashfree(orderId);
+        if (!orderVerified) {
+          logger.warn('Order verification failed, but continuing webhook processing', { orderId });
+          // You can choose to return error here for stricter security
+          // return res.status(400).send('Order verification failed');
+        }
         // Update payment intent
         const intent = await PaymentIntent.findOneAndUpdate(
           { orderId }, 
