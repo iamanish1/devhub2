@@ -73,7 +73,7 @@ const WithdrawalPage = () => {
   const completedWithdrawals = withdrawalHistory?.filter(w => w.status === PAYMENT_STATUS.SUCCESS) || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+    <div className="min-h-screen bg-[#121212] text-white">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -83,17 +83,17 @@ const WithdrawalPage = () => {
 
         {/* Balance and Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Available Balance</p>
                 <p className="text-2xl font-bold text-white">{formatCurrency(availableBalance)}</p>
               </div>
-              <div className="text-green-400 text-2xl">💰</div>
+              <div className="text-[#00A8E8] text-2xl">💰</div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Withdrawn</p>
@@ -101,171 +101,188 @@ const WithdrawalPage = () => {
                   {formatCurrency(completedWithdrawals.reduce((sum, w) => sum + w.amount, 0))}
                 </p>
               </div>
-              <div className="text-blue-400 text-2xl">💳</div>
+              <div className="text-[#00A8E8] text-2xl">💳</div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Pending Withdrawals</p>
                 <p className="text-2xl font-bold text-white">{pendingWithdrawals.length}</p>
               </div>
-              <div className="text-yellow-400 text-2xl">⏳</div>
+              <div className="text-[#00A8E8] text-2xl">⏳</div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Withdrawal Fee</p>
-                <p className="text-2xl font-bold text-white">₹15</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_FEE)}</p>
               </div>
-              <div className="text-red-400 text-2xl">💸</div>
+              <div className="text-[#00A8E8] text-2xl">💸</div>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Withdrawal Form */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h2 className="text-2xl font-bold text-white mb-6">Request Withdrawal</h2>
-            
-            <div className="space-y-6">
-              {/* Amount Input */}
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Withdrawal Amount
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                    ₹
-                  </span>
+        {/* Withdrawal Form */}
+        <div className="glass rounded-xl p-6 border border-gray-700 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-6">Request Withdrawal</h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Form */}
+            <div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                    Withdrawal Amount
+                  </label>
                   <input
                     type="number"
+                    placeholder="Enter amount (max ₹10,000)"
                     value={withdrawalAmount}
                     onChange={handleWithdrawalAmountChange}
-                    placeholder="0.00"
-                    min="0"
+                    className="w-full bg-[#1E1E1E] text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
                     max={PAYMENT_AMOUNTS.WITHDRAWAL_MAX}
-                    className="w-full bg-gray-700 text-white px-8 py-3 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                    min="1"
                   />
+                  {validationError && (
+                    <p className="text-red-400 text-sm mt-1">{validationError}</p>
+                  )}
                 </div>
-                {validationError && (
-                  <p className="text-red-400 text-sm mt-1">{validationError}</p>
-                )}
-              </div>
 
-              {/* Fee Breakdown */}
-              {withdrawalAmount > 0 && (
-                <div className="bg-gray-700/50 rounded-lg p-4">
-                  <h3 className="text-white font-medium mb-3">Fee Breakdown</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-gray-300">
-                      <span>Withdrawal Amount:</span>
-                      <span>{formatCurrency(withdrawalAmount)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-300">
-                      <span>Withdrawal Fee:</span>
-                      <span>{formatCurrency(withdrawalFee)}</span>
-                    </div>
-                    <div className="border-t border-gray-600 pt-2 flex justify-between text-white font-semibold">
-                      <span>Total Amount:</span>
-                      <span>{formatCurrency(totalAmount)}</span>
+                {/* Quick Amount Buttons */}
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                    Quick Amounts
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[500, 1000, 2000, 5000].map((amount) => (
+                      <button
+                        key={amount}
+                        onClick={() => setWithdrawalAmount(amount)}
+                        className="bg-[#2A2A2A] hover:bg-[#333] text-white px-4 py-2 rounded-lg border border-gray-600 transition-colors"
+                      >
+                        {formatCurrency(amount)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleWithdrawal}
+                  disabled={!validation.isValid || isProcessing}
+                  className="w-full btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? 'Processing...' : 'Request Withdrawal'}
+                </button>
+              </div>
+            </div>
+
+            {/* Fee Breakdown */}
+            <div>
+              <div className="bg-[#2A2A2A] rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Fee Breakdown</h3>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Withdrawal Amount:</span>
+                    <span className="text-white font-medium">
+                      {withdrawalAmount ? formatCurrency(withdrawalAmount) : '₹0'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Withdrawal Fee:</span>
+                    <span className="text-white font-medium">
+                      {formatCurrency(withdrawalFee)}
+                    </span>
+                  </div>
+                  
+                  <div className="border-t border-gray-600 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">Total Amount:</span>
+                      <span className="gradient-text font-bold text-lg">
+                        {formatCurrency(totalAmount)}
+                      </span>
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Quick Amount Buttons */}
-              <div>
-                <p className="text-gray-300 text-sm font-medium mb-3">Quick Amounts</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[100, 500, 1000, 2000, 5000, 10000].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setWithdrawalAmount(amount)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded-lg text-sm transition-colors"
-                    >
-                      ₹{amount.toLocaleString()}
-                    </button>
-                  ))}
+                <div className="mt-6 p-4 bg-[#1E1E1E] rounded-lg">
+                  <h4 className="text-white font-medium mb-2">Important Notes:</h4>
+                  <ul className="text-gray-400 text-sm space-y-1">
+                    <li>• Maximum withdrawal: {formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_MAX)}</li>
+                    <li>• Fixed fee: {formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_FEE)} per withdrawal</li>
+                    <li>• Processing time: 2-5 business days</li>
+                    <li>• Minimum withdrawal: ₹100</li>
+                  </ul>
                 </div>
-              </div>
-
-              {/* Withdrawal Button */}
-              <button
-                onClick={handleWithdrawal}
-                disabled={!validation.isValid || isProcessing}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors disabled:cursor-not-allowed"
-              >
-                {isProcessing ? 'Processing...' : 'Request Withdrawal'}
-              </button>
-
-              {/* Terms */}
-              <div className="text-gray-400 text-sm">
-                <p>• Maximum withdrawal: ₹{PAYMENT_AMOUNTS.WITHDRAWAL_MAX.toLocaleString()}</p>
-                <p>• Withdrawal fee: ₹{PAYMENT_AMOUNTS.WITHDRAWAL_FEE}</p>
-                <p>• Processing time: 2-5 business days</p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Withdrawal History */}
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h2 className="text-2xl font-bold text-white mb-6">Withdrawal History</h2>
-            
-            {isProcessing ? (
-              <LoadingSpinner />
-            ) : withdrawalHistory?.length > 0 ? (
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {withdrawalHistory.map((withdrawal) => (
-                  <div
-                    key={withdrawal.id}
-                    className="bg-gray-700/50 rounded-lg p-4 border border-gray-600"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${getPaymentStatusColor(withdrawal.status)}`}>
-                          {getPaymentStatusIcon(withdrawal.status)}
-                        </div>
-                        <div>
-                          <p className="text-white font-medium">
-                            Withdrawal #{withdrawal.id.slice(-8)}
-                          </p>
-                          <p className="text-gray-400 text-sm">
-                            {formatPaymentDate(withdrawal.createdAt)}
-                          </p>
-                        </div>
+        {/* Withdrawal History */}
+        <div className="glass rounded-xl p-6 border border-gray-700">
+          <h2 className="text-2xl font-bold text-white mb-6">Withdrawal History</h2>
+
+          {isProcessing ? (
+            <LoadingSpinner />
+          ) : withdrawalHistory?.length > 0 ? (
+            <div className="space-y-4">
+              {withdrawalHistory.map((withdrawal) => (
+                <div
+                  key={withdrawal.id}
+                  className="bg-[#2A2A2A] rounded-lg p-6 border border-gray-600"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-lg ${getPaymentStatusColor(withdrawal.status)}`}>
+                        {getPaymentStatusIcon(withdrawal.status)}
                       </div>
-                      <div className="text-right">
-                        <p className="text-white font-bold">{formatCurrency(withdrawal.amount)}</p>
-                        <p className={`text-sm ${getPaymentStatusColor(withdrawal.status)}`}>
-                          {withdrawal.status}
+                      <div>
+                        <p className="text-white font-semibold">Withdrawal Request</p>
+                        <p className="text-gray-400 text-sm">
+                          {formatPaymentDate(withdrawal.createdAt)}
+                        </p>
+                        <p className="text-gray-500 text-sm">
+                          ID: {withdrawal.id}
                         </p>
                       </div>
                     </div>
-                    
-                    {/* Additional Details */}
-                    {withdrawal.fee && (
-                      <div className="mt-3 pt-3 border-t border-gray-600">
-                        <div className="flex justify-between text-sm text-gray-400">
-                          <span>Fee:</span>
-                          <span>{formatCurrency(withdrawal.fee)}</span>
-                        </div>
-                      </div>
-                    )}
+                    <div className="text-right">
+                      <p className="text-white font-bold text-lg">
+                        {formatCurrency(withdrawal.amount)}
+                      </p>
+                      <p className={`text-sm font-medium ${getPaymentStatusColor(withdrawal.status)}`}>
+                        {withdrawal.status}
+                      </p>
+                      {withdrawal.fee && (
+                        <p className="text-gray-400 text-xs">
+                          Fee: {formatCurrency(withdrawal.fee)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <div className="text-gray-400 text-6xl mb-4">💳</div>
-                <p className="text-gray-400 text-lg mb-2">No withdrawal history</p>
-                <p className="text-gray-500">Your withdrawal requests will appear here</p>
-              </div>
-            )}
-          </div>
+
+                  {/* Additional Details */}
+                  {withdrawal.description && (
+                    <div className="mt-4 pt-4 border-t border-gray-600">
+                      <p className="text-gray-300 text-sm">{withdrawal.description}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-6xl mb-4">💳</div>
+              <p className="text-gray-400 text-lg mb-2">No withdrawal history</p>
+              <p className="text-gray-500">Start by requesting your first withdrawal</p>
+            </div>
+          )}
         </div>
 
         {/* Withdrawal Modal */}
@@ -274,11 +291,11 @@ const WithdrawalPage = () => {
             paymentType={PAYMENT_TYPES.WITHDRAWAL_FEE}
             isOpen={showWithdrawalModal}
             onClose={() => setShowWithdrawalModal(false)}
-            customAmount={withdrawalAmount}
-            onSuccess={() => {
-              setWithdrawalAmount('');
+            amount={withdrawalAmount}
+            onSuccess={(result) => {
+              console.log('Withdrawal payment successful:', result);
               setShowWithdrawalModal(false);
-              refreshData();
+              setWithdrawalAmount('');
             }}
           />
         )}

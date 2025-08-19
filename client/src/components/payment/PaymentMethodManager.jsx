@@ -123,99 +123,88 @@ const PaymentMethodManager = () => {
         <h2 className="text-2xl font-bold text-white">Payment Methods</h2>
         <button
           onClick={() => setShowAddForm(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          className="btn-primary"
         >
-          + Add Payment Method
+          Add Payment Method
         </button>
       </div>
 
       {/* Payment Methods List */}
-      <div className="space-y-4">
-        {paymentMethods.map((method) => (
-          <motion.div
-            key={method.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-2xl">
-                  {getMethodIcon(method.type, method.brand)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-white font-semibold">
-                      {getMethodDisplayName(method)}
-                    </h3>
-                    {method.isDefault && (
-                      <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                        Default
-                      </span>
-                    )}
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Your Payment Methods</h3>
+        
+        {paymentMethods.length > 0 ? (
+          <div className="space-y-4">
+            {paymentMethods.map((method) => (
+              <div
+                key={method.id}
+                className={`bg-[#2A2A2A] rounded-lg p-4 border transition-all ${
+                  method.isDefault ? 'border-[#00A8E8]' : 'border-gray-600'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-lg ${
+                      method.type === 'card' ? 'bg-[#00A8E8]' : 'bg-[#0062E6]'
+                    }`}>
+                      {method.type === 'card' ? '💳' : '📱'}
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">
+                        {method.type === 'card' ? 'Card' : 'UPI'} • {method.provider}
+                      </p>
+                      <p className="text-gray-400 text-sm">
+                        {method.type === 'card' 
+                          ? `•••• •••• •••• ${method.last4}`
+                          : method.upiId
+                        }
+                      </p>
+                      {method.isDefault && (
+                        <span className="inline-block bg-[#00A8E8] text-white text-xs px-2 py-1 rounded-full mt-1">
+                          Default
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-gray-400 text-sm">
-                    {method.name} • {method.provider}
-                  </p>
-                  {method.type === 'card' && (
-                    <p className="text-gray-500 text-xs">
-                      Expires {method.expiryMonth}/{method.expiryYear}
-                    </p>
-                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    {!method.isDefault && (
+                      <button
+                        onClick={() => handleSetDefault(method.id)}
+                        className="text-[#00A8E8] hover:text-[#0062E6] text-sm font-medium transition-colors"
+                      >
+                        Set Default
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteMethod(method.id)}
+                      className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-2">
-                {!method.isDefault && (
-                  <button
-                    onClick={() => handleSetDefault(method.id)}
-                    disabled={isLoading}
-                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
-                  >
-                    Set Default
-                  </button>
-                )}
-                <button
-                  onClick={() => handleDeleteMethod(method.id)}
-                  disabled={isLoading}
-                  className="text-red-400 hover:text-red-300 text-sm transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-
-        {paymentMethods.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">💳</div>
-            <p className="text-gray-400 text-lg mb-2">No payment methods</p>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-gray-400 text-4xl mb-4">💳</div>
+            <p className="text-gray-400 text-lg mb-2">No payment methods added</p>
             <p className="text-gray-500">Add a payment method to get started</p>
           </div>
         )}
       </div>
 
       {/* Add Payment Method Modal */}
-      <AnimatePresence>
-        {showAddForm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowAddForm(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 max-w-md w-full border border-gray-700 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
+          
+          <div className="relative w-full max-w-md">
+            <div className="glass rounded-xl p-6 border border-gray-700 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-white">Add Payment Method</h3>
+                <h3 className="text-xl font-semibold text-white">Add Payment Method</h3>
                 <button
                   onClick={() => setShowAddForm(false)}
                   className="text-gray-400 hover:text-white transition-colors"
@@ -224,15 +213,182 @@ const PaymentMethodManager = () => {
                 </button>
               </div>
 
-              <AddPaymentMethodForm
-                onSubmit={handleAddMethod}
-                onCancel={() => setShowAddForm(false)}
-                isLoading={isLoading}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <form onSubmit={handleAddMethod} className="space-y-4">
+                {/* Payment Type */}
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                    Payment Type
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, type: 'card' })}
+                      className={`p-3 rounded-lg border transition-all ${
+                        formData.type === 'card'
+                          ? 'border-[#00A8E8] bg-[#00A8E8] bg-opacity-10'
+                          : 'border-gray-600 hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="text-white font-medium">Card</div>
+                      <div className="text-xs text-gray-400">Credit/Debit</div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, type: 'upi' })}
+                      className={`p-3 rounded-lg border transition-all ${
+                        formData.type === 'upi'
+                          ? 'border-[#00A8E8] bg-[#00A8E8] bg-opacity-10'
+                          : 'border-gray-600 hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="text-white font-medium">UPI</div>
+                      <div className="text-xs text-gray-400">UPI ID</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Provider Selection */}
+                <div>
+                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                    Payment Provider
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, provider: 'cashfree' })}
+                      className={`p-3 rounded-lg border transition-all ${
+                        formData.provider === 'cashfree'
+                          ? 'border-[#00A8E8] bg-[#00A8E8] bg-opacity-10'
+                          : 'border-gray-600 hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="text-white font-medium">Cashfree</div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, provider: 'razorpay' })}
+                      className={`p-3 rounded-lg border transition-all ${
+                        formData.provider === 'razorpay'
+                          ? 'border-[#00A8E8] bg-[#00A8E8] bg-opacity-10'
+                          : 'border-gray-600 hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="text-white font-medium">Razorpay</div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card Details */}
+                {formData.type === 'card' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">
+                        Card Number
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="1234 5678 9012 3456"
+                        value={formData.cardNumber}
+                        onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
+                        className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
+                        maxLength="19"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-gray-300 text-sm font-medium mb-2">
+                          Expiry Date
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="MM/YY"
+                          value={formData.expiryDate}
+                          onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                          className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
+                          maxLength="5"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-gray-300 text-sm font-medium mb-2">
+                          CVV
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="123"
+                          value={formData.cvv}
+                          onChange={(e) => setFormData({ ...formData, cvv: e.target.value })}
+                          className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
+                          maxLength="4"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* UPI Details */}
+                {formData.type === 'upi' && (
+                  <div>
+                    <label className="block text-gray-300 text-sm font-medium mb-2">
+                      UPI ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="username@upi"
+                      value={formData.upiId}
+                      onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                      className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
+                    />
+                  </div>
+                )}
+
+                {/* Set as Default */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="setDefault"
+                    checked={formData.setAsDefault}
+                    onChange={(e) => setFormData({ ...formData, setAsDefault: e.target.checked })}
+                    className="w-4 h-4 text-[#00A8E8] bg-[#1E1E1E] border-gray-600 rounded focus:ring-[#00A8E8] focus:ring-2"
+                  />
+                  <label htmlFor="setDefault" className="text-gray-300 text-sm">
+                    Set as default payment method
+                  </label>
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="p-3 bg-red-500 bg-opacity-10 border border-red-500 rounded-lg">
+                    <p className="text-red-400 text-sm">{error}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="btn-secondary flex-1"
+                  >
+                    Cancel
+                  </button>
+                  
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn-primary flex-1"
+                  >
+                    {isSubmitting ? 'Adding...' : 'Add Method'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

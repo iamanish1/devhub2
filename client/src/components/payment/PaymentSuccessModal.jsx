@@ -25,114 +25,133 @@ const PaymentSuccessModal = ({
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
+      {isOpen && (
         <motion.div
-          initial={{ scale: 0.8, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.8, opacity: 0, y: 20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 max-w-md w-full border border-gray-700 shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          variants={backdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
         >
-          {/* Success Icon */}
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          
+          {/* Modal */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: "spring", damping: 15, stiffness: 300 }}
-            className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6"
+            className="relative w-full max-w-md"
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.4, type: "spring", damping: 15, stiffness: 300 }}
-              className="text-4xl"
-            >
-              ✅
-            </motion.div>
-          </motion.div>
+            <div className="glass rounded-xl p-8 border border-gray-700 shadow-2xl text-center">
+              {/* Success Icon */}
+              <motion.div
+                className="mx-auto w-20 h-20 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] rounded-full flex items-center justify-center mb-6"
+                variants={iconVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.div
+                  variants={checkmarkVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="text-white text-3xl"
+                >
+                  ✓
+                </motion.div>
+              </motion.div>
 
-          {/* Success Message */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-center mb-6"
-          >
-            <h2 className="text-2xl font-bold text-white mb-2">Payment Successful!</h2>
-            <p className="text-gray-300">
-              Your {getPaymentTypeDisplayName(paymentType)} has been processed successfully.
-            </p>
-          </motion.div>
+              {/* Success Message */}
+              <motion.h2
+                className="text-2xl font-bold text-white mb-2"
+                variants={textVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                Payment Successful!
+              </motion.h2>
 
-          {/* Payment Details */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-gray-700/50 rounded-xl p-4 mb-6"
-          >
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Amount:</span>
-                <span className="text-white font-semibold text-lg">
-                  {formatCurrency(amount)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Type:</span>
-                <span className="text-white">
-                  {getPaymentTypeDisplayName(paymentType)}
-                </span>
-              </div>
-              {transactionId && (
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Transaction ID:</span>
-                  <span className="text-blue-400 text-sm font-mono">
-                    {transactionId.slice(-8)}
-                  </span>
+              <motion.p
+                className="text-gray-400 mb-6"
+                variants={textVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                Your {getPaymentTypeDisplayName(paymentType)} payment has been processed successfully.
+              </motion.p>
+
+              {/* Payment Details */}
+              <motion.div
+                className="bg-[#2A2A2A] rounded-lg p-4 mb-6"
+                variants={detailsVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Amount:</span>
+                    <span className="gradient-text font-bold text-lg">
+                      {formatCurrency(amount)}
+                    </span>
+                  </div>
+                  
+                  {transactionId && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300">Transaction ID:</span>
+                      <span className="text-white font-mono text-sm">
+                        {transactionId.slice(-8)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Status:</span>
+                    <span className="text-green-400 font-medium">Completed</span>
+                  </div>
                 </div>
-              )}
+              </motion.div>
+
+              {/* Action Buttons */}
+              <motion.div
+                className="flex gap-3"
+                variants={buttonVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <button
+                  onClick={onClose}
+                  className="btn-secondary flex-1"
+                >
+                  Close
+                </button>
+                
+                {onContinue && (
+                  <button
+                    onClick={onContinue}
+                    className="btn-primary flex-1"
+                  >
+                    Continue
+                  </button>
+                )}
+              </motion.div>
+
+              {/* Auto-close notice */}
+              <motion.p
+                className="text-gray-500 text-xs mt-4"
+                variants={textVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                This window will close automatically in {countdown} seconds
+              </motion.p>
             </div>
           </motion.div>
-
-          {/* Action Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="flex gap-3"
-          >
-            <button
-              onClick={onClose}
-              className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-            >
-              Close
-            </button>
-            {onContinue && (
-              <button
-                onClick={onContinue}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-              >
-                Continue
-              </button>
-            )}
-          </motion.div>
-
-          {/* Auto-close indicator */}
-          <motion.div
-            initial={{ width: "100%" }}
-            animate={{ width: "0%" }}
-            transition={{ duration: 5, ease: "linear" }}
-            className="h-1 bg-blue-500 rounded-full mt-4"
-          />
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

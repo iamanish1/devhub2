@@ -140,7 +140,7 @@ const PaymentHistoryPage = () => {
   ).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+    <div className="min-h-screen bg-[#121212] text-white">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -150,51 +150,51 @@ const PaymentHistoryPage = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Transactions</p>
                 <p className="text-2xl font-bold text-white">{filteredPayments.length}</p>
               </div>
-              <div className="text-blue-400 text-2xl">📊</div>
+              <div className="text-[#00A8E8] text-2xl">📊</div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Amount</p>
                 <p className="text-2xl font-bold text-white">{formatCurrency(totalAmount)}</p>
               </div>
-              <div className="text-green-400 text-2xl">💰</div>
+              <div className="text-[#00A8E8] text-2xl">💰</div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Successful</p>
                 <p className="text-2xl font-bold text-white">{successfulPayments}</p>
               </div>
-              <div className="text-green-400 text-2xl">✅</div>
+              <div className="text-[#00A8E8] text-2xl">✅</div>
             </div>
           </div>
 
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Failed</p>
                 <p className="text-2xl font-bold text-white">{failedPayments}</p>
               </div>
-              <div className="text-red-400 text-2xl">❌</div>
+              <div className="text-[#00A8E8] text-2xl">❌</div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700 mb-8">
+        <div className="glass rounded-xl p-6 border border-gray-700 mb-8">
           <h2 className="text-xl font-semibold text-white mb-4">Filters & Search</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {/* Search */}
             <div className="lg:col-span-2">
@@ -203,7 +203,7 @@ const PaymentHistoryPage = () => {
                 placeholder="Search payments..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               />
             </div>
 
@@ -212,7 +212,7 @@ const PaymentHistoryPage = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
                 <option value="all">All Status</option>
                 <option value={PAYMENT_STATUS.SUCCESS}>Success</option>
@@ -227,7 +227,7 @@ const PaymentHistoryPage = () => {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
                 <option value="all">All Types</option>
                 <option value={PAYMENT_TYPES.BID_FEE}>Bid Fee</option>
@@ -242,7 +242,7 @@ const PaymentHistoryPage = () => {
               <select
                 value={providerFilter}
                 onChange={(e) => setProviderFilter(e.target.value)}
-                className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
                 <option value="all">All Providers</option>
                 <option value={PAYMENT_PROVIDERS.CASHFREE}>Cashfree</option>
@@ -255,7 +255,7 @@ const PaymentHistoryPage = () => {
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
+                className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
@@ -271,7 +271,7 @@ const PaymentHistoryPage = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-gray-700 text-white px-3 py-1 rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+              className="bg-[#1E1E1E] text-white px-3 py-1 rounded border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
             >
               <option value="date">Date</option>
               <option value="amount">Amount</option>
@@ -279,7 +279,7 @@ const PaymentHistoryPage = () => {
             </select>
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded border border-gray-600 transition-colors"
+              className="bg-[#1E1E1E] hover:bg-[#2A2A2A] text-white px-3 py-1 rounded border border-gray-600 transition-colors"
             >
               {sortOrder === 'asc' ? '↑' : '↓'}
             </button>
@@ -287,7 +287,7 @@ const PaymentHistoryPage = () => {
         </div>
 
         {/* Payment List */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+        <div className="glass rounded-xl p-6 border border-gray-700">
           {isProcessing ? (
             <LoadingSpinner />
           ) : filteredPayments.length > 0 ? (
@@ -295,8 +295,8 @@ const PaymentHistoryPage = () => {
               {filteredPayments.map((payment) => (
                 <div
                   key={payment.id}
-                  className={`bg-gray-700/50 rounded-lg p-6 border border-gray-600 transition-all duration-200 hover:bg-gray-700/70 ${
-                    isRecentPayment(payment.createdAt) ? 'ring-2 ring-blue-500/50' : ''
+                  className={`bg-[#2A2A2A] rounded-lg p-6 border border-gray-600 transition-all duration-200 hover:bg-[#333] ${
+                    isRecentPayment(payment.createdAt) ? 'ring-2 ring-[#00A8E8]/50' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -310,7 +310,7 @@ const PaymentHistoryPage = () => {
                             {getPaymentTypeDisplayName(payment.type)}
                           </p>
                           {isRecentPayment(payment.createdAt) && (
-                            <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                            <span className="bg-[#00A8E8] text-white text-xs px-2 py-1 rounded-full">
                               Recent
                             </span>
                           )}
@@ -335,7 +335,7 @@ const PaymentHistoryPage = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Additional Details */}
                   {payment.description && (
                     <div className="mt-4 pt-4 border-t border-gray-600">

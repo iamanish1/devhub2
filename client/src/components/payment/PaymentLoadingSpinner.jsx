@@ -52,95 +52,180 @@ const PaymentLoadingSpinner = ({
 
   if (!isVisible) return null;
 
+  const percentage = progress;
+
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    exit: { opacity: 0 },
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: 50 },
+  };
+
+  const textVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  const progressVariants = {
+    hidden: { opacity: 0, height: 0 },
+    visible: { opacity: 1, height: 8 },
+  };
+
+  const stepsVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  };
+
+  const stepVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  const percentageVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  };
+
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      >
+      {isVisible && (
         <motion.div
-          initial={{ scale: 0.8, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.8, opacity: 0, y: 20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 max-w-md w-full border border-gray-700 shadow-2xl"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          variants={backdropVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
         >
-          {/* Loading Icon */}
-          <div className="flex justify-center mb-6">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
-            />
-          </div>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
+          
+          {/* Loading Container */}
+          <motion.div
+            className="relative w-full max-w-md"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            <div className="glass rounded-xl p-8 border border-gray-700 shadow-2xl text-center">
+              {/* Spinner */}
+              <motion.div
+                className="mx-auto w-20 h-20 mb-6"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              >
+                <div className="w-full h-full border-4 border-[#2A2A2A] border-t-[#00A8E8] rounded-full" />
+              </motion.div>
 
-          {/* Message */}
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-white mb-2">{message}</h2>
-            <p className="text-gray-300 text-sm">
-              Please don't close this window or refresh the page
-            </p>
-          </div>
+              {/* Loading Message */}
+              <motion.h2
+                className="text-xl font-semibold text-white mb-2"
+                variants={textVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                Processing Payment
+              </motion.h2>
 
-          {/* Progress Steps */}
-          {showProgress && (
-            <div className="space-y-4">
+              <motion.p
+                className="text-gray-400 mb-6"
+                variants={textVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {message}
+              </motion.p>
+
               {/* Progress Bar */}
-              <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
+              <motion.div
+                className="w-full bg-[#2A2A2A] rounded-full h-2 mb-4"
+                variants={progressVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
+                  className="bg-gradient-to-r from-[#00A8E8] to-[#0062E6] h-2 rounded-full"
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 3, ease: "easeInOut" }}
                 />
-              </div>
+              </motion.div>
 
-              {/* Progress Percentage */}
-              <div className="text-center">
-                <span className="text-blue-400 font-semibold">{progress}%</span>
-              </div>
-
-              {/* Current Step */}
-              <div className="bg-gray-700/50 rounded-lg p-3">
-                <motion.p
-                  key={currentStep}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-white text-sm text-center"
-                >
-                  {steps[currentStep]}
-                </motion.p>
-              </div>
-
-              {/* Step Indicators */}
-              <div className="flex justify-center space-x-2">
-                {steps.map((_, index) => (
+              {/* Progress Steps */}
+              <motion.div
+                className="space-y-2"
+                variants={stepsVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {steps.map((step, index) => (
                   <motion.div
                     key={index}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: index <= currentStep ? 1 : 0.5 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`w-2 h-2 rounded-full ${
-                      index <= currentStep ? 'bg-blue-500' : 'bg-gray-600'
-                    }`}
-                  />
+                    className="flex items-center gap-3"
+                    variants={stepVariants}
+                    initial="hidden"
+                    animate="visible"
+                    transition={{ delay: index * 0.5 }}
+                  >
+                    <motion.div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                        index < currentStep
+                          ? 'bg-green-500 text-white'
+                          : index === currentStep
+                          ? 'bg-[#00A8E8] text-white'
+                          : 'bg-[#2A2A2A] text-gray-400'
+                      }`}
+                      animate={index === currentStep ? { scale: [1, 1.2, 1] } : {}}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    >
+                      {index < currentStep ? '✓' : index + 1}
+                    </motion.div>
+                    <span className={`text-sm ${
+                      index < currentStep
+                        ? 'text-green-400'
+                        : index === currentStep
+                        ? 'text-white'
+                        : 'text-gray-400'
+                    }`}>
+                      {step}
+                    </span>
+                  </motion.div>
                 ))}
-              </div>
-            </div>
-          )}
+              </motion.div>
 
-          {/* Security Notice */}
-          <div className="mt-6 text-center">
-            <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-              <span>🔒</span>
-              <span>Secure payment processing</span>
+              {/* Percentage */}
+              <motion.div
+                className="mt-6"
+                variants={percentageVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.span
+                  className="gradient-text text-2xl font-bold"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  {percentage}%
+                </motion.span>
+              </motion.div>
+
+              {/* Security Notice */}
+              <motion.p
+                className="text-gray-500 text-xs mt-4"
+                variants={textVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                🔒 Secure payment processing...
+              </motion.p>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

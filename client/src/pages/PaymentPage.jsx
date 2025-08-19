@@ -72,7 +72,7 @@ const PaymentPage = () => {
   const activeBonusPools = bonusPools?.filter(pool => pool.status === 'active') || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+    <div className="min-h-screen bg-[#121212] text-white">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -82,15 +82,15 @@ const PaymentPage = () => {
 
         {/* Tab Navigation */}
         <div className="mb-8">
-          <div className="flex flex-wrap gap-2 bg-gray-800/50 backdrop-blur-sm rounded-xl p-2">
+          <div className="flex flex-wrap gap-2 glass rounded-xl p-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                   activeTab === tab.id
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
+                    ? 'bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white shadow-lg'
+                    : 'text-gray-300 hover:text-white hover:bg-[#2A2A2A]'
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -106,37 +106,37 @@ const PaymentPage = () => {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Stats Cards */}
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+              <div className="glass rounded-xl p-6 border border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-400 text-sm">Total Spent</p>
                     <p className="text-2xl font-bold text-white">{formatCurrency(totalSpent)}</p>
                   </div>
-                  <div className="text-blue-400 text-2xl">💰</div>
+                  <div className="text-[#00A8E8] text-2xl">💰</div>
                 </div>
               </div>
 
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+              <div className="glass rounded-xl p-6 border border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-400 text-sm">Total Withdrawn</p>
                     <p className="text-2xl font-bold text-white">{formatCurrency(totalWithdrawn)}</p>
                   </div>
-                  <div className="text-green-400 text-2xl">💳</div>
+                  <div className="text-[#00A8E8] text-2xl">💳</div>
                 </div>
               </div>
 
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+              <div className="glass rounded-xl p-6 border border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-400 text-sm">Active Pools</p>
                     <p className="text-2xl font-bold text-white">{activeBonusPools.length}</p>
                   </div>
-                  <div className="text-yellow-400 text-2xl">🏆</div>
+                  <div className="text-[#00A8E8] text-2xl">🏆</div>
                 </div>
               </div>
 
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+              <div className="glass rounded-xl p-6 border border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-gray-400 text-sm">Subscription</p>
@@ -144,7 +144,7 @@ const PaymentPage = () => {
                       {subscription?.isActive ? 'Active' : 'Inactive'}
                     </p>
                   </div>
-                  <div className="text-purple-400 text-2xl">⭐</div>
+                  <div className="text-[#00A8E8] text-2xl">⭐</div>
                 </div>
               </div>
             </div>
@@ -152,12 +152,12 @@ const PaymentPage = () => {
 
           {/* Payment History Tab */}
           {activeTab === 'history' && (
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+            <div className="glass rounded-xl p-6 border border-gray-700">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white">Payment History</h2>
                 <button
                   onClick={() => handlePayment(PAYMENT_TYPES.BID_FEE)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="btn-primary"
                 >
                   New Payment
                 </button>
@@ -170,7 +170,7 @@ const PaymentPage = () => {
                   {paymentHistory.map((payment) => (
                     <div
                       key={payment.id}
-                      className="bg-gray-700/50 rounded-lg p-4 border border-gray-600"
+                      className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -206,19 +206,19 @@ const PaymentPage = () => {
 
           {/* Withdrawals Tab */}
           {activeTab === 'withdrawals' && (
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+            <div className="glass rounded-xl p-6 border border-gray-700">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white">Withdrawals</h2>
                 <button
                   onClick={() => setShowWithdrawalModal(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="btn-primary"
                 >
                   New Withdrawal
                 </button>
               </div>
 
               {/* Withdrawal Form */}
-              <div className="bg-gray-700/50 rounded-lg p-6 mb-6">
+              <div className="bg-[#2A2A2A] rounded-lg p-6 mb-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Request Withdrawal</h3>
                 <div className="flex gap-4">
                   <input
@@ -226,13 +226,13 @@ const PaymentPage = () => {
                     placeholder="Amount (max ₹10,000)"
                     value={withdrawalAmount}
                     onChange={(e) => setWithdrawalAmount(e.target.value)}
-                    className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg border border-gray-500 focus:border-blue-500 focus:outline-none"
+                    className="flex-1 bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-500 focus:border-[#00A8E8] focus:outline-none"
                     max="10000"
                   />
                   <button
                     onClick={handleWithdrawal}
                     disabled={!withdrawalAmount || withdrawalAmount <= 0}
-                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
+                    className="btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
                   >
                     Withdraw
                   </button>
@@ -248,7 +248,7 @@ const PaymentPage = () => {
                   {withdrawalHistory.map((withdrawal) => (
                     <div
                       key={withdrawal.id}
-                      className="bg-gray-700/50 rounded-lg p-4 border border-gray-600"
+                      className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -282,12 +282,12 @@ const PaymentPage = () => {
 
           {/* Bonus Pools Tab */}
           {activeTab === 'bonus-pools' && (
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+            <div className="glass rounded-xl p-6 border border-gray-700">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-white">Bonus Pools</h2>
                 <button
                   onClick={() => handlePayment(PAYMENT_TYPES.BONUS_FUNDING)}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="btn-primary"
                 >
                   Create Pool
                 </button>
@@ -309,7 +309,7 @@ const PaymentPage = () => {
 
           {/* Subscription Tab */}
           {activeTab === 'subscription' && (
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+            <div className="glass rounded-xl p-6 border border-gray-700">
               <SubscriptionStatus />
             </div>
           )}
