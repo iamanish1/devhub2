@@ -162,10 +162,17 @@ export const createOrder = async ({ orderId, amount, customer, notes, idempotenc
       orderId: data.order_id,
       cfOrderId: data.cf_order_id,
       amount: data.order_amount,
-      status: data.order_status
+      status: data.order_status,
+      paymentSessionId: data.payment_session_id
     });
     
-    return data;
+    // Add order_token field for frontend compatibility
+    const responseWithToken = {
+      ...data,
+      order_token: data.payment_session_id // Cashfree SDK expects order_token
+    };
+    
+    return responseWithToken;
   } catch (error) {
     logger.error('Failed to create Cashfree order', {
       orderId,

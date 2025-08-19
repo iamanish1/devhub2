@@ -14,6 +14,13 @@
           console.error('Cashfree SDK failed to load');
         } else {
           console.log('Cashfree SDK loaded successfully');
+          // Test SDK initialization
+          try {
+            const testInstance = new window.Cashfree({ mode: 'sandbox' });
+            console.log('Cashfree SDK initialization test successful');
+          } catch (error) {
+            console.error('Cashfree SDK initialization test failed:', error);
+          }
         }
       });
     </script>
