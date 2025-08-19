@@ -22,19 +22,19 @@ const checkBidEligibility = async (userId) => {
 
   // Check if user has active subscription
   if (User.subscription?.isActive && User.subscription?.expiresAt > new Date()) {
-    console.log(`[Bid Eligibility] User has active subscription - allowing free bid`);
-    return { canBid: true, requiresPayment: false, reason: 'subscription' };
+    console.log(`[Bid Eligibility] User has active subscription - ₹3 fee`);
+    return { canBid: true, feeAmount: 3, reason: 'subscription' };
   }
 
-  // Check if user has free bids remaining
+  // Check if user has free bids remaining (₹0 fee)
   if (User.freeBids?.remaining > 0) {
-    console.log(`[Bid Eligibility] User has ${User.freeBids.remaining} free bids remaining - allowing free bid`);
-    return { canBid: true, requiresPayment: false, reason: 'free_bid', remaining: User.freeBids.remaining };
+    console.log(`[Bid Eligibility] User has ${User.freeBids.remaining} free bids remaining - ₹0 fee`);
+    return { canBid: true, feeAmount: 0, reason: 'free_bid', remaining: User.freeBids.remaining };
   }
 
-  // User needs to pay bid fee
-  console.log(`[Bid Eligibility] User has no free bids or subscription - payment required`);
-  return { canBid: true, requiresPayment: true, reason: 'payment_required' };
+  // User needs to pay full bid fee (₹9 fee)
+  console.log(`[Bid Eligibility] User has no free bids or subscription - ₹9 fee required`);
+  return { canBid: true, feeAmount: 9, reason: 'payment_required' };
 };
 
 export const createBid = async (req, res) => {
@@ -81,186 +81,86 @@ export const createBid = async (req, res) => {
     }
 
     // Calculate bid fee and total amount based on eligibility
-    let bidFee = 0;
-    let totalAmount = bid_amount;
-    let requiresPayment = false;
+    let bidFee = eligibility.feeAmount; // Use the fee amount from eligibility
+    let totalAmount = bid_amount + bidFee;
 
     console.log(`[Bid Creation] Eligibility check result:`, eligibility);
+    console.log(`[Bid Creation] Fee calculation - bidFee: ₹${bidFee}, totalAmount: ₹${totalAmount}, reason: ${eligibility.reason}`);
 
-    if (eligibility.requiresPayment) {
-      // User needs to pay bid fee (after using free bids)
-      bidFee = 9; // ₹9 bidding fee
-      totalAmount = bid_amount + bidFee;
-      requiresPayment = true;
-      console.log(`[Bid Creation] Payment required - bidFee: ₹${bidFee}, totalAmount: ₹${totalAmount}`);
-    } else {
-      // Free bid (first 5 bids or subscription)
-      bidFee = 0; // No fee for free bids
-      totalAmount = bid_amount; // Only the original bid amount
-      requiresPayment = false;
-      console.log(`[Bid Creation] Free bid - bidFee: ₹${bidFee}, totalAmount: ₹${totalAmount}, reason: ${eligibility.reason}`);
-    }
-
-    // If payment is required, create payment intent first
+    // Create payment intent for ALL bids (payment always required)
     let paymentIntent = null;
     let cashfreeOrder = null;
 
-    if (requiresPayment) {
-      // Create payment intent for the TOTAL amount (bid amount + fee)
-      paymentIntent = await PaymentIntent.create({
-        provider: 'cashfree',
-        purpose: 'bid_fee',
-        amount: totalAmount, // Total amount including bid amount + fee
-        userId: userID,
-        projectId: _id,
-        status: 'created',
-        notes: { 
-          bidAmount: bid_amount,
-          bidFee: bidFee,
-          totalAmount: totalAmount
-        }
-      });
-
-      // Create Cashfree order for the TOTAL amount
-      cashfreeOrder = await cfCreateOrder({
-        orderId: paymentIntent._id.toString(),
-        amount: totalAmount, // Total amount including bid amount + fee
-        customer: { 
-          customer_id: String(userID), 
-          customer_email: req.user.email, 
-          customer_phone: req.user.phone || '9999999999' 
-        },
-        notes: 'Bid payment (bid amount + fee)'
-      });
-
-      // Update payment intent with order ID
-      paymentIntent.orderId = cashfreeOrder.order_id;
-      await paymentIntent.save();
-
-      logPaymentEvent('bid_fee_created', {
-        intentId: paymentIntent._id,
-        orderId: cashfreeOrder.order_id,
-        userId: userID,
-        projectId: _id,
+    // Create payment intent for the TOTAL amount (bid amount + fee if applicable)
+    paymentIntent = await PaymentIntent.create({
+      provider: 'cashfree',
+      purpose: 'bid_fee',
+      amount: totalAmount, // Total amount including bid amount + fee (if any)
+      userId: userID,
+      projectId: _id,
+      status: 'created',
+      notes: { 
         bidAmount: bid_amount,
         bidFee: bidFee,
-        totalAmount: totalAmount
-      });
-    }
-
-    // Create the bid
-    const newBid = new Bidding({
-      project_id: _id,
-      user_id: userID,
-      bid_amount: bid_amount, // Original bid amount
-      bid_fee: bidFee, // ₹9 fee or 0 for free bids
-      total_amount: totalAmount, // Total including fee (or just bid amount for free)
-      year_of_experience,
-      bid_description,
-      hours_avilable_per_week,
-      skills,
-      is_free_bid: !requiresPayment,
-      payment_status: requiresPayment ? 'pending' : 'free'
-    });
-
-    await newBid.save();
-
-    // Update user's bid statistics
-    const User = await user.findById(userID);
-    if (!requiresPayment && eligibility.reason === 'free_bid') {
-      console.log(`[Bid Creation] Updating free bid statistics - before: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
-      User.freeBids.remaining -= 1;
-      User.freeBids.used += 1;
-      console.log(`[Bid Creation] Updated free bid statistics - after: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
-    } else {
-      console.log(`[Bid Creation] No free bid statistics update needed - requiresPayment: ${requiresPayment}, reason: ${eligibility.reason}`);
-    }
-    await User.save();
-
-    // Update project statistics
-    const projectObjectId = new mongoose.Types.ObjectId(_id);
-    const totalBids = await Bidding.countDocuments({
-      project_id: projectObjectId,
-    });
-    const allBids = await Bidding.find({ project_id: projectObjectId });
-
-    const uniqueContributors = [
-      ...new Set(allBids.map((b) => b.user_id.toString())),
-    ].length;
-
-    // Calculate current bid amount (sum of all bid amounts, not including fees)
-    let currentBidAmount = 0;
-    if (allBids.length === 1) {
-      currentBidAmount = allBids[0].bid_amount;
-    } else if (allBids.length > 1) {
-      currentBidAmount = allBids.reduce((sum, b) => sum + b.bid_amount, 0);
-    }
-
-    await ProjectListing.findByIdAndUpdate(projectObjectId, {
-      Project_Number_Of_Bids: totalBids,
-      Project_Bid_Amount: currentBidAmount,
-    });
-
-    // Sync to Firebase
-    if (firestoreDb) {
-      try {
-        await firestoreDb
-          .collection("project_summaries")
-          .doc(String(projectObjectId))
-          .set(
-            {
-              current_bid_amount: currentBidAmount,
-              total_bids: totalBids,
-              number_of_contributors: uniqueContributors,
-              updated_at: new Date(),
-            },
-            { merge: true }
-          );
-
-        console.log("Firebase Sync Data:", {
-          total_bids: totalBids,
-          number_of_contributors: uniqueContributors,
-          current_bid_amount: currentBidAmount,
-        });
-      } catch (firestoreError) {
-        console.warn("Firestore sync failed:", firestoreError.message);
+        totalAmount: totalAmount,
+        feeAmount: eligibility.feeAmount,
+        feeWaived: eligibility.feeAmount === 0,
+        year_of_experience,
+        bid_description,
+        hours_avilable_per_week,
+        skills
       }
-    }
+    });
 
-    // Return response based on payment requirement
-    if (requiresPayment) {
-      console.log(`[Bid Creation] Returning payment required response - totalAmount: ₹${totalAmount}`);
-      res.status(201).json({ 
-        message: "Bid created successfully. Payment required.",
-        bid: newBid,
-        paymentRequired: true,
-        paymentData: {
-          provider: 'cashfree',
-          order: cashfreeOrder,
-          intentId: paymentIntent._id,
-          amount: totalAmount // Total amount including bid amount + fee
-        },
-        bidInfo: {
-          originalAmount: bid_amount,
-          fee: bidFee,
-          totalAmount: totalAmount,
-          paymentType: 'paid_bid'
-        }
-      });
-    } else {
-      console.log(`[Bid Creation] Returning free bid response - totalAmount: ₹${totalAmount}, reason: ${eligibility.reason}`);
-      res.status(201).json({ 
-        message: "Bid created successfully", 
-        bid: newBid,
-        paymentRequired: false,
-        bidInfo: {
-          originalAmount: bid_amount,
-          fee: bidFee,
-          totalAmount: totalAmount,
-          paymentType: eligibility.reason
-        }
-      });
-    }
+    // Create Cashfree order for the TOTAL amount
+    cashfreeOrder = await cfCreateOrder({
+      orderId: paymentIntent._id.toString(),
+      amount: totalAmount, // Total amount including bid amount + fee (if any)
+      customer: { 
+        customer_id: String(userID), 
+        customer_email: req.user.email, 
+        customer_phone: req.user.phone || '9999999999' 
+      },
+      notes: eligibility.feeAmount === 0 ? 'Bid payment (no fee)' : 
+             eligibility.feeAmount === 3 ? 'Bid payment (bid amount + ₹3 fee)' : 
+             'Bid payment (bid amount + ₹9 fee)'
+    });
+
+    // Update payment intent with order ID
+    paymentIntent.orderId = cashfreeOrder.order_id;
+    await paymentIntent.save();
+
+    logPaymentEvent('bid_fee_created', {
+      intentId: paymentIntent._id,
+      orderId: cashfreeOrder.order_id,
+      userId: userID,
+      projectId: _id,
+      bidAmount: bid_amount,
+      bidFee: bidFee,
+      totalAmount: totalAmount,
+      feeAmount: eligibility.feeAmount
+    });
+
+    // Return payment data for ALL bids (payment always required)
+    console.log(`[Bid Creation] Payment required for all bids - returning payment data`);
+    res.status(201).json({ 
+      message: "Payment required before bid creation.",
+      paymentRequired: true,
+      paymentData: {
+        provider: 'cashfree',
+        order: cashfreeOrder,
+        intentId: paymentIntent._id,
+        amount: totalAmount // Total amount including bid amount + fee (if any)
+      },
+      bidInfo: {
+        originalAmount: bid_amount,
+        fee: bidFee,
+        totalAmount: totalAmount,
+        paymentType: eligibility.feeAmount === 0 ? 'free_bid' : 
+                    eligibility.feeAmount === 3 ? 'subscription_bid' : 'paid_bid',
+        feeAmount: eligibility.feeAmount
+      }
+    });
 
   } catch (error) {
     console.error("Error creating bid:", error);
@@ -334,8 +234,9 @@ export const getUserBidStats = async (req, res) => {
     const stats = {
       eligibility: {
         canBid: eligibility.canBid,
-        requiresPayment: eligibility.requiresPayment,
+        requiresPayment: true, // All bids require payment
         reason: eligibility.reason,
+        feeAmount: eligibility.feeAmount,
         remaining: eligibility.remaining || 0
       },
       bids: bidStats[0] || {

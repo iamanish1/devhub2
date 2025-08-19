@@ -319,7 +319,7 @@ const BidingProporsalPage = () => {
 
     // Calculate bid amounts based on eligibility
     const originalBidAmount = bidAmount;
-    const bidFee = (isFreeBid() || hasActiveSubscription()) ? 0 : 9;
+    const bidFee = getBidFee();
     const totalBidAmount = originalBidAmount + bidFee;
 
     console.log("Bid submission details:", {
@@ -328,7 +328,7 @@ const BidingProporsalPage = () => {
       totalBidAmount,
       isFreeBid: isFreeBid(),
       hasActiveSubscription: hasActiveSubscription(),
-      requiresPayment: requiresPayment(),
+      isFeeWaived: isFeeWaived(),
       bidEligibility
     });
 
@@ -361,10 +361,12 @@ const BidingProporsalPage = () => {
       
       // Check if payment is required based on backend response
       if (response.data.paymentRequired && response.data.paymentData) {
+        console.log("Payment required - showing payment modal");
         // Show payment modal
         setPaymentData(response.data.paymentData);
         setShowPaymentModal(true);
       } else {
+        console.log("No payment required - bid is free");
         // No payment required (free bid or subscription)
         const successMessage = `Bid submitted successfully!
         
@@ -391,26 +393,34 @@ Your Bid Details:
     }
   };
 
-  const handlePaymentSuccess = (result) => {
+  const handlePaymentSuccess = async (result) => {
     setShowPaymentModal(false);
-    const paymentBidFee = (isFreeBid() || hasActiveSubscription()) ? 0 : 9;
-    const totalBidAmount = bidAmount + paymentBidFee;
     
-    const successMessage = `Payment successful! Bid submitted.
-    
+    try {
+      console.log("Payment successful, bid will be created automatically via webhook");
+      
+      const successMessage = `Payment successful! Your bid has been submitted.
+      
 Your Bid Details:
 • Original Bid: ₹${bidAmount}
-• Bidding Fee: ₹${paymentBidFee}
-• Total Amount: ₹${totalBidAmount}
-• Payment Type: Paid Bid`;
+• Bidding Fee: ₹${getBidFee()}
+• Total Amount: ₹${bidAmount + getBidFee()}
+• Payment Type: ${isFreeBid() ? 'Free Bid' : hasActiveSubscription() ? 'Subscription Bid' : 'Paid Bid'}
 
-    alert(successMessage);
-    navigate(`/bidingPage/${_id}`, { 
-      state: { 
-        success: true, 
-        message: "Bid submitted and payment successful!" 
-      } 
-    });
+Your bid will be visible to the project owner shortly.`;
+
+      alert(successMessage);
+      navigate(`/bidingPage/${_id}`, { 
+        state: { 
+          success: true, 
+          message: "Payment successful! Bid submitted." 
+        } 
+      });
+      
+    } catch (error) {
+      console.error("Error handling payment success:", error);
+      setError("Payment successful but there was an issue. Please contact support.");
+    }
   };
 
   const handlePaymentError = (error) => {
@@ -420,12 +430,18 @@ Your Bid Details:
 
   // Test function to manually trigger payment modal
   const testPaymentModal = () => {
+    // Only show payment modal if payment is actually required
+    if (!requiresPayment()) {
+      alert("No payment required! You have free bids or subscription available.");
+      return;
+    }
+
     const testPaymentData = {
       order: {
         order_token: "test_token",
         order_id: "test_order_123"
       },
-      amount: bidAmount + 9 // Total amount (bid amount + ₹9 fee)
+      amount: bidAmount + getBidFee() // Total amount (bid amount + ₹9 fee) - only for paid bids
     };
     setPaymentData(testPaymentData);
     setShowPaymentModal(true);
@@ -450,7 +466,16 @@ Your Bid Details:
   };
 
   const requiresPayment = () => {
-    return bidEligibility?.requiresPayment === true;
+    // All bids require payment, but fee amounts vary
+    return true;
+  };
+
+  const getBidFee = () => {
+    return bidEligibility?.feeAmount || 9; // Default to ₹9 if not set
+  };
+
+  const isFeeWaived = () => {
+    return bidEligibility?.feeAmount === 0;
   };
 
   if (loading) {
@@ -605,22 +630,22 @@ Your Bid Details:
                       </div>
                       <div className="flex justify-between">
                         <span>Bidding Fee:</span>
-                        <span className={isFreeBid() || hasActiveSubscription() ? 'text-green-400' : 'text-yellow-400'}>
-                          {isFreeBid() || hasActiveSubscription() ? 'FREE' : '₹9'}
+                        <span className={isFeeWaived() ? 'text-green-400' : 'text-yellow-400'}>
+                          {isFeeWaived() ? 'FREE' : formatCurrency(getBidFee())}
                         </span>
                       </div>
                       <div className="flex justify-between font-semibold text-blue-300 border-t border-blue-500/30 pt-1">
                         <span>Total Amount:</span>
-                        <span>₹{isFreeBid() || hasActiveSubscription() ? bidAmount : bidAmount + 9}</span>
+                        <span>₹{isFeeWaived() ? bidAmount : bidAmount + getBidFee()}</span>
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-blue-200">
                       {isFreeBid() ? (
-                        <p>🎉 You have {bidEligibility?.remaining} free bids remaining!</p>
+                        <p>🎉 You have {bidEligibility?.remaining} free bids remaining! (No fee)</p>
                       ) : hasActiveSubscription() ? (
-                        <p>🎉 Unlimited bids with your subscription!</p>
+                        <p>🎉 Unlimited bids with your subscription! (₹3 fee)</p>
                       ) : (
-                        <p>💡 The ₹9 bidding fee will be charged when you place your bid.</p>
+                        <p>�� The ₹9 bidding fee will be charged when you place your bid.</p>
                       )}
                     </div>
                     
@@ -631,14 +656,21 @@ Your Bid Details:
                       <p>Is Free Bid: {isFreeBid() ? 'Yes' : 'No'}</p>
                       <p>Has Subscription: {hasActiveSubscription() ? 'Yes' : 'No'}</p>
                       <p>Requires Payment: {requiresPayment() ? 'Yes' : 'No'}</p>
-                      
-                      {/* Test Payment Button */}
-                      <button
-                        onClick={testPaymentModal}
-                        className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                      >
-                        Test Payment Modal
-                      </button>
+                      <p>Bid Amount: ₹{bidAmount}</p>
+                      <p>Bid Fee: ₹{getBidFee()}</p>
+                      <p>Total Amount: ₹{bidAmount + getBidFee()}</p>
+                      {/* Test Payment Button - Only show if payment is required */}
+                      {requiresPayment() && (
+                        <button
+                          onClick={testPaymentModal}
+                          className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                        >
+                          Test Payment Modal
+                        </button>
+                      )}
+                      {!requiresPayment() && (
+                        <p className="mt-2 text-green-400">✅ No payment required - you have free bids or subscription!</p>
+                      )}
                     </div>
                   </div>
                 </motion.div>
