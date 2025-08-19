@@ -39,7 +39,7 @@ const checkBidEligibility = async (userId) => {
 
 export const createBid = async (req, res) => {
   try {
-    const { _id } = req.params; // projectId
+    const { id } = req.params; // projectId - changed from _id to id to match route
     const userID = req.user._id;
 
     const {
@@ -51,7 +51,7 @@ export const createBid = async (req, res) => {
     } = req.body;
 
     // Validate project exists
-    const project = await ProjectListing.findById(_id);
+    const project = await ProjectListing.findById(id);
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
@@ -63,7 +63,7 @@ export const createBid = async (req, res) => {
 
     // Check if user already placed a bid
     const existingBid = await Bidding.findOne({
-      project_id: _id,
+      project_id: id,
       user_id: userID,
     });
 
@@ -97,7 +97,7 @@ export const createBid = async (req, res) => {
       purpose: 'bid_fee',
       amount: totalAmount, // Total amount including bid amount + fee (if any)
       userId: userID,
-      projectId: _id,
+      projectId: id,
       status: 'created',
       notes: { 
         bidAmount: bid_amount,
@@ -134,7 +134,7 @@ export const createBid = async (req, res) => {
       intentId: paymentIntent._id,
       orderId: cashfreeOrder.order_id,
       userId: userID,
-      projectId: _id,
+      projectId: id,
       bidAmount: bid_amount,
       bidFee: bidFee,
       totalAmount: totalAmount,
@@ -170,11 +170,11 @@ export const createBid = async (req, res) => {
 
 export const getBid = async (req, res) => {
   try {
-    const { _id } = req.params; // projectId
+    const { id } = req.params; // projectId - changed from _id to id to match route
     const userID = req.user._id;
 
     const existingBid = await Bidding.findOne({
-      project_id: _id,
+      project_id: id,
       user_id: userID,
     });
 
