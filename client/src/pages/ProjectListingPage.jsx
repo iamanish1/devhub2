@@ -6,8 +6,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FileUploadField from "../components/FileUploadField.jsx";
 import { usePayment } from "../context/PaymentContext";
-import PaymentModal from "../components/payment/PaymentModal";
-import BonusPoolCard from "../components/payment/BonusPoolCard";
 import { PAYMENT_TYPES } from "../constants/paymentConstants";
 
 import axios from "axios";
@@ -30,6 +28,9 @@ const ProjectListingPage = () => {
     Project_gitHub_link: "",
     Project_cover_photo: "",
     project_starting_bid: "",
+    // Bonus pool fields
+    bonus_pool_amount: "200",
+    bonus_pool_contributors: "1",
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -39,17 +40,13 @@ const ProjectListingPage = () => {
   const [projectImages, setProjectImages] = useState([]);
 
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
   const [submitButtonClicked, setSubmitButtonClicked] = useState(false);
   
   // Security information toggle states
   const [showSSLInfo, setShowSSLInfo] = useState(false);
   const [showNDAInfo, setShowNDAInfo] = useState(false);
   const [showVerifiedInfo, setShowVerifiedInfo] = useState(false);
-  
-  // Payment states
-  const [showBonusFunding, setShowBonusFunding] = useState(false);
-  const [createdProjectId, setCreatedProjectId] = useState(null);
   
   // Payment context
   const { hasActiveSubscription } = usePayment();
@@ -164,6 +161,15 @@ const ProjectListingPage = () => {
          }
          break;
         
+      case 4:
+        if (!formData.bonus_pool_amount || formData.bonus_pool_amount < 200) {
+          errors.bonus_pool_amount = "Bonus pool amount must be at least ₹200";
+        }
+        if (!formData.bonus_pool_contributors || formData.bonus_pool_contributors < 1) {
+          errors.bonus_pool_contributors = "Number of contributors must be at least 1";
+        }
+        break;
+        
       default:
         break;
     }
@@ -250,6 +256,10 @@ const ProjectListingPage = () => {
         formDataToSend.append("Project_images", file);
       });
 
+      // Append bonus pool data
+      formDataToSend.append("bonus_pool_amount", formData.bonus_pool_amount);
+      formDataToSend.append("bonus_pool_contributors", formData.bonus_pool_contributors);
+
       // Use params.id if editingProject is not available
       const projectId = editingProject?._id || params.id;
 
@@ -267,6 +277,8 @@ const ProjectListingPage = () => {
           Project_looking: formData.Project_looking,
           project_duration: formData.project_duration,
           Project_gitHub_link: formData.Project_gitHub_link,
+          bonus_pool_amount: formData.bonus_pool_amount,
+          bonus_pool_contributors: formData.bonus_pool_contributors,
         };
         
         await axios.put(
@@ -295,10 +307,9 @@ const ProjectListingPage = () => {
         );
 
         if (response.status === 201) {
-          const projectId = response.data.projectId || response.data._id;
-          setCreatedProjectId(projectId);
-          setShowBonusFunding(true);
-          // Don't navigate yet, show bonus funding option
+          // Navigate directly to dashboard after successful project creation
+          navigate("/dashboard");
+          alert("Project created successfully with bonus pool!");
         }
       }
     } catch (error) {
@@ -337,6 +348,16 @@ const ProjectListingPage = () => {
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      ),
+    },
+    {
+      id: 4,
+      title: "Bonus Pool",
+      subtitle: "Set up rewards for contributors",
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
         </svg>
       ),
     },
@@ -1065,6 +1086,102 @@ const ProjectListingPage = () => {
                 </div>
               )}
 
+              {/* Step 4: Bonus Pool */}
+              {currentStep === 4 && (
+                <div className="animate-slide-in-right space-y-8">
+                                     <div className="text-center mb-8">
+                     <h2 className="text-3xl font-bold text-white mb-2">Bonus Pool</h2>
+                     <p className="text-gray-300">Set up rewards for contributors</p>
+                     <div className="mt-4 p-4 bg-[#2A2A2A] rounded-lg border border-gray-600">
+                       <p className="text-gray-300 text-sm">
+                         💡 <strong>What is a Bonus Pool?</strong><br/>
+                         A bonus pool is a reward fund that contributors can earn by adding to their bidding money. 
+                         This incentivizes quality contributions and helps you attract the best developers.
+                       </p>
+                     </div>
+                   </div>
+
+                  <div className="space-y-6">
+                    {/* Bonus Pool Amount */}
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-300 mb-3 group-hover:text-blue-400 transition-colors">
+                        Bonus Pool Amount ($) *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="bonus_pool_amount"
+                          value={formData.bonus_pool_amount}
+                          onChange={handleChange}
+                          onKeyDown={handleKeyDown}
+                          min="1"
+                          className={`w-full bg-[#2A2A2A] border rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
+                            validationErrors.bonus_pool_amount 
+                              ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" 
+                              : "border-gray-600 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8]"
+                          }`}
+                          placeholder="Enter the bonus pool amount..."
+                        />
+                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </div>
+                      {validationErrors.bonus_pool_amount && (
+                        <p className="text-red-400 text-sm mt-1">{validationErrors.bonus_pool_amount}</p>
+                      )}
+                    </div>
+
+                                         {/* Number of Contributors */}
+                     <div className="group">
+                       <label className="block text-sm font-semibold text-gray-300 mb-3 group-hover:text-blue-400 transition-colors">
+                         Number of Contributors *
+                       </label>
+                       <div className="relative">
+                         <input
+                           type="number"
+                           name="bonus_pool_contributors"
+                           value={formData.bonus_pool_contributors}
+                           onChange={handleChange}
+                           onKeyDown={handleKeyDown}
+                           min="1"
+                           className={`w-full bg-[#2A2A2A] border rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
+                             validationErrors.bonus_pool_contributors 
+                               ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" 
+                               : "border-gray-600 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8]"
+                           }`}
+                           placeholder="Enter the number of contributors..."
+                         />
+                         <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                       </div>
+                       {validationErrors.bonus_pool_contributors && (
+                         <p className="text-red-400 text-sm mt-1">{validationErrors.bonus_pool_contributors}</p>
+                       )}
+                     </div>
+
+                     {/* Total Bonus Pool Calculation */}
+                     <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
+                       <h4 className="text-white font-semibold mb-3">Bonus Pool Summary</h4>
+                       <div className="space-y-2">
+                         <div className="flex justify-between items-center">
+                           <span className="text-gray-300">Per Contributor:</span>
+                           <span className="text-white font-medium">₹{formData.bonus_pool_amount || 0}</span>
+                         </div>
+                         <div className="flex justify-between items-center">
+                           <span className="text-gray-300">Number of Contributors:</span>
+                           <span className="text-white font-medium">{formData.bonus_pool_contributors || 0}</span>
+                         </div>
+                         <div className="border-t border-gray-600 pt-2">
+                           <div className="flex justify-between items-center">
+                             <span className="text-white font-semibold">Total Bonus Pool:</span>
+                             <span className="gradient-text font-bold text-lg">
+                               ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
+                             </span>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                  </div>
+                </div>
+              )}
+
               {/* Navigation Buttons */}
               <div className="flex justify-between mt-8">
                 {currentStep > 1 ? (
@@ -1275,63 +1392,6 @@ const ProjectListingPage = () => {
                 </div>
               </div>
             </div>
-            
-            {/* Bonus Funding Section */}
-            {showBonusFunding && createdProjectId && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="bg-[#1E1E1E] rounded-xl p-6 border border-gray-700 max-w-md w-full">
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-semibold text-white mb-2">
-                      🎉 Project Created Successfully!
-                    </h3>
-                    <p className="text-gray-400">
-                      Would you like to create a bonus pool to reward contributors?
-                    </p>
-                  </div>
-                  
-                  <BonusPoolCard projectId={createdProjectId} />
-                  
-                  <div className="mt-4 flex gap-3">
-                    <button
-                      onClick={() => {
-                        setShowBonusFunding(false);
-                        // Reset form and navigate
-                        setFormData({
-                          project_Title: "",
-                          project_duration: "",
-                          Project_Bid_Amount: "",
-                          Project_Contributor: "",
-                          Project_Number_Of_Bids: "",
-                          Project_Description: "",
-                          Project_tech_stack: "",
-                          Project_Features: "",
-                          Project_looking: "",
-                          Project_gitHub_link: "",
-                          Project_cover_photo: "",
-                          project_starting_bid: "",
-                        });
-                        setCoverImage(null);
-                        setProjectImages([]);
-                        setCurrentStep(1);
-                        navigate("/dashboard");
-                      }}
-                      className="btn-secondary flex-1"
-                    >
-                      Skip for Now
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowBonusFunding(false);
-                        navigate("/dashboard");
-                      }}
-                      className="btn-primary flex-1"
-                    >
-                      Go to Dashboard
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
          </div>
        </main>
      </div>
