@@ -119,7 +119,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
       // Use the correct Cashfree SDK method based on available methods
       if (typeof cashfree.elements === 'function') {
         // Use elements method for custom payment form (RECOMMENDED METHOD)
-        console.log("Using Cashfree elements method - Recommended implementation");finall
+        console.log("Using Cashfree elements method - Recommended implementation");
         
         // Render the payment form in the container
         const container = document.getElementById('cashfree-payment-container');
