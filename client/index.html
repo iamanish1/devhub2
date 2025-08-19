@@ -7,6 +7,16 @@
     <title>DevHub - Developer Collaboration Platform</title>
     <!-- Cashfree Payment Gateway SDK -->
     <script src="https://sdk.cashfree.com/js/ui/2.0.0/cashfree.prod.js"></script>
+    <script>
+      // Check if Cashfree SDK loaded properly
+      window.addEventListener('load', function() {
+        if (typeof window.Cashfree === 'undefined') {
+          console.error('Cashfree SDK failed to load');
+        } else {
+          console.log('Cashfree SDK loaded successfully');
+        }
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

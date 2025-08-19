@@ -425,7 +425,7 @@ Your Bid Details:
         order_token: "test_token",
         order_id: "test_order_123"
       },
-      amount: 9
+      amount: bidAmount + 9 // Total amount (bid amount + ₹9 fee)
     };
     setPaymentData(testPaymentData);
     setShowPaymentModal(true);
