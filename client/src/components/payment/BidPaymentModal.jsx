@@ -95,17 +95,31 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
           mode: import.meta.env.VITE_CASHFREE_MODE || "sandbox"
         });
 
+        // Test if the elements method is callable (primary method)
+        if (typeof cashfree.elements !== 'function') {
+          console.warn("Cashfree elements method is not available, will try drop method");
+        }
+
+        // Test if the drop method is callable (fallback)
+        if (typeof cashfree.drop !== 'function') {
+          console.warn("Cashfree drop method is not available, will try redirect method");
+        }
+
         console.log("Cashfree SDK initialized:", cashfree);
         console.log("Available methods:", Object.keys(cashfree));
+        console.log("Cashfree elements method type:", typeof cashfree.elements);
+        console.log("Cashfree elements method:", cashfree.elements);
+        console.log("Cashfree drop method type:", typeof cashfree.drop);
+        console.log("Cashfree drop method:", cashfree.drop);
       } catch (sdkError) {
         console.error("Error initializing Cashfree SDK:", sdkError);
         throw new Error("Failed to initialize payment gateway");
       }
 
-      // Use the best method based on available methods and requirements
+      // Use the correct Cashfree SDK method based on available methods
       if (typeof cashfree.elements === 'function') {
-        // Use elements method for custom payment form (RECOMMENDED)
-        console.log("Using Cashfree elements method - Best for custom UI");
+        // Use elements method for custom payment form (RECOMMENDED METHOD)
+        console.log("Using Cashfree elements method - Recommended implementation");
         
         // Render the payment form in the container
         const container = document.getElementById('cashfree-payment-container');
@@ -117,42 +131,52 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         container.innerHTML = '';
 
         // Create custom payment form using elements method
-        const paymentForm = cashfree.elements({
-          orderToken: paymentConfig.orderToken,
-          orderNumber: paymentConfig.orderNumber,
-          appId: paymentConfig.appId,
-          orderAmount: paymentConfig.orderAmount,
-          orderCurrency: paymentConfig.orderCurrency,
-          customerName: paymentConfig.customerName,
-          customerEmail: paymentConfig.customerEmail,
-          customerPhone: paymentConfig.customerPhone,
-          orderNote: paymentConfig.orderNote,
-          source: paymentConfig.source,
-          returnUrl: paymentConfig.returnUrl,
-          notifyUrl: paymentConfig.notifyUrl,
-          style: {
-            backgroundColor: '#1a1a1a',
-            color: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #3b82f6',
-            padding: '16px'
-          },
-          onSuccess: (result) => {
-            console.log("Payment success:", result);
-            onSuccess(result);
-          },
-          onFailure: (error) => {
-            console.error("Payment failure:", error);
-            onError("Payment failed. Please try again.");
-          },
-          onClose: () => {
-            console.log("Payment form closed");
-            onClose();
-          }
-        });
+        try {
+          const paymentForm = cashfree.elements({
+            orderToken: paymentConfig.orderToken,
+            orderNumber: paymentConfig.orderNumber,
+            appId: paymentConfig.appId,
+            orderAmount: paymentConfig.orderAmount,
+            orderCurrency: paymentConfig.orderCurrency,
+            customerName: paymentConfig.customerName,
+            customerEmail: paymentConfig.customerEmail,
+            customerPhone: paymentConfig.customerPhone,
+            orderNote: paymentConfig.orderNote,
+            source: paymentConfig.source,
+            returnUrl: paymentConfig.returnUrl,
+            notifyUrl: paymentConfig.notifyUrl,
+            style: {
+              backgroundColor: '#1a1a1a',
+              color: '#ffffff',
+              borderRadius: '8px',
+              border: '1px solid #3b82f6',
+              padding: '16px'
+            },
+            onSuccess: (result) => {
+              console.log("Payment success:", result);
+              onSuccess(result);
+            },
+            onFailure: (error) => {
+              console.error("Payment failure:", error);
+              onError("Payment failed. Please try again.");
+            },
+            onClose: () => {
+              console.log("Payment form closed");
+              onClose();
+            }
+          });
 
-        // Render the form
-        paymentForm.render(container);
+          // Render the form in the container
+          if (typeof paymentForm.render === 'function') {
+            paymentForm.render(container);
+          } else {
+            // If render method doesn't exist, try mounting directly
+            container.appendChild(paymentForm);
+          }
+        } catch (elementsError) {
+          console.error("Cashfree elements method failed:", elementsError);
+          throw new Error("Failed to initialize payment form");
+        }
         
       } else if (typeof cashfree.drop === 'function') {
         // Fallback to drop method for embedded payment form
@@ -165,34 +189,41 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
 
         container.innerHTML = '';
 
-        const paymentForm = cashfree.drop({
-          orderToken: paymentConfig.orderToken,
-          orderNumber: paymentConfig.orderNumber,
-          appId: paymentConfig.appId,
-          orderAmount: paymentConfig.orderAmount,
-          orderCurrency: paymentConfig.orderCurrency,
-          customerName: paymentConfig.customerName,
-          customerEmail: paymentConfig.customerEmail,
-          customerPhone: paymentConfig.customerPhone,
-          orderNote: paymentConfig.orderNote,
-          source: paymentConfig.source,
-          returnUrl: paymentConfig.returnUrl,
-          notifyUrl: paymentConfig.notifyUrl,
-          onSuccess: (result) => {
-            console.log("Payment success:", result);
-            onSuccess(result);
-          },
-          onFailure: (error) => {
-            console.error("Payment failure:", error);
-            onError("Payment failed. Please try again.");
-          }
-        });
-
-        paymentForm.render(container);
+        try {
+          cashfree.drop({
+            orderToken: paymentConfig.orderToken,
+            orderNumber: paymentConfig.orderNumber,
+            appId: paymentConfig.appId,
+            orderAmount: paymentConfig.orderAmount,
+            orderCurrency: paymentConfig.orderCurrency,
+            customerName: paymentConfig.customerName,
+            customerEmail: paymentConfig.customerEmail,
+            customerPhone: paymentConfig.customerPhone,
+            orderNote: paymentConfig.orderNote,
+            source: paymentConfig.source,
+            returnUrl: paymentConfig.returnUrl,
+            notifyUrl: paymentConfig.notifyUrl,
+            onSuccess: (result) => {
+              console.log("Payment success:", result);
+              onSuccess(result);
+            },
+            onFailure: (error) => {
+              console.error("Payment failure:", error);
+              onError("Payment failed. Please try again.");
+            },
+            onClose: () => {
+              console.log("Payment form closed");
+              onClose();
+            }
+          });
+        } catch (dropError) {
+          console.error("Cashfree drop method failed:", dropError);
+          throw new Error("Failed to initialize payment form");
+        }
         
       } else if (typeof cashfree.redirect === 'function') {
-        // Last resort: Use redirect method for redirect-based payment
-        console.log("Using Cashfree redirect method - Last resort");
+        // Fallback to redirect method for redirect-based payment
+        console.log("Using Cashfree redirect method - Fallback option");
         
         const redirectUrl = cashfree.redirect({
           orderToken: paymentConfig.orderToken,
@@ -273,7 +304,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
                              <p className="text-gray-300">
                  {!import.meta.env.VITE_CASHFREE_APP_ID 
                    ? "Test Mode: Simulating payment..." 
-                   : "Loading secure payment form..."
+                   : "Loading custom payment form..."
                  }
                </p>
             </div>
