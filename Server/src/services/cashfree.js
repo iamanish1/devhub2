@@ -1,19 +1,45 @@
 import axios from 'axios';
 import { logger } from '../utils/logger.js';
 
+// Debug environment variables
+console.log('🔍 [Cashfree] Environment variables check:');
+console.log('🔍 [Cashfree] CASHFREE_APP_ID:', process.env.CASHFREE_APP_ID ? 'SET' : 'NOT SET');
+console.log('🔍 [Cashfree] CASHFREE_SECRET_KEY:', process.env.CASHFREE_SECRET_KEY ? 'SET' : 'NOT SET');
+console.log('🔍 [Cashfree] CASHFREE_ENV:', process.env.CASHFREE_ENV || 'NOT SET');
+
 const BASE = process.env.CASHFREE_ENV === 'sandbox'
   ? 'https://sandbox.cashfree.com/pg'
   : 'https://api.cashfree.com/pg';
 
-const headers = () => ({
-  'x-client-id': process.env.CASHFREE_APP_ID,
-  'x-client-secret': process.env.CASHFREE_SECRET_KEY,
-  'x-api-version': '2022-09-01',
-  'Content-Type': 'application/json'
-});
+console.log('🔍 [Cashfree] Using BASE URL:', BASE);
+
+const headers = () => {
+  const headerObj = {
+    'x-client-id': process.env.CASHFREE_APP_ID,
+    'x-client-secret': process.env.CASHFREE_SECRET_KEY,
+    'x-api-version': '2022-09-01',
+    'Content-Type': 'application/json'
+  };
+  
+  console.log('🔍 [Cashfree] Headers (without secret):', {
+    'x-client-id': headerObj['x-client-id'] ? 'SET' : 'NOT SET',
+    'x-client-secret': headerObj['x-client-secret'] ? 'SET' : 'NOT SET',
+    'x-api-version': headerObj['x-api-version'],
+    'Content-Type': headerObj['Content-Type']
+  });
+  
+  return headerObj;
+};
 
 export const createOrder = async ({ orderId, amount, customer, notes }) => {
   try {
+    console.log('🔍 [Cashfree] Creating order with:', {
+      orderId,
+      amount,
+      customer: { customer_id: customer.customer_id, customer_email: customer.customer_email },
+      notes
+    });
+    
     const { data } = await axios.post(`${BASE}/orders`, {
       order_id: orderId,
       order_amount: amount,
@@ -29,6 +55,13 @@ export const createOrder = async ({ orderId, amount, customer, notes }) => {
     
     return data;
   } catch (error) {
+    console.error('❌ [Cashfree] Error creating order:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    
     logger.error('Error creating Cashfree order', error.response?.data || error.message);
     throw error;
   }
