@@ -282,22 +282,51 @@ export const getBid = async (req, res) => {
 // Get user's bid statistics
 export const getUserBidStats = async (req, res) => {
   try {
-    const userID = req.user._id;
-    const User = await user.findById(userID);
+    const userId = req.user._id;
 
-    if (!User) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    // Get user's bid eligibility
+    const eligibility = await checkBidEligibility(userId);
+
+    // Get user's bid statistics
+    const bidStats = await Bidding.aggregate([
+      {
+        $match: { user_id: new mongoose.Types.ObjectId(userId) }
+      },
+      {
+        $group: {
+          _id: null,
+          totalBids: { $sum: 1 },
+          acceptedBids: {
+            $sum: { $cond: [{ $eq: ['$bid_status', 'Accepted'] }, 1, 0] }
+          },
+          pendingBids: {
+            $sum: { $cond: [{ $eq: ['$bid_status', 'Pending'] }, 1, 0] }
+          },
+          totalBidAmount: { $sum: '$total_amount' },
+          totalBidFees: { $sum: '$bid_fee' }
+        }
+      }
+    ]);
+
+    // Get user details for free bids info
+    const userDetails = await user.findById(userId).select('freeBids subscription');
 
     const stats = {
-      freeBids: {
-        remaining: User.freeBids?.remaining || 0,
-        used: User.freeBids?.used || 0
+      eligibility: {
+        canBid: eligibility.canBid,
+        requiresPayment: eligibility.requiresPayment,
+        reason: eligibility.reason,
+        remaining: eligibility.remaining || 0
       },
-      subscription: {
-        isActive: User.subscription?.isActive || false,
-        expiresAt: User.subscription?.expiresAt
-      }
+      bids: bidStats[0] || {
+        totalBids: 0,
+        acceptedBids: 0,
+        pendingBids: 0,
+        totalBidAmount: 0,
+        totalBidFees: 0
+      },
+      freeBids: userDetails?.freeBids || { remaining: 5, used: 0 },
+      subscription: userDetails?.subscription || { isActive: false, expiresAt: null }
     };
 
     res.status(200).json({
@@ -307,6 +336,9 @@ export const getUserBidStats = async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching bid stats:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error fetching bid statistics"
+    });
   }
 };

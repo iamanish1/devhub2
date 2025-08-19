@@ -246,7 +246,8 @@ const BidingProporsalPage = () => {
         );
         
         if (response.data.success) {
-          setBidEligibility(response.data.data);
+          console.log("Bid eligibility data:", response.data.data);
+          setBidEligibility(response.data.data.eligibility);
         }
       } catch (error) {
         console.error("Error fetching bid eligibility:", error);
@@ -318,8 +319,18 @@ const BidingProporsalPage = () => {
 
     // Calculate bid amounts based on eligibility
     const originalBidAmount = bidAmount;
-    const bidFee = (bidEligibility?.reason === 'free_bid' || hasActiveSubscription()) ? 0 : 9;
+    const bidFee = (isFreeBid() || hasActiveSubscription()) ? 0 : 9;
     const totalBidAmount = originalBidAmount + bidFee;
+
+    console.log("Bid submission details:", {
+      originalBidAmount,
+      bidFee,
+      totalBidAmount,
+      isFreeBid: isFreeBid(),
+      hasActiveSubscription: hasActiveSubscription(),
+      requiresPayment: requiresPayment(),
+      bidEligibility
+    });
 
     const payload = {
       bid_amount: originalBidAmount, // Original bid amount (without fee)
@@ -348,8 +359,8 @@ const BidingProporsalPage = () => {
 
       console.log("Bid created successfully:", response.data);
       
-      // Check if payment is required
-      if (response.data.paymentRequired) {
+      // Check if payment is required based on backend response
+      if (response.data.paymentRequired && response.data.paymentData) {
         // Show payment modal
         setPaymentData(response.data.paymentData);
         setShowPaymentModal(true);
@@ -382,14 +393,14 @@ Your Bid Details:
 
   const handlePaymentSuccess = (result) => {
     setShowPaymentModal(false);
-    const bidFee = (bidEligibility?.reason === 'free_bid' || hasActiveSubscription()) ? 0 : 9;
-    const totalBidAmount = bidAmount + bidFee;
+    const paymentBidFee = (isFreeBid() || hasActiveSubscription()) ? 0 : 9;
+    const totalBidAmount = bidAmount + paymentBidFee;
     
     const successMessage = `Payment successful! Bid submitted.
     
 Your Bid Details:
 • Original Bid: ₹${bidAmount}
-• Bidding Fee: ₹${bidFee}
+• Bidding Fee: ₹${paymentBidFee}
 • Total Amount: ₹${totalBidAmount}
 • Payment Type: Paid Bid`;
 
@@ -407,6 +418,19 @@ Your Bid Details:
     setError("Payment failed. Please try again.");
   };
 
+  // Test function to manually trigger payment modal
+  const testPaymentModal = () => {
+    const testPaymentData = {
+      order: {
+        order_token: "test_token",
+        order_id: "test_order_123"
+      },
+      amount: 9
+    };
+    setPaymentData(testPaymentData);
+    setShowPaymentModal(true);
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -417,13 +441,16 @@ Your Bid Details:
   };
 
   const hasActiveSubscription = () => {
-    // This function would typically fetch the user's subscription status from the backend
-    // For now, we'll simulate it based on a dummy token or a simple check
-    const token = localStorage.getItem("token");
-    if (token && token.includes("active_subscription")) {
-      return true;
-    }
-    return false;
+    // Check if user has active subscription
+    return bidEligibility?.reason === 'subscription';
+  };
+
+  const isFreeBid = () => {
+    return bidEligibility?.reason === 'free_bid';
+  };
+
+  const requiresPayment = () => {
+    return bidEligibility?.requiresPayment === true;
   };
 
   if (loading) {
@@ -578,23 +605,40 @@ Your Bid Details:
                       </div>
                       <div className="flex justify-between">
                         <span>Bidding Fee:</span>
-                        <span className={bidEligibility?.reason === 'free_bid' || hasActiveSubscription() ? 'text-green-400' : 'text-yellow-400'}>
-                          {bidEligibility?.reason === 'free_bid' || hasActiveSubscription() ? 'FREE' : '₹9'}
+                        <span className={isFreeBid() || hasActiveSubscription() ? 'text-green-400' : 'text-yellow-400'}>
+                          {isFreeBid() || hasActiveSubscription() ? 'FREE' : '₹9'}
                         </span>
                       </div>
                       <div className="flex justify-between font-semibold text-blue-300 border-t border-blue-500/30 pt-1">
                         <span>Total Amount:</span>
-                        <span>₹{bidEligibility?.reason === 'free_bid' || hasActiveSubscription() ? bidAmount : bidAmount + 9}</span>
+                        <span>₹{isFreeBid() || hasActiveSubscription() ? bidAmount : bidAmount + 9}</span>
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-blue-200">
-                      {bidEligibility?.reason === 'free_bid' ? (
-                        <p>🎉 You have {bidEligibility.remaining} free bids remaining!</p>
+                      {isFreeBid() ? (
+                        <p>🎉 You have {bidEligibility?.remaining} free bids remaining!</p>
                       ) : hasActiveSubscription() ? (
                         <p>🎉 Unlimited bids with your subscription!</p>
                       ) : (
                         <p>💡 The ₹9 bidding fee will be charged when you place your bid.</p>
                       )}
+                    </div>
+                    
+                    {/* Debug Info */}
+                    <div className="mt-3 p-2 bg-gray-800/50 rounded text-xs">
+                      <p><strong>Debug Info:</strong></p>
+                      <p>Eligibility: {JSON.stringify(bidEligibility)}</p>
+                      <p>Is Free Bid: {isFreeBid() ? 'Yes' : 'No'}</p>
+                      <p>Has Subscription: {hasActiveSubscription() ? 'Yes' : 'No'}</p>
+                      <p>Requires Payment: {requiresPayment() ? 'Yes' : 'No'}</p>
+                      
+                      {/* Test Payment Button */}
+                      <button
+                        onClick={testPaymentModal}
+                        className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                      >
+                        Test Payment Modal
+                      </button>
                     </div>
                   </div>
                 </motion.div>

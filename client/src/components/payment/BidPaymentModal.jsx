@@ -13,7 +13,10 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
   }, [isOpen, paymentData]);
 
   const initializePayment = async () => {
+    console.log("Initializing payment with data:", paymentData);
+    
     if (!window.Cashfree) {
+      console.error("Cashfree SDK not loaded");
       setError('Payment gateway not loaded. Please refresh the page.');
       return;
     }
@@ -25,6 +28,8 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
       const cashfree = new window.Cashfree({
         mode: import.meta.env.VITE_CASHFREE_MODE || "sandbox"
       });
+
+      console.log("Cashfree SDK loaded, creating payment config...");
 
       const paymentConfig = {
         orderToken: paymentData.order.order_token,
@@ -41,7 +46,10 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         notifyUrl: `${import.meta.env.VITE_API_URL}/api/webhooks/cashfree`
       };
 
+      console.log("Payment config:", paymentConfig);
+
       const result = await cashfree.init(paymentConfig);
+      console.log("Payment result:", result);
       
       if (result.transaction.status === "SUCCESS") {
         onSuccess(result);
