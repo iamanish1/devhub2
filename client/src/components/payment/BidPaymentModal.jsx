@@ -73,6 +73,8 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
       // Check if orderToken is available (required for Cashfree SDK)
       if (!paymentConfig.orderToken) {
         console.warn("Order token not available, using test mode");
+        console.log("Payment data received:", paymentData);
+        console.log("Order data:", paymentData.order);
         // Fallback to test mode when orderToken is not available
         setTimeout(() => {
           onSuccess({ transaction: { status: "SUCCESS" } });
@@ -94,24 +96,78 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         });
 
         console.log("Cashfree SDK initialized:", cashfree);
+        console.log("Available methods:", Object.keys(cashfree));
       } catch (sdkError) {
         console.error("Error initializing Cashfree SDK:", sdkError);
         throw new Error("Failed to initialize payment gateway");
       }
 
-      // Check if init method exists
-      if (typeof cashfree.init !== 'function') {
-        console.error("Cashfree init method not found, available methods:", Object.keys(cashfree));
-        throw new Error("Payment gateway not properly initialized");
-      }
+      // Use the correct method based on available methods
+      if (typeof cashfree.drop === 'function') {
+        // Use drop method for embedded payment form
+        console.log("Using Cashfree drop method");
+        
+        // Render the payment form in the container
+        const container = document.getElementById('cashfree-payment-container');
+        if (!container) {
+          throw new Error("Payment container not found");
+        }
 
-      const result = await cashfree.init(paymentConfig);
-      console.log("Payment result:", result);
-      
-      if (result.transaction.status === "SUCCESS") {
-        onSuccess(result);
+        // Clear container
+        container.innerHTML = '';
+
+        // Create payment form using drop method
+        const paymentForm = cashfree.drop({
+          orderToken: paymentConfig.orderToken,
+          orderNumber: paymentConfig.orderNumber,
+          appId: paymentConfig.appId,
+          orderAmount: paymentConfig.orderAmount,
+          orderCurrency: paymentConfig.orderCurrency,
+          customerName: paymentConfig.customerName,
+          customerEmail: paymentConfig.customerEmail,
+          customerPhone: paymentConfig.customerPhone,
+          orderNote: paymentConfig.orderNote,
+          source: paymentConfig.source,
+          returnUrl: paymentConfig.returnUrl,
+          notifyUrl: paymentConfig.notifyUrl,
+          onSuccess: (result) => {
+            console.log("Payment success:", result);
+            onSuccess(result);
+          },
+          onFailure: (error) => {
+            console.error("Payment failure:", error);
+            onError("Payment failed. Please try again.");
+          }
+        });
+
+        // Render the form
+        paymentForm.render(container);
+        
+      } else if (typeof cashfree.redirect === 'function') {
+        // Use redirect method for redirect-based payment
+        console.log("Using Cashfree redirect method");
+        
+        const redirectUrl = cashfree.redirect({
+          orderToken: paymentConfig.orderToken,
+          orderNumber: paymentConfig.orderNumber,
+          appId: paymentConfig.appId,
+          orderAmount: paymentConfig.orderAmount,
+          orderCurrency: paymentConfig.orderCurrency,
+          customerName: paymentConfig.customerName,
+          customerEmail: paymentConfig.customerEmail,
+          customerPhone: paymentConfig.customerPhone,
+          orderNote: paymentConfig.orderNote,
+          source: paymentConfig.source,
+          returnUrl: paymentConfig.returnUrl,
+          notifyUrl: paymentConfig.notifyUrl
+        });
+
+        // Redirect to payment page
+        window.location.href = redirectUrl;
+        
       } else {
-        onError("Payment failed. Please try again.");
+        console.error("No suitable Cashfree payment method found");
+        throw new Error("Payment gateway not properly initialized");
       }
     } catch (error) {
       console.error("Payment error:", error);
@@ -169,7 +225,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
               <p className="text-gray-300">
                 {!import.meta.env.VITE_CASHFREE_APP_ID 
                   ? "Test Mode: Simulating payment..." 
-                  : "Initializing payment gateway..."
+                  : "Loading payment form..."
                 }
               </p>
             </div>
