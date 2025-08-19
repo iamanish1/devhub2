@@ -152,11 +152,11 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
                border: '1px solid #3b82f6',
                padding: '16px'
              },
-             onPaymentSuccess: (result) => {
+             onSuccess: (result) => {
                console.log("Payment success:", result);
                onSuccess(result);
              },
-             onPaymentFailure: (error) => {
+             onError: (error) => {
                console.error("Payment failure:", error);
                onError("Payment failed. Please try again.");
              },
@@ -203,11 +203,11 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
              source: paymentConfig.source,
              returnUrl: paymentConfig.returnUrl,
              notifyUrl: paymentConfig.notifyUrl,
-             onPaymentSuccess: (result) => {
+             onSuccess: (result) => {
                console.log("Payment success:", result);
                onSuccess(result);
              },
-             onPaymentFailure: (error) => {
+             onError: (error) => {
                console.error("Payment failure:", error);
                onError("Payment failed. Please try again.");
              },
