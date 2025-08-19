@@ -192,7 +192,7 @@ const BidingPage = () => {
       return `Place Bid (Free - ${bidEligibility.remaining} left)`;
     }
     
-    return "Place Bid (₹9 fee included)";
+    return "Place Bid (₹9 payment required)";
   };
 
   const getBidInfoText = () => {
@@ -204,7 +204,7 @@ const BidingPage = () => {
       return `You have ${bidEligibility.remaining} free bids remaining`;
     }
     
-    return "₹9 bidding fee will be added to your bid amount";
+    return "₹9 bidding fee will be charged when you place your bid";
   };
 
   return (

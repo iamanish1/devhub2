@@ -1,10 +1,10 @@
 /* eslint-disable no-unused-vars */
-import Navbar from "../components/NavBar";
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import Navbar from "../components/NavBar";
+import BidPaymentModal from "../components/payment/BidPaymentModal.jsx";
 
 // Animation variants
 const fadeInUp = {
@@ -202,6 +202,9 @@ const BidingProporsalPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
+  const [bidEligibility, setBidEligibility] = useState(null);
 
   useEffect(() => {
     const fetchProjectDetails = async () => {
@@ -225,6 +228,33 @@ const BidingProporsalPage = () => {
     };
     fetchProjectDetails();
   }, [_id]);
+
+  // Fetch user's bid eligibility
+  useEffect(() => {
+    const fetchBidEligibility = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/bid/stats`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        
+        if (response.data.success) {
+          setBidEligibility(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching bid eligibility:", error);
+      }
+    };
+
+    fetchBidEligibility();
+  }, []);
 
   // Update bid validation when project data changes
   useEffect(() => {
@@ -286,9 +316,9 @@ const BidingProporsalPage = () => {
       return;
     }
 
-    // Calculate bid amounts
+    // Calculate bid amounts based on eligibility
     const originalBidAmount = bidAmount;
-    const bidFee = 9; // ₹9 bidding fee
+    const bidFee = (bidEligibility?.reason === 'free_bid' || hasActiveSubscription()) ? 0 : 9;
     const totalBidAmount = originalBidAmount + bidFee;
 
     const payload = {
@@ -318,30 +348,63 @@ const BidingProporsalPage = () => {
 
       console.log("Bid created successfully:", response.data);
       
-      // Show success message with bid details
-      const bidInfo = response.data.bidInfo;
-      const successMessage = `Bid submitted successfully!
-      
+      // Check if payment is required
+      if (response.data.paymentRequired) {
+        // Show payment modal
+        setPaymentData(response.data.paymentData);
+        setShowPaymentModal(true);
+      } else {
+        // No payment required (free bid or subscription)
+        const successMessage = `Bid submitted successfully!
+        
 Your Bid Details:
-• Original Bid: ₹${bidInfo.originalAmount}
-• Bidding Fee: ₹${bidInfo.fee}
-• Total Amount: ₹${bidInfo.totalAmount}
-• Payment Type: ${bidInfo.paymentType === 'free_bid' ? 'Free Bid' : bidInfo.paymentType === 'subscription' ? 'Subscription' : 'Paid Bid'}`;
+• Original Bid: ₹${response.data.bidInfo.originalAmount}
+• Bidding Fee: ₹${response.data.bidInfo.fee}
+• Total Amount: ₹${response.data.bidInfo.totalAmount}
+• Payment Type: ${response.data.bidInfo.paymentType === 'free_bid' ? 'Free Bid' : response.data.bidInfo.paymentType === 'subscription' ? 'Subscription' : 'Paid Bid'}`;
 
-      alert(successMessage);
-      
-      navigate(`/bidingPage/${_id}`, { 
-        state: { 
-          success: true, 
-          message: "Bid submitted successfully!" 
-        } 
-      });
+        alert(successMessage);
+        
+        navigate(`/bidingPage/${_id}`, { 
+          state: { 
+            success: true, 
+            message: "Bid submitted successfully!" 
+          } 
+        });
+      }
     } catch (error) {
       console.error("Error creating bid:", error);
       setError(error.response?.data?.message || "Failed to create bid. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePaymentSuccess = (result) => {
+    setShowPaymentModal(false);
+    const bidFee = (bidEligibility?.reason === 'free_bid' || hasActiveSubscription()) ? 0 : 9;
+    const totalBidAmount = bidAmount + bidFee;
+    
+    const successMessage = `Payment successful! Bid submitted.
+    
+Your Bid Details:
+• Original Bid: ₹${bidAmount}
+• Bidding Fee: ₹${bidFee}
+• Total Amount: ₹${totalBidAmount}
+• Payment Type: Paid Bid`;
+
+    alert(successMessage);
+    navigate(`/bidingPage/${_id}`, { 
+      state: { 
+        success: true, 
+        message: "Bid submitted and payment successful!" 
+      } 
+    });
+  };
+
+  const handlePaymentError = (error) => {
+    setShowPaymentModal(false);
+    setError("Payment failed. Please try again.");
   };
 
   const formatCurrency = (amount) => {
@@ -351,6 +414,16 @@ Your Bid Details:
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  const hasActiveSubscription = () => {
+    // This function would typically fetch the user's subscription status from the backend
+    // For now, we'll simulate it based on a dummy token or a simple check
+    const token = localStorage.getItem("token");
+    if (token && token.includes("active_subscription")) {
+      return true;
+    }
+    return false;
   };
 
   if (loading) {
@@ -505,15 +578,23 @@ Your Bid Details:
                       </div>
                       <div className="flex justify-between">
                         <span>Bidding Fee:</span>
-                        <span>₹9</span>
+                        <span className={bidEligibility?.reason === 'free_bid' || hasActiveSubscription() ? 'text-green-400' : 'text-yellow-400'}>
+                          {bidEligibility?.reason === 'free_bid' || hasActiveSubscription() ? 'FREE' : '₹9'}
+                        </span>
                       </div>
                       <div className="flex justify-between font-semibold text-blue-300 border-t border-blue-500/30 pt-1">
                         <span>Total Amount:</span>
-                        <span>₹{bidAmount + 9}</span>
+                        <span>₹{bidEligibility?.reason === 'free_bid' || hasActiveSubscription() ? bidAmount : bidAmount + 9}</span>
                       </div>
                     </div>
                     <div className="mt-2 text-xs text-blue-200">
-                      <p>💡 The ₹9 bidding fee will be added to your bid amount. Payment will be processed when you are selected as a contributor.</p>
+                      {bidEligibility?.reason === 'free_bid' ? (
+                        <p>🎉 You have {bidEligibility.remaining} free bids remaining!</p>
+                      ) : hasActiveSubscription() ? (
+                        <p>🎉 Unlimited bids with your subscription!</p>
+                      ) : (
+                        <p>💡 The ₹9 bidding fee will be charged when you place your bid.</p>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -939,6 +1020,15 @@ Your Bid Details:
           box-shadow: 0 2px 6px rgba(0, 168, 232, 0.3);
         }
       `}</style>
+
+      {/* Payment Modal */}
+      <BidPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        paymentData={paymentData}
+        onSuccess={handlePaymentSuccess}
+        onError={handlePaymentError}
+      />
     </div>
   );
 };

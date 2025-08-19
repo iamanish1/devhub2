@@ -52,9 +52,9 @@ const BiddingSchema = new mongoose.Schema({
   // Payment and escrow related fields
   payment_status: {
     type: String,
-    enum: ["pending", "locked", "paid", "refunded"],
+    enum: ["pending", "locked", "paid", "refunded", "free"],
     default: "pending",
-    comment: "pending: not paid yet, locked: in escrow, paid: to contributor, refunded: back to bidder"
+    comment: "pending: not paid yet, locked: in escrow, paid: to contributor, refunded: back to bidder, free: no payment required"
   },
   escrow_details: {
     locked_at: Date,
