@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { usePayment } from '../context/PaymentContext';
-import { PaymentModal } from '../components/payment/PaymentModal';
-import { BonusPoolCard } from '../components/payment/BonusPoolCard';
-import { SubscriptionStatus } from '../components/payment/SubscriptionStatus';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import PaymentModal from '../components/payment/PaymentModal';
+import BonusPoolCard from '../components/payment/BonusPoolCard';
+import SubscriptionStatus from '../components/payment/SubscriptionStatus';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   PAYMENT_TYPES, 
   PAYMENT_AMOUNTS, 

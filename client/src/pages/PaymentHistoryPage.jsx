@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePayment } from '../context/PaymentContext';
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { 
   PAYMENT_TYPES, 
   PAYMENT_STATUS,
