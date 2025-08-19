@@ -89,7 +89,11 @@ const WithdrawalPage = () => {
                 <p className="text-gray-400 text-sm">Available Balance</p>
                 <p className="text-2xl font-bold text-white">{formatCurrency(availableBalance)}</p>
               </div>
-              <div className="text-[#00A8E8] text-2xl">💰</div>
+              <div className="text-[#00A8E8]">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -101,7 +105,11 @@ const WithdrawalPage = () => {
                   {formatCurrency(completedWithdrawals.reduce((sum, w) => sum + w.amount, 0))}
                 </p>
               </div>
-              <div className="text-[#00A8E8] text-2xl">💳</div>
+              <div className="text-[#00A8E8]">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -111,7 +119,11 @@ const WithdrawalPage = () => {
                 <p className="text-gray-400 text-sm">Pending Withdrawals</p>
                 <p className="text-2xl font-bold text-white">{pendingWithdrawals.length}</p>
               </div>
-              <div className="text-[#00A8E8] text-2xl">⏳</div>
+              <div className="text-[#00A8E8]">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -121,7 +133,11 @@ const WithdrawalPage = () => {
                 <p className="text-gray-400 text-sm">Withdrawal Fee</p>
                 <p className="text-2xl font-bold text-white">{formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_FEE)}</p>
               </div>
-              <div className="text-[#00A8E8] text-2xl">💸</div>
+              <div className="text-[#00A8E8]">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -278,7 +294,11 @@ const WithdrawalPage = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <div className="text-gray-400 text-6xl mb-4">💳</div>
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+              </div>
               <p className="text-gray-400 text-lg mb-2">No withdrawal history</p>
               <p className="text-gray-500">Start by requesting your first withdrawal</p>
             </div>

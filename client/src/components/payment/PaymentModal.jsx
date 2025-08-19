@@ -173,7 +173,9 @@ const PaymentModal = ({
                   onClick={onClose}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
-                  ✕
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
                 </button>
               </div>
 
@@ -270,8 +272,11 @@ const PaymentModal = ({
 
               {/* Security Notice */}
               <div className="mt-4 text-center">
-                <p className="text-xs text-gray-500">
-                  🔒 Secure payment powered by {selectedProvider === 'cashfree' ? 'Cashfree' : 'Razorpay'}
+                <p className="text-xs text-gray-500 flex items-center justify-center">
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  Secure payment powered by {selectedProvider === 'cashfree' ? 'Cashfree' : 'Razorpay'}
                 </p>
               </div>
             </div>

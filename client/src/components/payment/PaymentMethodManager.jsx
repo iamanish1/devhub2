@@ -95,15 +95,35 @@ const PaymentMethodManager = () => {
   const getMethodIcon = (type, brand) => {
     switch (type) {
       case 'card':
-        return brand === 'Visa' ? '💳' : '💳';
+        return (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+        );
       case 'upi':
-        return '📱';
+        return (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+          </svg>
+        );
       case 'netbanking':
-        return '🏦';
+        return (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+        );
       case 'wallet':
-        return '👛';
+        return (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+        );
       default:
-        return '💳';
+        return (
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+        );
     }
   };
 
@@ -147,7 +167,15 @@ const PaymentMethodManager = () => {
                     <div className={`p-2 rounded-lg ${
                       method.type === 'card' ? 'bg-[#00A8E8]' : 'bg-[#0062E6]'
                     }`}>
-                      {method.type === 'card' ? '💳' : '📱'}
+                      {method.type === 'card' ? (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                      )}
                     </div>
                     <div>
                       <p className="text-white font-medium">
@@ -189,7 +217,11 @@ const PaymentMethodManager = () => {
           </div>
         ) : (
           <div className="text-center py-8">
-            <div className="text-gray-400 text-4xl mb-4">💳</div>
+            <div className="text-gray-400 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+              </svg>
+            </div>
             <p className="text-gray-400 text-lg mb-2">No payment methods added</p>
             <p className="text-gray-500">Add a payment method to get started</p>
           </div>
@@ -209,7 +241,9 @@ const PaymentMethodManager = () => {
                   onClick={() => setShowAddForm(false)}
                   className="text-gray-400 hover:text-white transition-colors"
                 >
-                  ✕
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
                 </button>
               </div>
 
@@ -229,7 +263,12 @@ const PaymentMethodManager = () => {
                           : 'border-gray-600 hover:border-gray-500'
                       }`}
                     >
-                      <div className="text-white font-medium">Card</div>
+                      <div className="text-white font-medium flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        Card
+                      </div>
                       <div className="text-xs text-gray-400">Credit/Debit</div>
                     </button>
                     
@@ -242,7 +281,12 @@ const PaymentMethodManager = () => {
                           : 'border-gray-600 hover:border-gray-500'
                       }`}
                     >
-                      <div className="text-white font-medium">UPI</div>
+                      <div className="text-white font-medium flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        UPI
+                      </div>
                       <div className="text-xs text-gray-400">UPI ID</div>
                     </button>
                   </div>
@@ -433,7 +477,12 @@ const AddPaymentMethodForm = ({ onSubmit, onCancel, isLoading }) => {
                 : 'border-gray-600 hover:border-gray-500'
             }`}
           >
-            <div className="text-white font-medium">💳 Card</div>
+            <div className="text-white font-medium flex items-center">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+              </svg>
+              Card
+            </div>
           </button>
           
           <button
@@ -445,7 +494,12 @@ const AddPaymentMethodForm = ({ onSubmit, onCancel, isLoading }) => {
                 : 'border-gray-600 hover:border-gray-500'
             }`}
           >
-            <div className="text-white font-medium">📱 UPI</div>
+            <div className="text-white font-medium flex items-center">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+              </svg>
+              UPI
+            </div>
           </button>
         </div>
       </div>

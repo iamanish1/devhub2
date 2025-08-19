@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '../../utils/paymentUtils';
 import { getPaymentTypeDisplayName } from '../../utils/paymentUtils';
@@ -11,15 +11,118 @@ const PaymentSuccessModal = ({
   transactionId,
   onContinue 
 }) => {
+  const [countdown, setCountdown] = useState(5);
+
   useEffect(() => {
     if (isOpen) {
-      const timer = setTimeout(() => {
-        onClose();
-      }, 5000); // Auto close after 5 seconds
+      setCountdown(5);
+      
+      const countdownTimer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownTimer);
+            onClose();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-      return () => clearTimeout(timer);
+      return () => clearInterval(countdownTimer);
     }
   }, [isOpen, onClose]);
+
+  // Animation variants
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+    exit: { opacity: 0 }
+  };
+
+  const modalVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: { 
+      opacity: 1, 
+      scale: 1,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    },
+    exit: { 
+      opacity: 0, 
+      scale: 0.8,
+      transition: {
+        duration: 0.2,
+        ease: "easeIn"
+      }
+    }
+  };
+
+  const iconVariants = {
+    hidden: { scale: 0.8, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 700,
+        damping: 30,
+      },
+    },
+  };
+
+  const checkmarkVariants = {
+    hidden: { scale: 0, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 700,
+        damping: 30,
+      },
+    },
+  };
+
+  const textVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 700,
+        damping: 30,
+      },
+    },
+  };
+
+  const detailsVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 700,
+        damping: 30,
+      },
+    },
+  };
+
+  const buttonVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 700,
+        damping: 30,
+      },
+    },
+  };
 
   if (!isOpen) return null;
 
@@ -59,9 +162,11 @@ const PaymentSuccessModal = ({
                   variants={checkmarkVariants}
                   initial="hidden"
                   animate="visible"
-                  className="text-white text-3xl"
+                  className="text-white"
                 >
-                  ✓
+                  <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
                 </motion.div>
               </motion.div>
 
