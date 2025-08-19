@@ -44,10 +44,19 @@ export const createBid = async (req, res) => {
     console.log("🚀 [createBid] Request body:", req.body);
     console.log("🚀 [createBid] User from auth:", req.user ? `User: ${req.user.username}, ID: ${req.user._id}` : "No user found");
     
-    const { id } = req.params; // projectId - changed from _id to id to match route
+    // Safety check for authentication
+    if (!req.user || !req.user._id) {
+      console.error("❌ [createBid] Authentication failed - req.user is undefined or missing _id");
+      return res.status(401).json({ 
+        message: "Authentication failed. Please log in again.",
+        error: "User not authenticated"
+      });
+    }
+    
+    const { _id } = req.params; // projectId - changed back to _id to match ProjectListingModel schema
     const userID = req.user._id;
 
-    console.log("🚀 [createBid] Project ID:", id);
+    console.log("🚀 [createBid] Project ID:", _id);
     console.log("🚀 [createBid] User ID:", userID);
 
     const {
@@ -67,8 +76,8 @@ export const createBid = async (req, res) => {
     });
 
     // Validate project exists
-    console.log("🚀 [createBid] Looking for project with ID:", id);
-    const project = await ProjectListing.findById(id);
+    console.log("🚀 [createBid] Looking for project with ID:", _id);
+    const project = await ProjectListing.findById(_id);
     console.log("🚀 [createBid] Project found:", project ? `Project: ${project.Project_Title}` : "Project not found");
     
     if (!project) {
@@ -82,7 +91,7 @@ export const createBid = async (req, res) => {
 
     // Check if user already placed a bid
     const existingBid = await Bidding.findOne({
-      project_id: id,
+      project_id: _id,
       user_id: userID,
     });
 
@@ -116,7 +125,7 @@ export const createBid = async (req, res) => {
       purpose: 'bid_fee',
       amount: totalAmount, // Total amount including bid amount + fee (if any)
       userId: userID,
-      projectId: id,
+      projectId: _id,
       status: 'created',
       notes: { 
         bidAmount: bid_amount,
@@ -153,7 +162,7 @@ export const createBid = async (req, res) => {
       intentId: paymentIntent._id,
       orderId: cashfreeOrder.order_id,
       userId: userID,
-      projectId: id,
+      projectId: _id,
       bidAmount: bid_amount,
       bidFee: bidFee,
       totalAmount: totalAmount,
@@ -189,11 +198,20 @@ export const createBid = async (req, res) => {
 
 export const getBid = async (req, res) => {
   try {
-    const { id } = req.params; // projectId - changed from _id to id to match route
+    // Safety check for authentication
+    if (!req.user || !req.user._id) {
+      console.error("❌ [getBid] Authentication failed - req.user is undefined or missing _id");
+      return res.status(401).json({ 
+        message: "Authentication failed. Please log in again.",
+        error: "User not authenticated"
+      });
+    }
+    
+    const { _id } = req.params; // projectId - changed back to _id to match ProjectListingModel schema
     const userID = req.user._id;
 
     const existingBid = await Bidding.findOne({
-      project_id: id,
+      project_id: _id,
       user_id: userID,
     });
 
@@ -221,6 +239,15 @@ export const getBid = async (req, res) => {
 // Get user's bid statistics
 export const getUserBidStats = async (req, res) => {
   try {
+    // Safety check for authentication
+    if (!req.user || !req.user._id) {
+      console.error("❌ [getUserBidStats] Authentication failed - req.user is undefined or missing _id");
+      return res.status(401).json({ 
+        message: "Authentication failed. Please log in again.",
+        error: "User not authenticated"
+      });
+    }
+    
     const userId = req.user._id;
 
     // Get user's bid eligibility

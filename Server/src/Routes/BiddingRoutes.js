@@ -16,8 +16,8 @@ biddingRoutes.get('/test-auth', authMiddleware, (req, res) => {
   });
 });
 
-biddingRoutes.post('/createBid/:id',  createBid);
-biddingRoutes.get('/getBid/:id', authMiddleware, getBid);
+biddingRoutes.post('/createBid/:_id', authMiddleware, createBid);
+biddingRoutes.get('/getBid/:_id', authMiddleware, getBid);
 biddingRoutes.get('/stats', authMiddleware, getUserBidStats); // Get user's bid statistics
 
 export default biddingRoutes;

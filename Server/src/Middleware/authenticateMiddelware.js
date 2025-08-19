@@ -4,6 +4,12 @@ import user from "../Model/UserModel.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
+    // Check if JWT_SECRET is configured
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET environment variable is not set!");
+      return res.status(500).json({ message: "Server configuration error" });
+    }
+    
     const authHeader = req.headers.authorization;
     console.log("🔍 Auth Header:", authHeader); // Debug auth header
     
