@@ -342,6 +342,7 @@ const BidingProporsalPage = () => {
 
     try {
       const token = localStorage.getItem("token");
+      console.log("🚀 [handleSubmit] Token:", token);
       if (!token) {
         throw new Error("No token found. Please log in.");
       }
