@@ -1,6 +1,6 @@
 import express from 'express';
 import { createBid, getBid, getUserBidStats } from '../controller/BidingController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import authMiddleware from '../Middleware/authenticateMiddelware.js';
 
 const biddingRoutes = express.Router();
 
