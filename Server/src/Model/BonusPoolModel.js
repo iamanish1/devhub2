@@ -1,43 +1,63 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const BonusPoolSchema = new mongoose.Schema({
-  projectId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'ProjectListing', 
-    index: true, 
-    required: true 
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProjectListing',
+    required: true
   },
-  totalBonus: { 
-    type: Number, 
-    required: true 
+  projectOwner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'user',
+    required: true
   },
-  commission: { 
-    rate: { 
-      type: Number, 
-      default: 0.10 
-    }, 
-    amount: { 
-      type: Number, 
-      required: true 
-    } 
+  totalAmount: {
+    type: Number,
+    required: true
   },
-  splits: [{
-    userId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'user' 
-    },
-    amount: Number,
-    routeTransferId: String, // Razorpay Route transfer id (if used)
-    payoutId: String         // if using Cashfree/RazorpayX instead
-  }],
-  status: { 
-    type: String, 
-    enum: ['funded', 'released', 'refunded'], 
-    default: 'funded' 
-  }
-}, { 
-  timestamps: true 
+  contributorCount: {
+    type: Number,
+    required: true
+  },
+  amountPerContributor: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'funded', 'distributed', 'cancelled'],
+    default: 'pending'
+  },
+  // Payment details
+  paymentIntentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PaymentIntent'
+  },
+  orderId: String, // Cashfree order id
+  payoutId: String, // Cashfree payout id for distribution
+  // Distribution tracking
+  distributedAmount: {
+    type: Number,
+    default: 0
+  },
+  remainingAmount: {
+    type: Number,
+    default: 0
+  },
+  // Timestamps
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  fundedAt: Date,
+  distributedAt: Date
 });
 
-const BonusPool = mongoose.model('BonusPool', BonusPoolSchema);
-export default BonusPool;
+BonusPoolSchema.pre('save', function(next) {
+  if (this.isModified('totalAmount') || this.isModified('distributedAmount')) {
+    this.remainingAmount = this.totalAmount - this.distributedAmount;
+  }
+  next();
+});
+
+export default mongoose.model('BonusPool', BonusPoolSchema);

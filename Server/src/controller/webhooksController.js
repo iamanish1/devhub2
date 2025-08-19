@@ -3,50 +3,48 @@ import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
 import WebhookEvent from '../Model/WebhookEventModel.js';
-import { verifySignature as rzpVerify } from '../services/razorpay.js';
 import { verifyWebhookSignature as cfVerify } from '../services/cashfree.js';
 import { logWebhookEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 
-// Razorpay webhook handler
-export const razorpayWebhook = async (req, res) => {
+// Cashfree webhook handler
+export const cashfreeWebhook = async (req, res) => {
   try {
-    const signature = req.headers['x-razorpay-signature'];
+    const signature = req.headers['x-webhook-signature'];
     const rawBody = req.rawBody || JSON.stringify(req.body);
     
     // Verify signature
-    if (!rzpVerify(rawBody, signature)) {
-      logWebhookEvent('razorpay', 'signature_verification_failed', 'unknown', {
+    if (!cfVerify(rawBody, signature)) {
+      logWebhookEvent('cashfree', 'signature_verification_failed', 'unknown', {
         signature: signature ? 'present' : 'missing'
       });
       return res.status(400).send('Invalid signature');
     }
 
-    const eventId = req.body.id;
-    const type = req.body.event;
+    const eventId = req.body.orderId || req.body.paymentId;
+    const type = req.body.orderStatus || req.body.paymentStatus;
 
     // Check for duplicate webhook
     const exists = await WebhookEvent.findOne({ eventId });
     if (exists) {
-      logWebhookEvent('razorpay', 'duplicate_webhook', eventId, { type });
+      logWebhookEvent('cashfree', 'duplicate_webhook', eventId, { type });
       return res.status(200).end();
     }
 
     // Create webhook event record
     await WebhookEvent.create({ 
-      provider: 'razorpay', 
+      provider: 'cashfree', 
       eventType: type, 
       eventId, 
       signature, 
       processed: true 
     });
 
-    logWebhookEvent('razorpay', type, eventId, req.body);
+    logWebhookEvent('cashfree', type, eventId, req.body);
 
     // Handle payment success events
-    if (type === 'order.paid' || type === 'payment.captured') {
-      const payment = req.body.payload?.payment?.entity;
-      const orderId = payment?.order_id;
+    if (type === 'PAID' || type === 'SUCCESS') {
+      const orderId = req.body.orderId;
       
       if (orderId) {
         // Update payment intent
@@ -54,128 +52,90 @@ export const razorpayWebhook = async (req, res) => {
           { orderId }, 
           { 
             status: 'paid', 
-            paymentId: payment.id 
+            paymentId: req.body.paymentId 
           }, 
           { new: true }
         );
 
         if (intent) {
-          // Handle bonus funding
-          if (intent.purpose === 'bonus') {
-            const commission = Math.round(intent.amount * 0.10);
-            
-            await BonusPool.updateOne(
-              { projectId: intent.projectId },
-              { 
-                $set: { 
-                  totalBonus: intent.amount, 
-                  commission: { rate: 0.10, amount: commission }, 
-                  status: 'funded' 
-                } 
-              },
-              { upsert: true }
-            );
-            
-            await ProjectListing.updateOne(
-              { _id: intent.projectId }, 
-              { 
-                $set: { 
-                  'bonus.funded': true, 
-                  'bonus.razorpayOrderId': orderId 
-                } 
+          // Handle different payment purposes
+          switch (intent.purpose) {
+            case 'bid_fee':
+              // Update bid status
+              if (intent.notes?.bidId) {
+                await Bidding.findByIdAndUpdate(intent.notes.bidId, {
+                  'feePayment.status': 'paid',
+                  'feePayment.paidAt': new Date()
+                });
               }
-            );
+              break;
 
-            logWebhookEvent('razorpay', 'bonus_funded', eventId, {
-              projectId: intent.projectId,
-              amount: intent.amount,
-              commission
-            });
+            case 'listing':
+              // Update project listing status
+              await ProjectListing.findByIdAndUpdate(intent.projectId, {
+                'cashfreeOrderId': orderId,
+                status: 'active'
+              });
+              break;
+
+            case 'bonus_funding':
+              // Create or update bonus pool
+              const bonusAmount = intent.amount;
+              const contributorCount = intent.notes?.contributorsCount || 1;
+              const amountPerContributor = Math.floor(bonusAmount / contributorCount);
+              
+              await BonusPool.findOneAndUpdate(
+                { projectId: intent.projectId },
+                { 
+                  $set: { 
+                    projectOwner: intent.userId,
+                    totalAmount: bonusAmount,
+                    contributorCount,
+                    amountPerContributor,
+                    status: 'funded',
+                    paymentIntentId: intent._id,
+                    orderId: orderId,
+                    fundedAt: new Date()
+                  } 
+                },
+                { upsert: true }
+              );
+              
+              await ProjectListing.findByIdAndUpdate(intent.projectId, { 
+                $set: { 
+                  'bonus.funded': true,
+                  'bonus.cashfreeOrderId': orderId
+                } 
+              });
+
+              logWebhookEvent('cashfree', 'bonus_funded', eventId, {
+                projectId: intent.projectId,
+                amount: bonusAmount,
+                contributorCount
+              });
+              break;
+
+            case 'subscription':
+              // Handle subscription activation
+              logWebhookEvent('cashfree', 'subscription_activated', eventId, {
+                userId: intent.userId,
+                planType: intent.notes?.planType
+              });
+              break;
+
+            case 'withdrawal_fee':
+              // Handle withdrawal fee payment
+              logWebhookEvent('cashfree', 'withdrawal_fee_paid', eventId, {
+                userId: intent.userId,
+                withdrawalAmount: intent.notes?.withdrawalAmount
+              });
+              break;
           }
         }
       }
     }
 
     return res.status(200).end();
-
-  } catch (error) {
-    logWebhookEvent('razorpay', 'webhook_error', 'unknown', { error: error.message });
-    return res.status(500).send('Webhook processing failed');
-  }
-};
-
-// Cashfree webhook handler
-export const cashfreeWebhook = async (req, res) => {
-  try {
-    const signature = req.headers['x-webhook-signature'];
-    const eventId = (req.body?.data?.order?.order_id || '') + ':' + (req.body?.type || 'cf');
-    
-    // Verify signature if available
-    if (signature && !cfVerify(JSON.stringify(req.body), signature)) {
-      logWebhookEvent('cashfree', 'signature_verification_failed', eventId, {
-        signature: 'invalid'
-      });
-      return res.status(400).send('Invalid signature');
-    }
-
-    // Check for duplicate webhook
-    const exists = await WebhookEvent.findOne({ eventId });
-    if (exists) {
-      logWebhookEvent('cashfree', 'duplicate_webhook', eventId, { type: req.body?.type });
-      return res.status(200).end();
-    }
-
-    // Create webhook event record
-    await WebhookEvent.create({ 
-      provider: 'cashfree', 
-      eventType: req.body?.type, 
-      eventId, 
-      processed: true 
-    });
-
-    logWebhookEvent('cashfree', req.body?.type, eventId, req.body);
-
-    // Handle payment success
-    const cfStatus = req.body?.data?.payment?.payment_status || req.body?.data?.order?.order_status;
-    if (['SUCCESS', 'PAID'].includes(String(cfStatus).toUpperCase())) {
-      const orderId = req.body?.data?.order?.order_id;
-      
-      if (orderId) {
-        // Update payment intent
-        const intent = await PaymentIntent.findOneAndUpdate(
-          { orderId }, 
-          { status: 'paid' }, 
-          { new: true }
-        );
-
-        if (intent) {
-          // Handle bid fee payment
-          if (intent.purpose === 'bid_fee' && intent.notes?.bidId) {
-            await Bidding.findByIdAndUpdate(intent.notes.bidId, {
-              'feePayment.status': 'paid'
-            });
-
-            logWebhookEvent('cashfree', 'bid_fee_paid', eventId, {
-              bidId: intent.notes.bidId,
-              projectId: intent.projectId
-            });
-          }
-
-          // Handle listing fee payment
-          if (intent.purpose === 'listing') {
-            await ProjectListing.findByIdAndUpdate(intent.projectId, {
-              $set: { status: 'active' }
-            });
-
-            logWebhookEvent('cashfree', 'listing_fee_paid', eventId, {
-              projectId: intent.projectId
-            });
-          }
-        }
-      }
-    }
-
-    res.status(200).end();
 
   } catch (error) {
     logWebhookEvent('cashfree', 'webhook_error', 'unknown', { error: error.message });

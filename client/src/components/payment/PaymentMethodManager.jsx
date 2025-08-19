@@ -265,29 +265,20 @@ const PaymentMethodManager = () => {
                   <label className="block text-gray-300 text-sm font-medium mb-2">
                     Payment Provider
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, provider: 'cashfree' })}
-                      className={`p-3 rounded-lg border transition-all ${
+                      className={`p-4 rounded-lg border-2 transition-all ${
                         formData.provider === 'cashfree'
-                          ? 'border-[#00A8E8] bg-[#00A8E8] bg-opacity-10'
+                          ? 'border-[#00A8E8] bg-[#00A8E8]/10'
                           : 'border-gray-600 hover:border-gray-500'
                       }`}
                     >
-                      <div className="text-white font-medium">Cashfree</div>
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, provider: 'razorpay' })}
-                      className={`p-3 rounded-lg border transition-all ${
-                        formData.provider === 'razorpay'
-                          ? 'border-[#00A8E8] bg-[#00A8E8] bg-opacity-10'
-                          : 'border-gray-600 hover:border-gray-500'
-                      }`}
-                    >
-                      <div className="text-white font-medium">Razorpay</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-white font-medium">Cashfree</div>
+                        <div className="text-gray-400 text-sm">Recommended</div>
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -484,7 +475,6 @@ const AddPaymentMethodForm = ({ onSubmit, onCancel, isLoading }) => {
           className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
         >
           <option value="cashfree">Cashfree</option>
-          <option value="razorpay">Razorpay</option>
         </select>
       </div>
 

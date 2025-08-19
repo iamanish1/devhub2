@@ -262,7 +262,6 @@ const PaymentHistoryPage = () => {
               >
                 <option value="all">All Providers</option>
                 <option value={PAYMENT_PROVIDERS.CASHFREE}>Cashfree</option>
-                <option value={PAYMENT_PROVIDERS.RAZORPAY}>Razorpay</option>
               </select>
             </div>
 

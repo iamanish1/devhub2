@@ -1,45 +1,49 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const PaymentIntentSchema = new mongoose.Schema({
-  provider: { 
-    type: String, 
-    enum: ['razorpay', 'cashfree'], 
-    required: true 
+  provider: {
+    type: String,
+    enum: ['cashfree'],
+    required: true
   },
-  purpose: { 
-    type: String, 
-    enum: ['bid_fee', 'listing', 'bonus', 'subscription'], 
-    required: true 
+  purpose: {
+    type: String,
+    enum: ['bid_fee', 'bonus_funding', 'listing', 'subscription', 'withdrawal_fee'],
+    required: true
   },
-  amount: { 
-    type: Number, 
-    required: true 
-  }, // INR whole number
-  currency: { 
-    type: String, 
-    default: 'INR' 
+  amount: {
+    type: Number,
+    required: true
   },
-  orderId: String,     // provider order id
-  paymentId: String,   // provider payment id
-  status: { 
-    type: String, 
-    enum: ['created', 'paid', 'failed'], 
-    default: 'created' 
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'user',
+    required: true
   },
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'user', 
-    index: true 
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProjectListing'
   },
-  projectId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'ProjectListing', 
-    index: true 
+  orderId: String,
+  status: {
+    type: String,
+    enum: ['created', 'pending', 'paid', 'failed', 'refunded'],
+    default: 'created'
   },
-  notes: mongoose.Schema.Types.Mixed
-}, { 
-  timestamps: true 
+  notes: mongoose.Schema.Types.Mixed,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-const PaymentIntent = mongoose.model('PaymentIntent', PaymentIntentSchema);
-export default PaymentIntent;
+PaymentIntentSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+export default mongoose.model('PaymentIntent', PaymentIntentSchema);

@@ -104,19 +104,35 @@ const ProjectListingSchema = new mongoose.Schema({
     size: Number
   }],
   // Payment and bonus related fields
-  selectedContributors: [{ 
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' }, 
-    bidAmount: Number, 
-    linkedAccountId: String 
+  selectedContributors: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'user'
+    },
+    bidId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Bidding'
+    },
+    amount: Number,
+    status: {
+      type: String,
+      enum: ['pending', 'paid', 'cancelled'],
+      default: 'pending'
+    },
+    paidAt: Date
   }],
-  bonus: { 
-    minRequired: Number, 
-    funded: { type: Boolean, default: false }, 
-    razorpayOrderId: String 
+  bonusPool: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'BonusPool'
   },
-  escrow: { 
-    totalBidLocked: { type: Number, default: 0 }, 
-    status: { type: String, enum: ['locked', 'released', 'refunded'], default: 'locked' } 
+  cashfreeOrderId: String, // Cashfree order id for listing fee
+  bonus: {
+    minRequired: Number,
+    funded: { type: Boolean, default: false },
+  },
+  escrow: {
+    totalBidLocked: { type: Number, default: 0 },
+    status: { type: String, enum: ['locked', 'released', 'refunded'], default: 'locked' }
   }
 }, {
   timestamps: true // This will automatically add createdAt and updatedAt fields

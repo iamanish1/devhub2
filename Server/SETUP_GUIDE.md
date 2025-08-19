@@ -1,125 +1,92 @@
-# 🚀 DevHubs Payment System Setup Guide
+# 🚀 Platform Setup Guide
 
-## 📋 Prerequisites
-
+## **📋 Prerequisites**
 - Node.js (v16 or higher)
 - MongoDB database
-- Razorpay merchant account
 - Cashfree merchant account
-- Public domain (for webhooks)
+- Domain with SSL certificate
 
-## 🔧 Step-by-Step Setup
+## **🔧 Environment Setup**
 
-### **Step 1: Environment Configuration**
+### **1. Clone and Install**
+```bash
+git clone <repository-url>
+cd developerProduct
+npm install
+cd Server
+npm install
+```
 
-1. **Copy environment template:**
-   ```bash
-   cd Server
-   cp env.example .env
-   ```
+### **2. Environment Variables**
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+Create `.env` file in the Server directory:
 
-3. **Validate environment:**
-   ```bash
-   node validate-env.js
-   ```
+```env
+# Server Configuration
+PORT=5000
+NODE_ENV=development
 
-### **Step 2: Payment Provider Setup**
+# Database
+MONGODB_URI=mongodb://localhost:27017/devhub
+# or MongoDB Atlas: mongodb+srv://username:password@cluster.mongodb.net/database
 
-#### **🔵 Razorpay Setup**
+# JWT Secret
+JWT_SECRET=your_super_secret_jwt_key_here
 
-1. **Create Razorpay Account:**
-   - Visit [https://dashboard.razorpay.com/](https://dashboard.razorpay.com/)
-   - Sign up and complete KYC verification
-   - Wait for account approval (usually 24-48 hours)
+# Firebase Configuration
+FIREBASE_PROJECT_ID=your_firebase_project_id
+FIREBASE_PRIVATE_KEY_ID=your_private_key_id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@project.iam.gserviceaccount.com
+FIREBASE_CLIENT_ID=your_client_id
+FIREBASE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+FIREBASE_TOKEN_URI=https://oauth2.googleapis.com/token
+FIREBASE_AUTH_PROVIDER_X509_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
+FIREBASE_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-xxxxx%40project.iam.gserviceaccount.com
 
-2. **Get API Keys:**
-   - Go to **Settings → API Keys**
-   - Click "Generate Key Pair"
-   - Copy `Key ID` and `Key Secret`
-   - Update your `.env` file:
-     ```env
-     RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxxx
-     RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
-     ```
+# GitHub OAuth
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
 
-3. **Configure Webhook:**
-   - Go to **Settings → Webhooks**
-   - Add webhook URL: `https://yourdomain.com/webhooks/razorpay`
-   - Copy webhook secret and update `.env`:
-     ```env
-     RAZORPAY_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
-     ```
+# File Upload
+UPLOAD_PATH=./uploads
+MAX_FILE_SIZE=5242880
 
-4. **Enable Route (Optional):**
-   - Contact Razorpay support to enable Route feature
-   - Get your linked account ID for transfers
-   - Update `.env`:
-     ```env
-     PLATFORM_RZP_LINKED_ACCOUNT_ID=acc_xxxxxxxxxxxxx
-     ```
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
 
-#### **🟢 Cashfree Setup**
+# Logging
+LOG_LEVEL=info
+```
 
-1. **Create Cashfree Account:**
-   - Visit [https://merchant.cashfree.com/](https://merchant.cashfree.com/)
-   - Sign up and complete business verification
-   - Wait for account approval
+### **3. 🟢 Cashfree Setup**
 
-2. **Get API Credentials:**
-   - Go to **Settings → API Keys**
-   - Copy `App ID` and `Secret Key`
-   - Update your `.env` file:
-     ```env
-     CASHFREE_APP_ID=xxxxxxxxxxxxxxxxxxxxxxxx
-     CASHFREE_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxx
-     CASHFREE_ENV=sandbox
-     ```
+#### **Create Cashfree Account:**
+1. Visit [https://merchant.cashfree.com/](https://merchant.cashfree.com/)
+2. Sign up for a merchant account
+3. Complete KYC verification
+4. Get your App ID and Secret Key
 
-3. **Configure Webhook:**
-   - Go to **Settings → Webhooks**
-   - Add webhook URL: `https://yourdomain.com/webhooks/cashfree`
-   - Copy webhook secret if available:
-     ```env
-     CASHFREE_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
-     ```
+#### **Add Cashfree Environment Variables:**
+```env
+# Cashfree Configuration
+CASHFREE_APP_ID=xxxxxxxxxxxxxxxxxxxxxxxx
+CASHFREE_SECRET_KEY=xxxxxxxxxxxxxxxxxxxxxxxx
+CASHFREE_ENV=sandbox
+```
 
-### **Step 3: Database Setup**
+#### **Configure Webhooks:**
+1. Go to Cashfree Dashboard → Settings → Webhooks
+2. Add webhook URL: `https://yourdomain.com/webhooks/cashfree`
+3. Select events: `order.paid`, `payment.success`
+4. Copy webhook secret and add to .env:
+```env
+CASHFREE_WEBHOOK_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+```
 
-1. **MongoDB Connection:**
-   - Ensure MongoDB is running
-   - Update connection string in `.env`:
-     ```env
-     MONGODB_URI=mongodb://localhost:27017/devhubs
-     ```
+### **4. Payment Configuration**
 
-2. **Database Models:**
-   - The payment models will be created automatically when you first use them
-   - No manual database setup required
-
-### **Step 4: URL Configuration**
-
-1. **Update URLs in `.env`:**
-   ```env
-   # Development
-   FRONTEND_URL=http://localhost:3000
-   CLIENT_URL=http://localhost:3000
-   WEBHOOK_PUBLIC_URL=http://localhost:5000/webhooks
-   
-   # Production (replace with your domain)
-   FRONTEND_URL=https://yourdomain.com
-   CLIENT_URL=https://yourdomain.com
-   WEBHOOK_PUBLIC_URL=https://yourdomain.com/webhooks
-   ```
-
-### **Step 5: Feature Flags**
-
-Configure which payment providers to use:
-
+#### **Enable Payment Features:**
 ```env
 # Enable Cashfree for bid fees (₹9)
 USE_CASHFREE_FOR_BIDS=true
@@ -127,151 +94,70 @@ USE_CASHFREE_FOR_BIDS=true
 # Enable Cashfree for listing fees (₹199)
 USE_CASHFREE_FOR_LISTINGS=true
 
-# Enable Razorpay for bonus funding (₹200 × contributors)
-USE_RAZORPAY_FOR_BONUS=true
+# Enable Cashfree for bonus funding (₹200 × contributors)
+USE_CASHFREE_FOR_BONUS=true
 
-# Enable Razorpay subscriptions (₹299/month)
-USE_RAZORPAY_SUBSCRIPTIONS=true
+# Enable Cashfree for subscriptions (₹299/month)
+USE_CASHFREE_FOR_SUBSCRIPTIONS=true
 ```
 
-### **Step 6: Security Configuration**
+#### **Payment Amounts:**
+```env
+# Bid fee amount (₹9)
+BID_FEE=9
 
-1. **JWT Secret:**
-   ```env
-   JWT_SECRET=your_super_secret_jwt_key_here
-   ```
+# Listing fee amount (₹199)
+LISTING_FEE=199
 
-2. **Generate a secure JWT secret:**
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-   ```
+# Bonus per contributor (₹200)
+BONUS_PER_CONTRIBUTOR=200
 
-### **Step 7: Testing Setup**
+# Subscription amount (₹299)
+SUBSCRIPTION_AMOUNT=299
+```
 
-1. **Run validation script:**
-   ```bash
-   node validate-env.js
-   ```
+## **🚀 Deployment**
 
-2. **Start the server:**
-   ```bash
-   npm start
-   ```
+### **1. Production Environment**
+```env
+NODE_ENV=production
+CASHFREE_ENV=production
+```
 
-3. **Test payment endpoints:**
-   ```bash
-   node test-payment-system.js
-   ```
-
-## 🔍 Environment Validation
-
-Run the validation script to check your setup:
-
+### **2. Start Server**
 ```bash
-node validate-env.js
+# Development
+npm run dev
+
+# Production
+npm start
 ```
 
-This will show:
-- ✅ Properly configured variables
-- ❌ Missing variables
-- ⚠️ Variables with default values
-- 🔧 Payment provider status
-- 🎯 Feature flags status
+### **3. Verify Setup**
+- Check server logs for successful initialization
+- Test payment flow with test credentials
+- Verify webhook endpoints are accessible
 
-## 🧪 Testing
+## **🔍 Troubleshooting**
 
-### **Local Testing**
+### **Common Issues:**
+1. **MongoDB Connection Error**: Check MONGODB_URI format
+2. **Payment Gateway Error**: Verify Cashfree credentials
+3. **Webhook Failures**: Check webhook URL and secret
+4. **File Upload Issues**: Ensure upload directory exists
 
-1. **Start server:**
-   ```bash
-   npm start
-   ```
+### **Logs:**
+- Check server logs for detailed error messages
+- Monitor webhook events in database
+- Verify payment status in Cashfree dashboard
 
-2. **Test endpoints:**
-   ```bash
-   node test-payment-system.js
-   ```
-
-3. **Check webhook events:**
-   ```bash
-   curl http://localhost:5000/webhooks/events
-   ```
-
-### **Production Testing**
-
-1. **Use ngrok for webhook testing:**
-   ```bash
-   ngrok http 5000
-   ```
-
-2. **Update webhook URLs in payment provider dashboards**
-
-3. **Test with real payment flows**
-
-## 🚨 Common Issues & Solutions
-
-### **Issue 1: "Invalid API Key"**
-- **Solution:** Check your API credentials in the payment provider dashboard
-- **Verify:** Key ID and Secret are correctly copied
-
-### **Issue 2: "Webhook signature verification failed"**
-- **Solution:** Ensure webhook secret is correctly set in `.env`
-- **Verify:** Webhook URL is accessible from the internet
-
-### **Issue 3: "MongoDB connection failed"**
-- **Solution:** Check MongoDB is running and connection string is correct
-- **Verify:** Database exists and user has proper permissions
-
-### **Issue 4: "CORS error"**
-- **Solution:** Update `CLIENT_URL` and `FRONTEND_URL` in `.env`
-- **Verify:** Frontend URL matches your actual frontend domain
-
-## 📞 Support
-
-### **Razorpay Support**
-- Email: support@razorpay.com
-- Phone: 1800-123-4567
-- Documentation: [https://razorpay.com/docs/](https://razorpay.com/docs/)
+## **📞 Support**
 
 ### **Cashfree Support**
 - Email: merchant.support@cashfree.com
-- Phone: 1800-102-6483
+- Phone: 1800-102-9533
 - Documentation: [https://docs.cashfree.com/](https://docs.cashfree.com/)
 
-### **DevHubs Support**
-- Check logs: `tail -f logs/app.log`
-- Validate environment: `node validate-env.js`
-- Test endpoints: `node test-payment-system.js`
-
-## 🔐 Security Checklist
-
-- [ ] JWT secret is strong and unique
-- [ ] API keys are kept secure and not committed to git
-- [ ] Webhook secrets are properly configured
-- [ ] HTTPS is enabled for production
-- [ ] Environment variables are properly set
-- [ ] Database connection is secure
-- [ ] CORS is properly configured
-- [ ] Rate limiting is implemented
-- [ ] Input validation is enabled
-- [ ] Error logging is configured
-
-## 🚀 Deployment Checklist
-
-- [ ] Environment variables are set in production
-- [ ] Database is properly configured
-- [ ] Webhook URLs are updated in payment provider dashboards
-- [ ] SSL certificate is installed
-- [ ] Domain is properly configured
-- [ ] Monitoring and logging are set up
-- [ ] Backup strategy is implemented
-- [ ] Security headers are configured
-- [ ] Rate limiting is enabled
-- [ ] Error handling is tested
-
-## 📚 Additional Resources
-
-- [Payment System README](PAYMENT_SYSTEM_README.md)
-- [API Documentation](API_DOCUMENTATION.md)
-- [Testing Guide](TESTING_GUIDE.md)
-- [Troubleshooting Guide](TROUBLESHOOTING.md)
+### **Platform Support**
+- GitHub Issues: [Repository Issues Page]
+- Email: support@yourplatform.com

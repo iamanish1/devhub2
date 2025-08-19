@@ -1,47 +1,40 @@
-# DevHubs Payment System - Backend Implementation
+# 💳 Payment System Documentation
 
-## Overview
+This payment system implements **Cashfree** as the sole payment gateway for all payment flows:
 
-This payment system implements a hybrid approach using **Cashfree** and **Razorpay** for different payment flows:
+- **Cashfree**: Bid fees (₹9), listing fees (₹199), bonus funding (₹200 × contributors), and subscriptions (₹299/month)
 
-- **Cashfree PG**: Bid fees (₹9) and listing fees (₹199)
-- **Razorpay**: Bonus pool funding (₹200 × contributors) with Route transfers
-- **Webhook-first**: All payment confirmations via webhooks
-- **Idempotent**: Duplicate webhook protection
-- **Secure**: HMAC signature verification
+## 🔄 Payment Flows
 
-## Payment Flows
-
-### 1. Bid Fee Payment (₹9)
+### **1. Bid Fee Payment (₹9)**
 ```
 User → POST /api/payments/bid-fee → Cashfree Order → Webhook → Bid Status Updated
 ```
 
-### 2. Listing Fee Payment (₹199)
+### **2. Project Listing Fee (₹199)**
 ```
 User → POST /api/payments/listing → Cashfree Order → Webhook → Project Activated
 ```
 
-### 3. Bonus Pool Funding (₹200 × contributors)
+### **3. Bonus Pool Funding (₹200 × contributors)**
 ```
-Project Owner → POST /api/payments/bonus → Razorpay Order → Webhook → Bonus Pool Created
-```
-
-### 4. Project Completion & Bonus Distribution
-```
-Project Owner → POST /api/projects/:id/complete → Razorpay Route Transfers → Contributors Paid
+Project Owner → POST /api/payments/bonus → Cashfree Order → Webhook → Bonus Pool Created
 ```
 
-## Environment Configuration
+### **4. Contributor Payouts**
+```
+Project Owner → POST /api/projects/:id/complete → Cashfree Payouts → Contributors Paid
+```
 
-Create `.env` file with:
+### **5. Subscription Payment (₹299/month)**
+```
+User → POST /api/payments/subscription → Cashfree Order → Webhook → Subscription Activated
+```
 
+## ⚙️ Configuration
+
+### **Environment Variables**
 ```env
-# Razorpay Configuration
-RAZORPAY_KEY_ID=your_razorpay_key_id
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
-RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
-
 # Cashfree Configuration
 CASHFREE_APP_ID=your_cashfree_app_id
 CASHFREE_SECRET_KEY=your_cashfree_secret_key
@@ -51,205 +44,150 @@ CASHFREE_WEBHOOK_SECRET=your_cashfree_webhook_secret
 # Feature Flags
 USE_CASHFREE_FOR_BIDS=true
 USE_CASHFREE_FOR_LISTINGS=true
-USE_RAZORPAY_FOR_BONUS=true
-USE_RAZORPAY_SUBSCRIPTIONS=true
+USE_CASHFREE_FOR_BONUS=true
+USE_CASHFREE_FOR_SUBSCRIPTIONS=true
 
-# Platform Configuration
-PLATFORM_RZP_LINKED_ACCOUNT_ID=optional_platform_account_id
-FRONTEND_URL=http://localhost:3000
-WEBHOOK_PUBLIC_URL=http://localhost:5000/webhooks
+# Payment Amounts
+BID_FEE=9
+LISTING_FEE=199
+BONUS_PER_CONTRIBUTOR=200
+SUBSCRIPTION_AMOUNT=299
 ```
 
-## API Endpoints
+## 🏗️ Architecture
 
-### Payment Endpoints
+### **Models**
+- `PaymentIntent`: Tracks all payment intents
+- `BonusPool`: Manages bonus pool funding and distribution
+- `Payout`: Handles contributor payouts
+- `WebhookEvent`: Logs webhook events for debugging
 
-#### Create Bid Fee Payment
+### **Services**
+- `cashfree.js`: Cashfree API integration
+- `payouts.js`: Payout processing logic
+
+### **Controllers**
+- `paymentsController.js`: Payment creation and management
+- `webhooksController.js`: Webhook event handling
+
+## 🔗 API Endpoints
+
+### **Payment Creation**
 ```http
 POST /api/payments/bid-fee
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "projectId": "project_id",
-  "bidId": "bid_id"
-}
-```
-
-#### Create Listing Fee Payment
-```http
 POST /api/payments/listing
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "projectId": "project_id"
-}
-```
-
-#### Create Bonus Pool Funding
-```http
 POST /api/payments/bonus
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "projectId": "project_id",
-  "contributorsCount": 3
-}
+POST /api/payments/subscription
+POST /api/payments/withdrawal
 ```
 
-#### Get Payment Status
+### **Payment Status**
 ```http
 GET /api/payments/status/:intentId
-Authorization: Bearer <token>
+GET /api/payments/history
+GET /api/payments/subscription-status
 ```
 
-#### Get Payment History
-```http
-GET /api/payments/history?page=1&limit=10&purpose=bid_fee
-Authorization: Bearer <token>
-```
-
-### Project Payment Endpoints
-
-#### Complete Project & Distribute Bonus
-```http
-POST /api/projects/:id/complete
-Authorization: Bearer <token>
-```
-
-#### Get Project Bonus Status
-```http
-GET /api/projects/:id/bonus-status
-Authorization: Bearer <token>
-```
-
-#### Select Contributors
-```http
-POST /api/projects/:id/select-contributors
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "contributorIds": ["bid_id_1", "bid_id_2"]
-}
-```
-
-### Webhook Endpoints
-
-#### Razorpay Webhook
-```http
-POST /webhooks/razorpay
-Content-Type: application/json
-X-Razorpay-Signature: <signature>
-```
-
-#### Cashfree Webhook
+### **Webhooks**
 ```http
 POST /webhooks/cashfree
-Content-Type: application/json
-X-Webhook-Signature: <signature>
+GET /webhooks/events?provider=cashfree&limit=50
 ```
 
-#### Get Webhook Events (Debug)
-```http
-GET /webhooks/events?provider=razorpay&limit=50
+## 🔄 Webhook Processing
+
+### **Cashfree Webhook Events**
+- `order.paid`: Payment successful
+- `payment.success`: Payment captured
+- `order.failed`: Payment failed
+
+### **Event Handling**
+1. **Signature Verification**: Verify webhook authenticity
+2. **Duplicate Check**: Prevent duplicate processing
+3. **Payment Intent Update**: Update payment status
+4. **Business Logic**: Handle specific payment purposes
+5. **Logging**: Record event for debugging
+
+## 🧪 Testing
+
+### **Test Payment Flow**
+```bash
+# Create test payment
+curl -X POST http://localhost:5000/api/payments/bid-fee \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"projectId": "project_id", "bidId": "bid_id"}'
+
+# Check payment status
+curl http://localhost:5000/api/payments/status/<intent_id>
 ```
 
-## Database Models
+### **Simulate Webhook**
+```bash
+# Simulate Cashfree webhook
+curl -X POST http://localhost:5000/webhooks/cashfree \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": "order_id", "orderStatus": "PAID"}'
+```
 
-### PaymentIntent
-Tracks all payment transactions with status and provider details.
+## 📊 Monitoring
 
-### BonusPool
-Manages bonus pool funding and distribution splits.
+### **Payment Metrics**
+- Success/failure rates
+- Average processing time
+- Revenue tracking
+- Subscription analytics
 
-### WebhookEvent
-Ensures webhook idempotency and prevents duplicate processing.
+### **Webhook Monitoring**
+- Delivery success rate
+- Processing time
+- Error rates
+- Duplicate events
 
-### Updated Models
-- **ProjectListing**: Added bonus and escrow fields
-- **Bidding**: Added fee payment tracking
+## 🔐 Security
 
-## Security Features
+### **Webhook Security**
+- Signature verification
+- Duplicate event prevention
+- Rate limiting
+- IP whitelisting (optional)
 
-1. **HMAC Signature Verification**: All webhooks verified
-2. **Idempotency**: Duplicate webhook protection
-3. **Authentication**: JWT-based access control
-4. **Validation**: Request validation with Joi
-5. **Logging**: Comprehensive payment event logging
+### **Payment Security**
+- Input validation
+- Amount verification
+- User authentication
+- Audit logging
 
-## Testing
+## 🚨 Error Handling
 
-### Postman Collection
+### **Common Errors**
+- Invalid payment amount
+- Duplicate payment attempts
+- Webhook signature mismatch
+- Payment gateway errors
 
-Create a Postman collection with:
+### **Recovery Procedures**
+- Retry failed payments
+- Manual payment verification
+- Webhook replay
+- Database reconciliation
 
-1. **Bid Fee Flow**:
-   - POST `/api/payments/bid-fee`
-   - Simulate Cashfree webhook
-   - Verify PaymentIntent status = 'paid'
+## 📈 Future Enhancements
 
-2. **Listing Fee Flow**:
-   - POST `/api/payments/listing`
-   - Simulate Cashfree webhook
-   - Verify project status = 'active'
+1. **Subscription Management**: Recurring payment handling
+2. **Payout System**: Cashfree Payouts integration
+3. **Analytics Dashboard**: Payment analytics and reporting
+4. **Multi-currency Support**: International payments
+5. **Advanced Fraud Detection**: Risk assessment and prevention
 
-3. **Bonus Funding Flow**:
-   - POST `/api/payments/bonus`
-   - Simulate Razorpay webhook
-   - Verify BonusPool status = 'funded'
+## 📞 Support
 
-4. **Project Completion Flow**:
-   - POST `/api/projects/:id/complete`
-   - Verify Route transfers created
+### **Cashfree Support**
+- Email: merchant.support@cashfree.com
+- Phone: 1800-102-9533
+- Documentation: [https://docs.cashfree.com/](https://docs.cashfree.com/)
 
-### Unit Tests
-
-Test signature verification, idempotency, and split calculations.
-
-## Error Handling
-
-- **400**: Invalid request data
-- **401**: Unauthorized access
-- **403**: Access denied
-- **404**: Resource not found
-- **409**: Duplicate payment
-- **500**: Internal server error
-
-## Monitoring
-
-### Logs
-- Payment events logged with timestamps
-- Webhook events tracked
-- Error events with stack traces
-
-### Alerts
-- Webhook failures
-- Transfer failures
-- Payment processing errors
-
-## Deployment
-
-1. **Environment Variables**: Set all required env vars
-2. **Webhook URLs**: Configure in payment provider dashboards
-3. **Database**: Ensure MongoDB connection
-4. **SSL**: Required for webhook endpoints
-5. **Monitoring**: Set up logging and alerting
-
-## Support
-
-For issues:
-1. Check webhook events: `GET /webhooks/events`
-2. Verify payment status: `GET /api/payments/status/:intentId`
-3. Check logs for error details
-4. Validate webhook signatures
-
-## Future Enhancements
-
-1. **Subscription Management**: Razorpay subscription integration
-2. **Payout System**: Cashfree/RazorpayX payouts
-3. **Refund Handling**: Automated refund processing
-4. **Analytics**: Payment analytics dashboard
-5. **Multi-currency**: Support for other currencies
+### **Platform Support**
+- Check logs: `tail -f logs/app.log`
+- Monitor webhooks: `GET /webhooks/events`
+- Test endpoints: Use provided test scripts

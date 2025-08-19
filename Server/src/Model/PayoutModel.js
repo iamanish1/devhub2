@@ -1,29 +1,49 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const PayoutSchema = new mongoose.Schema({
-  provider: { 
-    type: String, 
-    enum: ['cashfree', 'razorpayx'] 
+  provider: {
+    type: String,
+    enum: ['cashfree'],
+    required: true
   },
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'user' 
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'user',
+    required: true
   },
-  projectId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'ProjectListing' 
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProjectListing'
   },
-  amount: Number,
-  feeApplied: Number,
-  status: { 
-    type: String, 
-    enum: ['queued', 'processed', 'failed', 'reversed'], 
-    default: 'queued' 
+  amount: {
+    type: Number,
+    required: true
   },
-  externalId: String
-}, { 
-  timestamps: true 
+  fee: {
+    type: Number,
+    default: 0
+  },
+  netAmount: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'processing', 'completed', 'failed'],
+    default: 'pending'
+  },
+  payoutId: String, // Cashfree payout id
+  bankDetails: {
+    accountNumber: String,
+    ifscCode: String,
+    accountHolderName: String
+  },
+  notes: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  processedAt: Date
 });
 
-const Payout = mongoose.model('Payout', PayoutSchema);
-export default Payout;
+export default mongoose.model('Payout', PayoutSchema);

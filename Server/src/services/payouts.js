@@ -1,54 +1,60 @@
 import { logger } from '../utils/logger.js';
-import Payout from '../Model/PayoutModel.js';
 
+// Create payout to user's bank account
 export const createPayout = async ({ userId, projectId, amount, provider = 'cashfree' }) => {
   try {
-    const payout = new Payout({
-      provider,
+    // Validate provider
+    if (provider !== 'cashfree') {
+      throw new Error('Only Cashfree payouts are supported');
+    }
+
+    // Calculate fee (₹15 for amounts up to ₹10k)
+    const fee = amount <= 10000 ? 15 : Math.round(amount * 0.015); // 1.5% for amounts > ₹10k
+    const netAmount = amount - fee;
+
+    logger.info('Creating payout', {
       userId,
       projectId,
       amount,
-      feeApplied: calculatePayoutFee(amount, provider),
-      status: 'queued'
+      fee,
+      netAmount,
+      provider
     });
 
-    await payout.save();
+    // Here you would integrate with Cashfree Payouts API
+    // For now, we'll return a mock response
+    const payoutId = `payout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    logger.info('Payout created', { 
-      payoutId: payout._id, 
-      userId, 
-      amount, 
-      provider 
-    });
-    
-    return payout;
+    return {
+      payoutId,
+      amount,
+      fee,
+      netAmount,
+      status: 'pending',
+      provider
+    };
+
   } catch (error) {
     logger.error('Error creating payout', error);
     throw error;
   }
 };
 
-export const processPayout = async (payoutId) => {
+// Get payout status
+export const getPayoutStatus = async (payoutId, provider = 'cashfree') => {
   try {
-    const payout = await Payout.findById(payoutId);
-    if (!payout) {
-      throw new Error('Payout not found');
-    }
+    logger.info('Getting payout status', { payoutId, provider });
 
-    // Here you would integrate with Cashfree Payouts or RazorpayX
-    // For now, we'll simulate processing
-    payout.status = 'processed';
-    payout.externalId = `ext_${Date.now()}`;
-    await payout.save();
-    
-    logger.info('Payout processed', { 
-      payoutId: payout._id, 
-      externalId: payout.externalId 
-    });
-    
-    return payout;
+    // Here you would call Cashfree Payouts API to get status
+    // For now, we'll return a mock response
+    return {
+      payoutId,
+      status: 'completed',
+      provider
+    };
+
   } catch (error) {
-    logger.error('Error processing payout', error);
+    logger.error('Error getting payout status', error);
     throw error;
   }
 };

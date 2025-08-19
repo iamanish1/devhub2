@@ -2,7 +2,6 @@ import PaymentIntent from '../Model/PaymentIntentModel.js';
 import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
-import { createOrder as rzpCreateOrder } from '../services/razorpay.js';
 import { createOrder as cfCreateOrder } from '../services/cashfree.js';
 import { BID_FEE, LISTING_FEE, BONUS_PER_CONTRIBUTOR } from '../utils/flags.js';
 import { logPaymentEvent } from '../utils/logger.js';
@@ -181,8 +180,8 @@ export const createBonus = async (req, res) => {
 
     // Create payment intent
     const intent = await PaymentIntent.create({
-      provider: 'razorpay',
-      purpose: 'bonus',
+      provider: 'cashfree',
+      purpose: 'bonus_funding',
       amount: minBonus,
       userId,
       projectId,
@@ -190,30 +189,33 @@ export const createBonus = async (req, res) => {
       notes: { contributorsCount }
     });
 
-    // Create Razorpay order
-    const order = await rzpCreateOrder({ 
-      amount: minBonus, 
-      notes: { 
-        purpose: 'bonus', 
-        projectId: projectId.toString() 
-      } 
+    // Create Cashfree order
+    const order = await cfCreateOrder({
+      orderId: intent._id.toString(),
+      amount: minBonus,
+      customer: { 
+        customer_id: String(userId), 
+        customer_email: req.user.email, 
+        customer_phone: req.user.phone || '9999999999' 
+      },
+      notes: 'Bonus funding payment'
     });
 
     // Update intent with order ID
-    intent.orderId = order.id;
+    intent.orderId = order.order_id;
     await intent.save();
 
     // Update project with bonus info
     await ProjectListing.findByIdAndUpdate(projectId, {
       $set: { 
         'bonus.minRequired': minBonus,
-        'bonus.razorpayOrderId': order.id
+        'bonus.cashfreeOrderId': order.order_id
       }
     });
 
     logPaymentEvent('bonus_funding_created', {
       intentId: intent._id,
-      orderId: order.id,
+      orderId: order.order_id,
       userId,
       projectId,
       amount: minBonus,
@@ -224,7 +226,7 @@ export const createBonus = async (req, res) => {
       success: true,
       message: 'Bonus funding initiated',
       data: {
-        provider: 'razorpay',
+        provider: 'cashfree',
         order,
         intentId: intent._id,
         amount: minBonus
