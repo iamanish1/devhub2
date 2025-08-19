@@ -19,6 +19,10 @@ import CommunityGuidelines from "../pages/CommunityGuideline";
 import Careers from "../pages/CarrerPage";
 import Blog from "../pages/BlogPage";
 import Contact from "../pages/ContactPage";
+// Payment pages
+import PaymentPage from "../pages/PaymentPage";
+import PaymentHistoryPage from "../pages/PaymentHistoryPage";
+import WithdrawalPage from "../pages/WithdrawalPage";
 
 const AppRoutes = () => {
   return (
@@ -47,6 +51,11 @@ const AppRoutes = () => {
         <Route path="/admin/" element={<AdminPage/>}/>
         <Route path="/editproject/:id" element={<ProjectListingPage />} />
         <Route path = "/contributionPage/:_id" element={<ContributionPage/>}/>
+        
+        {/* Payment Routes */}
+        <Route path="/payments" element={<PaymentPage />} />
+        <Route path="/payment-history" element={<PaymentHistoryPage />} />
+        <Route path="/withdrawals" element={<WithdrawalPage />} />
         
       </Route>
     </Routes>

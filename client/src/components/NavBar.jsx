@@ -138,7 +138,7 @@ const Navbar = () => {
 
       <div className="flex items-center">
         <ul className="flex items-center gap-[4vmin] text-white mr-[3vmin]">
-          {["dashboard", "listproject", "about"].map((item, index) => (
+          {["dashboard", "listproject", "payments", "about"].map((item, index) => (
             <motion.li
               key={item}
               variants={linkVariants}
@@ -156,6 +156,8 @@ const Navbar = () => {
                   ? "Explore Projects"
                   : item === "listproject"
                   ? "List Project"
+                  : item === "payments"
+                  ? "Payments"
                   : "About"}
               </Link>
               <motion.div
@@ -207,6 +209,34 @@ const Navbar = () => {
                         Create Profile
                       </Link>
                     )}
+                    
+                    {/* Payment Center */}
+                    <Link
+                      to="/payments"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      💰 Payment Center
+                    </Link>
+                    
+                    {/* Payment History */}
+                    <Link
+                      to="/payment-history"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      📋 Payment History
+                    </Link>
+                    
+                    {/* Withdrawals */}
+                    <Link
+                      to="/withdrawals"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      💳 Withdrawals
+                    </Link>
+                    
                     <Link
                       to={`/admin`}
                       className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
