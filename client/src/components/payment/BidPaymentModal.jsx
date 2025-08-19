@@ -20,7 +20,9 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
     return () => {
       try {
         cardRef.current?.unmount?.();
-      } catch {}
+      } catch {
+        // Ignore unmount errors
+      }
       if (containerRef.current) containerRef.current.innerHTML = "";
       initializedRef.current = false;
       setReady(false);
@@ -44,11 +46,15 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
       const paymentSessionId = order.payment_session_id || order.order_token || null;
       if (!paymentSessionId) throw new Error("Missing payment session id");
 
+      console.log("🔧 Initializing Cashfree SDK with mode:", mode);
       const cashfree = new window.Cashfree({ mode });
       cashfreeRef.current = cashfree;
 
-      // ---- OPTION A: Checkout Modal (preferred & easiest) ----
+      console.log("🔧 Available Cashfree methods:", Object.keys(cashfree));
+
+      // ---- OPTION A: Modern Checkout Modal (preferred) ----
       if (typeof cashfree.checkout === "function") {
+        console.log("🔧 Using modern checkout method");
         await cashfree.checkout({
           paymentSessionId,
           redirectTarget: "_modal", // "_self" to redirect full page
@@ -56,26 +62,133 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         return;
       }
 
-      // ---- OPTION B: Elements ----
-      const container = containerRef.current || document.getElementById("cashfree-payment-container");
-      if (!container) throw new Error("Payment container not found");
-      container.innerHTML = "";
+      // ---- OPTION B: Modern Elements API ----
+      if (typeof cashfree.create === "function") {
+        console.log("🔧 Using modern Elements API");
+        const container = containerRef.current || document.getElementById("cashfree-payment-container");
+        if (!container) throw new Error("Payment container not found");
+        container.innerHTML = "";
 
-      if (typeof cashfree.create !== "function")
-        throw new Error("Cashfree Elements API not available");
+        // Create card element
+        const card = cashfree.create("card", {
+          style: {
+            base: {
+              fontSize: '16px',
+              color: '#ffffff',
+              backgroundColor: '#1a1a1a',
+              border: '1px solid #3b82f6',
+              borderRadius: '8px',
+              padding: '12px'
+            }
+          }
+        });
+        cardRef.current = card;
 
-      const card = cashfree.create("card", {});
-      cardRef.current = card;
+        console.log("🔧 Card element created:", card);
 
-      // Try selector mount first, fallback to DOM node
-      try {
-        card.mount("#cashfree-payment-container");
-      } catch {
-        if (!(container instanceof Element)) throw new Error("Container invalid");
-        card.mount(container);
+        // Mount the card
+        try {
+          card.mount("#cashfree-payment-container");
+          console.log("🔧 Card mounted successfully using selector");
+        } catch {
+          console.log("🔧 Selector mount failed, trying DOM element mount");
+          if (!(container instanceof Element)) throw new Error("Container is not a valid DOM element");
+          card.mount(container);
+          console.log("🔧 Card mounted successfully using DOM element");
+        }
+
+        setReady(true); // enable "Pay Now" button
+        return;
       }
 
-      setReady(true); // enable "Pay Now" button
+      // ---- OPTION C: Legacy Methods (fallback) ----
+      console.log("🔧 Modern API not available, trying legacy methods");
+      
+      if (typeof cashfree.elements === "function") {
+        console.log("🔧 Using legacy elements method");
+        const container = containerRef.current || document.getElementById("cashfree-payment-container");
+        if (!container) throw new Error("Payment container not found");
+        container.innerHTML = "";
+
+        const paymentForm = cashfree.elements({
+          orderToken: paymentSessionId,
+          orderNumber: order.order_id,
+          appId: appId,
+          orderAmount: paymentData.amount,
+          orderCurrency: "INR",
+          customerName: localStorage.getItem("username") || "User",
+          customerEmail: localStorage.getItem("email") || order.customer_details?.customer_email || "user@example.com",
+          customerPhone: localStorage.getItem("phone") || order.customer_details?.customer_phone || "9999999999",
+          orderNote: order.order_note || "Bid payment",
+          source: "web",
+          returnUrl: `${window.location.origin}?payment=success`,
+          notifyUrl: `${import.meta.env.VITE_API_URL}/api/webhooks/cashfree`,
+          style: {
+            backgroundColor: '#1a1a1a',
+            color: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #3b82f6',
+            padding: '16px'
+          },
+          onPaymentSuccess: (result) => {
+            console.log("✅ Payment success:", result);
+            onSuccess?.(result);
+          },
+          onPaymentFailure: (error) => {
+            console.log("❌ Payment failure:", error);
+            onError?.("Payment failed. Please try again.");
+          },
+          onClose: () => {
+            console.log("🔒 Payment form closed");
+            onClose?.();
+          }
+        });
+
+        if (typeof paymentForm.render === 'function') {
+          paymentForm.render(container);
+        } else {
+          container.appendChild(paymentForm);
+        }
+        return;
+      }
+
+      if (typeof cashfree.drop === "function") {
+        console.log("🔧 Using legacy drop method");
+        const container = containerRef.current || document.getElementById("cashfree-payment-container");
+        if (!container) throw new Error("Payment container not found");
+        container.innerHTML = "";
+
+        cashfree.drop({
+          orderToken: paymentSessionId,
+          orderNumber: order.order_id,
+          appId: appId,
+          orderAmount: paymentData.amount,
+          orderCurrency: "INR",
+          customerName: localStorage.getItem("username") || "User",
+          customerEmail: localStorage.getItem("email") || order.customer_details?.customer_email || "user@example.com",
+          customerPhone: localStorage.getItem("phone") || order.customer_details?.customer_phone || "9999999999",
+          orderNote: order.order_note || "Bid payment",
+          source: "web",
+          returnUrl: `${window.location.origin}?payment=success`,
+          notifyUrl: `${import.meta.env.VITE_API_URL}/api/webhooks/cashfree`,
+          onPaymentSuccess: (result) => {
+            console.log("✅ Payment success:", result);
+            onSuccess?.(result);
+          },
+          onPaymentFailure: (error) => {
+            console.log("❌ Payment failure:", error);
+            onError?.("Payment failed. Please try again.");
+          },
+          onClose: () => {
+            console.log("🔒 Payment form closed");
+            onClose?.();
+          }
+        });
+        return;
+      }
+
+      throw new Error("No compatible Cashfree payment method found");
+
     } catch (err) {
       console.error("Payment init error:", err);
       setError(err.message || "Payment failed. Please try again.");

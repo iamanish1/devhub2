@@ -5,21 +5,32 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DevHub - Developer Collaboration Platform</title>
-    <!-- Cashfree Payment Gateway SDK -->
-    <script src="https://sdk.cashfree.com/js/ui/2.0.0/cashfree.prod.js"></script>
+    <!-- Cashfree Payment Gateway SDK - Latest Version with Elements API -->
+    <script src="https://sdk.cashfree.com/js/ui/3.0.0/cashfree.prod.js"></script>
     <script>
       // Check if Cashfree SDK loaded properly
       window.addEventListener('load', function() {
         if (typeof window.Cashfree === 'undefined') {
-          console.error('Cashfree SDK failed to load');
+          console.error('❌ Cashfree SDK failed to load');
         } else {
-          console.log('Cashfree SDK loaded successfully');
-          // Test SDK initialization
+          console.log('✅ Cashfree SDK loaded successfully');
+          // Test SDK initialization and check for Elements API
           try {
             const testInstance = new window.Cashfree({ mode: 'sandbox' });
-            console.log('Cashfree SDK initialization test successful');
+            console.log('✅ Cashfree SDK initialization test successful');
+            
+            // Check if modern Elements API is available
+            if (typeof testInstance.create === 'function') {
+              console.log('✅ Modern Elements API (create method) is available');
+            } else {
+              console.warn('⚠️ Modern Elements API not available, only legacy methods');
+            }
+            
+            // Check available methods
+            console.log('🔧 Available Cashfree methods:', Object.keys(testInstance));
+            
           } catch (error) {
-            console.error('Cashfree SDK initialization test failed:', error);
+            console.error('❌ Cashfree SDK initialization test failed:', error);
           }
         }
       });
