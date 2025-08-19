@@ -10,7 +10,11 @@ import {
   getPaymentHistory,
   getSubscriptionStatus,
   getBonusPools,
-  getWithdrawalHistory
+  getWithdrawalHistory,
+  getPaymentAnalytics,
+  getPaymentSummary,
+  processRefund,
+  getRefundHistory
 } from '../controller/paymentsController.js';
 import {
   validateRequest,
@@ -58,6 +62,12 @@ paymentsRoutes.post('/withdrawal',
   createWithdrawal
 );
 
+// Process refund
+paymentsRoutes.post('/refund/:paymentIntentId', 
+  authMiddleware, 
+  processRefund
+);
+
 // Get payment status
 paymentsRoutes.get('/status/:intentId', 
   authMiddleware, 
@@ -68,6 +78,18 @@ paymentsRoutes.get('/status/:intentId',
 paymentsRoutes.get('/history', 
   authMiddleware, 
   getPaymentHistory
+);
+
+// Get payment analytics
+paymentsRoutes.get('/analytics', 
+  authMiddleware, 
+  getPaymentAnalytics
+);
+
+// Get payment summary
+paymentsRoutes.get('/summary', 
+  authMiddleware, 
+  getPaymentSummary
 );
 
 // Get subscription status
@@ -86,6 +108,12 @@ paymentsRoutes.get('/bonus-pools',
 paymentsRoutes.get('/withdrawal/history', 
   authMiddleware, 
   getWithdrawalHistory
+);
+
+// Get refund history
+paymentsRoutes.get('/refund/history', 
+  authMiddleware, 
+  getRefundHistory
 );
 
 export default paymentsRoutes;

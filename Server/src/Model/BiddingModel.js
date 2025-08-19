@@ -1,20 +1,32 @@
 import mongoose from "mongoose";
 import user from "./UserModel.js";
 import ProjectListing from "./ProjectListingModel.js";
+
 const BiddingSchema = new mongoose.Schema({
   project_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "ProjectListing", // Use model name as a string
+    ref: "ProjectListing",
     required: true,
   },
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // Use model name as a string
+    ref: "User",
     required: true,
   },
   bid_amount: {
     type: Number,
     required: true,
+    comment: "User's original bid amount (without fee)"
+  },
+  bid_fee: {
+    type: Number,
+    default: 9,
+    comment: "Bidding fee (₹9)"
+  },
+  total_amount: {
+    type: Number,
+    required: true,
+    comment: "Total amount including bid fee (bid_amount + bid_fee)"
   },
   year_of_experience: {
     type: Number,
@@ -37,16 +49,46 @@ const BiddingSchema = new mongoose.Schema({
     enum: ["Pending", "Accepted", "Rejected"],
     default: "Pending",
   },
+  // Payment and escrow related fields
+  payment_status: {
+    type: String,
+    enum: ["pending", "locked", "paid", "refunded"],
+    default: "pending",
+    comment: "pending: not paid yet, locked: in escrow, paid: to contributor, refunded: back to bidder"
+  },
+  escrow_details: {
+    locked_at: Date,
+    payment_intent_id: String,
+    provider: { type: String, default: 'cashfree' }
+  },
+  // Free bid tracking
+  is_free_bid: {
+    type: Boolean,
+    default: false,
+    comment: "Whether this bid used a free bid credit"
+  },
   created_at: {
     type: Date,
     default: Date.now,
   },
-  // Payment related fields
-  feePayment: { 
-    provider: String, 
-    orderId: String, 
-    status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' } 
+  updated_at: {
+    type: Date,
+    default: Date.now,
   }
+});
+
+// Update timestamp on save
+BiddingSchema.pre('save', function(next) {
+  this.updated_at = new Date();
+  next();
+});
+
+// Calculate total amount before saving
+BiddingSchema.pre('save', function(next) {
+  if (this.isModified('bid_amount') || this.isNew) {
+    this.total_amount = this.bid_amount + this.bid_fee;
+  }
+  next();
 });
 
 // Add a unique compound index for safety

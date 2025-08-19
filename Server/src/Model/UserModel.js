@@ -32,8 +32,17 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     sparse: true, // Allows `null` values without breaking uniqueness
   },
+  // Free bid tracking (5 free bids for new users)
+  freeBids: {
+    remaining: { type: Number, default: 5 },
+    used: { type: Number, default: 0 }
+  },
+  // Subscription status
+  subscription: {
+    isActive: { type: Boolean, default: false },
+    expiresAt: { type: Date }
+  }
 });
-
 
 const user = mongoose.model("user", UserSchema);
 

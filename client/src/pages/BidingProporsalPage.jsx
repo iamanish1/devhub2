@@ -286,8 +286,13 @@ const BidingProporsalPage = () => {
       return;
     }
 
+    // Calculate bid amounts
+    const originalBidAmount = bidAmount;
+    const bidFee = 9; // ₹9 bidding fee
+    const totalBidAmount = originalBidAmount + bidFee;
+
     const payload = {
-      bid_amount: bidAmount,
+      bid_amount: originalBidAmount, // Original bid amount (without fee)
       year_of_experience: yearsExperience,
       bid_description: motivation,
       hours_avilable_per_week: availableHours,
@@ -312,6 +317,19 @@ const BidingProporsalPage = () => {
       );
 
       console.log("Bid created successfully:", response.data);
+      
+      // Show success message with bid details
+      const bidInfo = response.data.bidInfo;
+      const successMessage = `Bid submitted successfully!
+      
+Your Bid Details:
+• Original Bid: ₹${bidInfo.originalAmount}
+• Bidding Fee: ₹${bidInfo.fee}
+• Total Amount: ₹${bidInfo.totalAmount}
+• Payment Type: ${bidInfo.paymentType === 'free_bid' ? 'Free Bid' : bidInfo.paymentType === 'subscription' ? 'Subscription' : 'Paid Bid'}`;
+
+      alert(successMessage);
+      
       navigate(`/bidingPage/${_id}`, { 
         state: { 
           success: true, 
@@ -469,6 +487,35 @@ const BidingProporsalPage = () => {
                       {bidError}
                     </motion.p>
                   )}
+                  
+                  {/* Bid Fee Information */}
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center text-blue-300">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Bid Fee Information
+                      </div>
+                    </div>
+                    <div className="mt-2 space-y-1 text-xs text-gray-300">
+                      <div className="flex justify-between">
+                        <span>Your Bid Amount:</span>
+                        <span>₹{bidAmount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Bidding Fee:</span>
+                        <span>₹9</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-blue-300 border-t border-blue-500/30 pt-1">
+                        <span>Total Amount:</span>
+                        <span>₹{bidAmount + 9}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-blue-200">
+                      <p>💡 The ₹9 bidding fee will be added to your bid amount. Payment will be processed when you are selected as a contributor.</p>
+                    </div>
+                  </div>
                 </motion.div>
 
                 {/* Skills Section */}

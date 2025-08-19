@@ -3,6 +3,28 @@ import ProjectListing from "../Model/ProjectListingModel.js";
 import user from "../Model/UserModel.js";
 import mongoose from "mongoose";
 import { firestoreDb } from "../config/firebaseAdmin.js";
+
+// Check if user can place a bid (free bids or subscription)
+const checkBidEligibility = async (userId) => {
+  const User = await user.findById(userId);
+  if (!User) {
+    return { canBid: false, reason: 'user_not_found' };
+  }
+
+  // Check if user has active subscription
+  if (User.subscription?.isActive && User.subscription?.expiresAt > new Date()) {
+    return { canBid: true, requiresPayment: false, reason: 'subscription' };
+  }
+
+  // Check if user has free bids remaining
+  if (User.freeBids?.remaining > 0) {
+    return { canBid: true, requiresPayment: false, reason: 'free_bid' };
+  }
+
+  // User needs to pay bid fee (but not upfront)
+  return { canBid: true, requiresPayment: true, reason: 'payment_required' };
+};
+
 export const createBid = async (req, res) => {
   try {
     const { _id } = req.params; // projectId
@@ -16,16 +38,18 @@ export const createBid = async (req, res) => {
       skills,
     } = req.body;
 
+    // Validate project exists
     const project = await ProjectListing.findById(_id);
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    const User = await user.findById(userID);
-    if (!User) {
-      return res.status(404).json({ message: "User not found" });
+    // Check if project is still accepting bids
+    if (project.status === 'completed' || project.status === 'in_progress') {
+      return res.status(400).json({ message: "Project is no longer accepting bids" });
     }
 
+    // Check if user already placed a bid
     const existingBid = await Bidding.findOne({
       project_id: _id,
       user_id: userID,
@@ -37,18 +61,42 @@ export const createBid = async (req, res) => {
       });
     }
 
+    // Check bid eligibility
+    const eligibility = await checkBidEligibility(userID);
+    
+    if (!eligibility.canBid) {
+      return res.status(403).json({ message: "You are not eligible to place bids" });
+    }
+
+    // Calculate bid fee and total amount
+    const bidFee = 9; // ₹9 bidding fee
+    const totalAmount = bid_amount + bidFee;
+
+    // Create the bid with fee included
     const newBid = new Bidding({
       project_id: _id,
       user_id: userID,
-      bid_amount,
+      bid_amount: bid_amount, // Original bid amount
+      bid_fee: bidFee, // ₹9 fee
+      total_amount: totalAmount, // Total including fee
       year_of_experience,
       bid_description,
       hours_avilable_per_week,
       skills,
+      is_free_bid: eligibility.reason === 'free_bid'
     });
 
     await newBid.save();
-    // update the data in the project listing
+
+    // Update user's bid statistics
+    const User = await user.findById(userID);
+    if (eligibility.reason === 'free_bid') {
+      User.freeBids.remaining -= 1;
+      User.freeBids.used += 1;
+    }
+    await User.save();
+
+    // Update project statistics
     const projectObjectId = new mongoose.Types.ObjectId(_id);
     const totalBids = await Bidding.countDocuments({
       project_id: projectObjectId,
@@ -59,18 +107,20 @@ export const createBid = async (req, res) => {
       ...new Set(allBids.map((b) => b.user_id.toString())),
     ].length;
 
+    // Calculate current bid amount (sum of all bid amounts, not including fees)
     let currentBidAmount = 0;
     if (allBids.length === 1) {
       currentBidAmount = allBids[0].bid_amount;
     } else if (allBids.length > 1) {
       currentBidAmount = allBids.reduce((sum, b) => sum + b.bid_amount, 0);
     }
+
     await ProjectListing.findByIdAndUpdate(projectObjectId, {
       Project_Number_Of_Bids: totalBids,
       Project_Bid_Amount: currentBidAmount,
     });
 
-    // sync the data to the firebase fire store (if available)
+    // Sync to Firebase
     if (firestoreDb) {
       try {
         await firestoreDb
@@ -96,7 +146,17 @@ export const createBid = async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: "Bid created successfully", bid: newBid });
+    res.status(201).json({ 
+      message: "Bid created successfully", 
+      bid: newBid,
+      bidInfo: {
+        originalAmount: bid_amount,
+        fee: bidFee,
+        totalAmount: totalAmount,
+        paymentType: eligibility.reason
+      }
+    });
+
   } catch (error) {
     console.error("Error creating bid:", error);
     res.status(500).json({ message: error.message });
@@ -113,16 +173,55 @@ export const getBid = async (req, res) => {
       user_id: userID,
     });
 
+    // Get user's bid eligibility
+    const eligibility = await checkBidEligibility(userID);
+
     if (!existingBid) {
-      return res.status(200).json({ bidExist: false });
+      return res.status(200).json({ 
+        bidExist: false,
+        eligibility: eligibility
+      });
     }
 
     res.status(200).json({
       message: "Bid fetched successfully",
       existingBid,
+      eligibility: eligibility
     });
   } catch (error) {
     console.error("Error fetching bid:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get user's bid statistics
+export const getUserBidStats = async (req, res) => {
+  try {
+    const userID = req.user._id;
+    const User = await user.findById(userID);
+
+    if (!User) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const stats = {
+      freeBids: {
+        remaining: User.freeBids?.remaining || 0,
+        used: User.freeBids?.used || 0
+      },
+      subscription: {
+        isActive: User.subscription?.isActive || false,
+        expiresAt: User.subscription?.expiresAt
+      }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    console.error("Error fetching bid stats:", error);
     res.status(500).json({ message: error.message });
   }
 };

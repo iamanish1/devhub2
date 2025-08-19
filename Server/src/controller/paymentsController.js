@@ -7,6 +7,7 @@ import { BID_FEE, LISTING_FEE, BONUS_PER_CONTRIBUTOR } from '../utils/flags.js';
 import { logPaymentEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 import { v4 as uuid } from 'uuid';
+import mongoose from 'mongoose';
 
 // Create bid fee payment (₹9)
 export const createBidFee = async (req, res) => {
@@ -390,6 +391,143 @@ export const createWithdrawal = async (req, res) => {
   }
 };
 
+// Process refund for failed project or cancelled payment
+export const processRefund = async (req, res) => {
+  try {
+    const { paymentIntentId } = req.params;
+    const { reason } = req.body;
+    const userId = req.user._id;
+
+    // Find the payment intent
+    const paymentIntent = await PaymentIntent.findOne({
+      _id: paymentIntentId,
+      userId: userId
+    });
+
+    if (!paymentIntent) {
+      throw new ApiError(404, 'Payment intent not found');
+    }
+
+    if (paymentIntent.status === 'refunded') {
+      throw new ApiError(400, 'Payment has already been refunded');
+    }
+
+    if (paymentIntent.status !== 'paid') {
+      throw new ApiError(400, 'Payment must be completed before refund');
+    }
+
+    // Create refund through Cashfree
+    const refund = await createRefund(
+      paymentIntent.orderId,
+      `refund_${Date.now()}`,
+      paymentIntent.amount,
+      reason || 'User requested refund'
+    );
+
+    // Update payment intent status
+    paymentIntent.status = 'refunded';
+    paymentIntent.notes = {
+      ...paymentIntent.notes,
+      refundId: refund.refund_id,
+      refundReason: reason,
+      refundedAt: new Date()
+    };
+    await paymentIntent.save();
+
+    // If this was a bid fee payment, update the bid status
+    if (paymentIntent.purpose === 'bid_fee') {
+      await Bidding.updateOne(
+        { 'escrow_details.payment_intent_id': paymentIntentId },
+        { 
+          payment_status: 'refunded',
+          'escrow_details.refunded_at': new Date()
+        }
+      );
+    }
+
+    logPaymentEvent('refund_processed', {
+      paymentIntentId,
+      userId,
+      amount: paymentIntent.amount,
+      reason,
+      refundId: refund.refund_id
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Refund processed successfully',
+      data: {
+        refundId: refund.refund_id,
+        amount: paymentIntent.amount,
+        reason,
+        refundedAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    logPaymentEvent('refund_error', {
+      paymentIntentId: req.params.paymentIntentId,
+      error: error.message
+    });
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Error processing refund'
+    });
+  }
+};
+
+// Get refund history
+export const getRefundHistory = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { page = 1, limit = 10 } = req.query;
+
+    const refunds = await PaymentIntent.find({
+      userId,
+      status: 'refunded'
+    })
+    .populate('projectId', 'project_Title')
+    .sort({ updatedAt: -1 })
+    .limit(limit * 1)
+    .skip((page - 1) * limit);
+
+    const total = await PaymentIntent.countDocuments({
+      userId,
+      status: 'refunded'
+    });
+
+    const formattedRefunds = refunds.map(payment => ({
+      id: payment._id,
+      purpose: payment.purpose,
+      amount: payment.amount,
+      refundReason: payment.notes?.refundReason,
+      refundedAt: payment.notes?.refundedAt,
+      projectTitle: payment.projectId?.project_Title || 'N/A',
+      provider: payment.provider
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        refunds: formattedRefunds,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          hasNext: page * limit < total,
+          hasPrev: page > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching refund history'
+    });
+  }
+};
+
 // Get subscription status
 export const getSubscriptionStatus = async (req, res) => {
   try {
@@ -593,6 +731,204 @@ export const getPaymentHistory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching payment history'
+    });
+  }
+};
+
+// Get detailed payment analytics
+export const getPaymentAnalytics = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { period = '30d' } = req.query;
+
+    // Calculate date range
+    const now = new Date();
+    let startDate;
+    switch (period) {
+      case '7d':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30d':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '90d':
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case '1y':
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    // Get payment statistics
+    const paymentStats = await PaymentIntent.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: '$purpose',
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$amount' },
+          successfulPayments: {
+            $sum: { $cond: [{ $eq: ['$status', 'paid'] }, 1, 0] }
+          },
+          failedPayments: {
+            $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    // Get monthly trends
+    const monthlyTrends = await PaymentIntent.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          totalAmount: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
+    // Get recent activity
+    const recentActivity = await PaymentIntent.find({
+      userId,
+      createdAt: { $gte: startDate }
+    })
+    .populate('projectId', 'project_Title')
+    .sort({ createdAt: -1 })
+    .limit(10);
+
+    const analytics = {
+      period,
+      summary: {
+        totalPayments: paymentStats.reduce((sum, stat) => sum + stat.count, 0),
+        totalAmount: paymentStats.reduce((sum, stat) => sum + stat.totalAmount, 0),
+        successfulPayments: paymentStats.reduce((sum, stat) => sum + stat.successfulPayments, 0),
+        failedPayments: paymentStats.reduce((sum, stat) => sum + stat.failedPayments, 0)
+      },
+      byPurpose: paymentStats,
+      monthlyTrends: monthlyTrends.map(trend => ({
+        period: `${trend._id.year}-${trend._id.month.toString().padStart(2, '0')}`,
+        amount: trend.totalAmount,
+        count: trend.count
+      })),
+      recentActivity: recentActivity.map(payment => ({
+        id: payment._id,
+        purpose: payment.purpose,
+        amount: payment.amount,
+        status: payment.status,
+        provider: payment.provider,
+        projectTitle: payment.projectId?.project_Title || 'N/A',
+        createdAt: payment.createdAt
+      }))
+    };
+
+    res.status(200).json({
+      success: true,
+      data: analytics
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching payment analytics'
+    });
+  }
+};
+
+// Get user's payment summary
+export const getPaymentSummary = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Get user's payment summary
+    const summary = await PaymentIntent.aggregate([
+      {
+        $match: { userId: new mongoose.Types.ObjectId(userId) }
+      },
+      {
+        $group: {
+          _id: null,
+          totalPayments: { $sum: 1 },
+          totalAmount: { $sum: '$amount' },
+          successfulPayments: {
+            $sum: { $cond: [{ $eq: ['$status', 'paid'] }, 1, 0] }
+          },
+          pendingPayments: {
+            $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+          },
+          failedPayments: {
+            $sum: { $cond: [{ $eq: ['$status', 'failed'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    // Get user's bid statistics
+    const bidStats = await Bidding.aggregate([
+      {
+        $match: { user_id: new mongoose.Types.ObjectId(userId) }
+      },
+      {
+        $group: {
+          _id: null,
+          totalBids: { $sum: 1 },
+          acceptedBids: {
+            $sum: { $cond: [{ $eq: ['$bid_status', 'Accepted'] }, 1, 0] }
+          },
+          pendingBids: {
+            $sum: { $cond: [{ $eq: ['$bid_status', 'Pending'] }, 1, 0] }
+          },
+          totalBidAmount: { $sum: '$total_amount' },
+          totalBidFees: { $sum: '$bid_fee' }
+        }
+      }
+    ]);
+
+    const paymentSummary = {
+      payments: summary[0] || {
+        totalPayments: 0,
+        totalAmount: 0,
+        successfulPayments: 0,
+        pendingPayments: 0,
+        failedPayments: 0
+      },
+      bids: bidStats[0] || {
+        totalBids: 0,
+        acceptedBids: 0,
+        pendingBids: 0,
+        totalBidAmount: 0,
+        totalBidFees: 0
+      }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: paymentSummary
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching payment summary'
     });
   }
 };

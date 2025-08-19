@@ -6,9 +6,9 @@ import axios from "axios";
 import { db } from "../Config/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
 import { usePayment } from "../context/PaymentContext";
-import PaymentModal from "../components/payment/PaymentModal";
 import { PAYMENT_TYPES } from "../constants/paymentConstants";
 import { LightbulbIcon } from "../utils/iconUtils";
+
 const BidingPage = () => {
   const { _id } = useParams();
   const { projectId } = useParams();
@@ -21,11 +21,10 @@ const BidingPage = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [hasBid, setHasBid] = useState(null);
   const [savingProject, setSavingProject] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [pendingBidId, setPendingBidId] = useState(null);
+  const [bidEligibility, setBidEligibility] = useState(null);
   
   // Payment context
-  const { hasActiveSubscription, canPerformAction } = usePayment();
+  const { hasActiveSubscription } = usePayment();
 
   // Real-time listener for project data updates
   useEffect(() => {
@@ -60,6 +59,7 @@ const BidingPage = () => {
           }
         );
         setHasBid(bidRes.data.existingBid || null);
+        setBidEligibility(bidRes.data.eligibility || null);
         
         // Check if project is saved/bookmarked
         const savedRes = await axios.get(
@@ -81,6 +81,7 @@ const BidingPage = () => {
     };
     checkUserStatus();
   }, [_id]);
+
   // Fetch project data based on project ID
   useEffect(() => {
     const fetchProject = async () => {
@@ -98,105 +99,73 @@ const BidingPage = () => {
           const endDate = new Date(response.data.project.project_duration);
           const now = new Date();
           
-          // Ensure we're comparing dates correctly
-          const endTime = endDate.getTime();
-          const currentTime = now.getTime();
-          const timeDiff = Math.floor((endTime - currentTime) / 1000); // Convert to seconds
-          
-          if (timeDiff > 0) {
-            setTimeLeft(timeDiff);
-            setIsProjectEnded(false);
+          if (endDate > now) {
+            setTimeLeft(Math.floor((endDate - now) / 1000));
             setCountdownInitialized(true);
           } else {
-            setTimeLeft(0);
             setIsProjectEnded(true);
             setCountdownInitialized(true);
           }
-        } else {
-          setTimeLeft(0);
-          setIsProjectEnded(true);
-          setCountdownInitialized(true);
         }
       } catch (error) {
-        setError(
-          error.response?.data?.message || "Failed to fetch project data."
-        );
+        console.error("Error fetching project:", error);
+        setError("Failed to load project details.");
+        setLoading(false);
       }
     };
     fetchProject();
   }, [_id]);
 
-  // Countdown timer effect
+  // Countdown timer
   useEffect(() => {
-    if (timeLeft <= 0) {
-      setIsProjectEnded(true);
-      return;
-    }
-    
+    if (!countdownInitialized || isProjectEnded) return;
+
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
           setIsProjectEnded(true);
           return 0;
         }
-        return prev - 1;
+        return prevTime - 1;
       });
     }, 1000);
+
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [countdownInitialized, isProjectEnded]);
 
-  // Effect to update project status when timeLeft changes
-  useEffect(() => {
-    if (timeLeft <= 0 && !isProjectEnded) {
-      setIsProjectEnded(true);
-    }
-  }, [timeLeft, isProjectEnded]);
-
-  // Handle bookmark toggle
   const handleBookmarkToggle = async () => {
+    if (savingProject) return;
+    
+    setSavingProject(true);
     try {
-      setSavingProject(true);
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Please login to save projects");
+        setError("Please log in to save projects.");
         return;
       }
 
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
+      const endpoint = isBookmarked ? "remove" : "add";
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/saved-projects/${endpoint}`,
+        { projectId: _id },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (isBookmarked) {
-        // Unsave project
-        await axios.delete(
-          `${import.meta.env.VITE_API_URL}/api/saved-projects/unsave/${_id}`,
-          config
-        );
-        setIsBookmarked(false);
-      } else {
-        // Save project
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/saved-projects/save/${_id}`,
-          {},
-          config
-        );
-        setIsBookmarked(true);
-      }
+      setIsBookmarked(!isBookmarked);
     } catch (error) {
       console.error("Error toggling bookmark:", error);
-      alert(error.response?.data?.message || "Failed to update bookmark");
+      setError("Failed to update bookmark.");
     } finally {
       setSavingProject(false);
     }
   };
 
-  // Format time for display
   const formatTime = () => {
-    if (timeLeft <= 0) {
-      return "00:00:00";
-    }
+    if (timeLeft <= 0) return "00:00:00";
     
     const days = Math.floor(timeLeft / (24 * 3600));
     const hours = Math.floor((timeLeft % (24 * 3600)) / 3600);
@@ -212,6 +181,30 @@ const BidingPage = () => {
     return `${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const getBidButtonText = () => {
+    if (hasActiveSubscription()) {
+      return "Place a Bid Now";
+    }
+    
+    if (bidEligibility?.reason === 'free_bid') {
+      return `Place Bid (Free - ${bidEligibility.remaining} left)`;
+    }
+    
+    return "Place Bid (₹9 fee included)";
+  };
+
+  const getBidInfoText = () => {
+    if (hasActiveSubscription()) {
+      return "Unlimited bids with subscription";
+    }
+    
+    if (bidEligibility?.reason === 'free_bid') {
+      return `You have ${bidEligibility.remaining} free bids remaining`;
+    }
+    
+    return "₹9 bidding fee will be added to your bid amount";
   };
 
   return (
@@ -282,11 +275,11 @@ const BidingPage = () => {
 
           {/* Project Image with Overlay */}
           <div className="relative group overflow-hidden rounded-xl shadow-lg mb-6">
-                                      <img
-                               src={project.Project_cover_photo ? `${import.meta.env.VITE_API_URL}${project.Project_cover_photo}` : "/api/placeholder/800/400"}
-               alt={project.project_Title || "Project Cover"}
-               className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
-             />
+            <img
+              src={project.Project_cover_photo ? `${import.meta.env.VITE_API_URL}${project.Project_cover_photo}` : "/api/placeholder/800/400"}
+              alt={project.project_Title || "Project Cover"}
+              className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-105"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-80"></div>
             <div className="absolute bottom-0 left-0 p-4">
               <h1 className="text-3xl font-bold text-white tracking-wide">
@@ -348,44 +341,21 @@ const BidingPage = () => {
           {/* Project Description */}
           <div className="bg-[#232323] rounded-xl p-6 border border-gray-700/50 mb-8">
             <h2 className="text-xl font-bold text-blue-400 mb-4">
-              Project Details
+              Project Description
             </h2>
+            <p className="text-gray-300 leading-relaxed mb-6">
+              {project.project_description || "No description available"}
+            </p>
 
-            <div className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold text-white">Overview</h3>
-                <p className="text-gray-300 mt-1">
-                  {project.Project_Description}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">Tech Stack</h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {project.Project_tech_stack ? (
-                    project.Project_tech_stack.split(",").map((tech, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1 bg-blue-900/50 text-blue-300 rounded-full text-sm"
-                      >
-                        {tech.trim()}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-400">
-                      No tech stack available
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  Key Features
+                <h3 className="text-lg font-semibold text-white mb-3">
+                  Features
                 </h3>
-                <ul className="mt-2 space-y-2 list-none">
-                  {project.Project_Features ? (
-                    project.Project_Features.split("\n")
-                      .filter((feature) => feature.trim() !== "") // 🛠️ Filter empty lines
+                <ul className="space-y-2 list-none">
+                  {project.Project_features ? (
+                    project.Project_features.split("\n")
+                      .filter((feature) => feature.trim() !== "")
                       .map((feature, index) => (
                         <li key={index} className="flex items-start">
                           <svg
@@ -422,7 +392,7 @@ const BidingPage = () => {
                   <ul className="mt-2 space-y-2 list-none">
                     {project.Project_looking ? (
                       project.Project_looking.split("\n")
-                        .filter((item) => item.trim() !== "") // 🛠️ Filter empty lines
+                        .filter((item) => item.trim() !== "")
                         .map((item, index) => (
                           <li key={index} className="flex items-start">
                             <svg
@@ -454,37 +424,35 @@ const BidingPage = () => {
                 </div>
               </div>
             </div>
-                     </div>
+          </div>
 
-           {/* Project Images */}
-           {project.Project_images?.length > 0 && (
-             <div className="bg-[#232323] rounded-xl p-6 border border-gray-700/50 mb-8">
-               <h2 className="text-xl font-bold text-blue-400 mb-4">
-                 Project Images
-               </h2>
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 {project.Project_images.map((image, index) => (
-                   <div key={index} className="relative group">
-                     <img
-                                               src={`${import.meta.env.VITE_API_URL}${image.url}`}
-                       alt={image.originalName}
-                       className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                                               onClick={() => window.open(`${import.meta.env.VITE_API_URL}${image.url}`, '_blank')}
-                     />
-                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
-                       <p className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity text-center px-2">
-                         {image.originalName}
-                       </p>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             </div>
-           )}
+          {/* Project Images */}
+          {project.Project_images?.length > 0 && (
+            <div className="bg-[#232323] rounded-xl p-6 border border-gray-700/50 mb-8">
+              <h2 className="text-xl font-bold text-blue-400 mb-4">
+                Project Images
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {project.Project_images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={`${import.meta.env.VITE_API_URL}${image.url}`}
+                      alt={image.originalName}
+                      className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => window.open(`${import.meta.env.VITE_API_URL}${image.url}`, '_blank')}
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
+                      <p className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity text-center px-2">
+                        {image.originalName}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-           
-
-           {/* Call to Action */}
+          {/* Call to Action */}
           <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-6 border border-blue-500/30 mb-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500 opacity-20 rounded-full blur-xl"></div>
             <h2 className="text-xl font-bold text-white mb-2">
@@ -520,29 +488,24 @@ const BidingPage = () => {
                     You already placed a bid for this project. Wait for the bid completion.
                   </div>
                 ) : (
-                  <button
-                    onClick={() => {
-                      if (hasActiveSubscription()) {
-                        // User has subscription, redirect to bid proposal
+                  <div>
+                    <button
+                      onClick={() => {
+                        // Direct redirect to bid proposal - no payment modal needed
                         window.location.href = `/bidingproposal/${_id}`;
-                      } else {
-                        // User needs to pay bid fee
-                        setShowPaymentModal(true);
-                      }
-                    }}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30"
-                  >
-                    {hasActiveSubscription() ? "Place a Bid Now" : "Pay ₹9 & Place Bid"}
-                  </button>
-                )}
-                
-                {/* Subscription notice */}
-                {!hasActiveSubscription() && !hasBid && (
-                  <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                    <p className="text-blue-300 text-sm text-center flex items-center justify-center">
-                      <LightbulbIcon className="w-4 h-4 mr-2" />
-                      <strong>Save money:</strong> Get unlimited bids with our ₹299/month subscription!
-                    </p>
+                      }}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30"
+                    >
+                      {getBidButtonText()}
+                    </button>
+                    
+                    {/* Bid info notice */}
+                    <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                      <p className="text-blue-300 text-sm text-center flex items-center justify-center">
+                        <LightbulbIcon className="w-4 h-4 mr-2" />
+                        {getBidInfoText()}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -550,20 +513,6 @@ const BidingPage = () => {
           </div>
         </section>
       </main>
-      
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        paymentType={PAYMENT_TYPES.BID_FEE}
-        projectId={_id}
-        onSuccess={(result) => {
-          console.log('Bid fee payment successful:', result);
-          setShowPaymentModal(false);
-          // Redirect to bid proposal page after successful payment
-          window.location.href = `/bidingproposal/${_id}`;
-        }}
-      />
     </div>
   );
 };
