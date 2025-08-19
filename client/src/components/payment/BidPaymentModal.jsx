@@ -102,10 +102,10 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         throw new Error("Failed to initialize payment gateway");
       }
 
-      // Use the correct method based on available methods
-      if (typeof cashfree.drop === 'function') {
-        // Use drop method for embedded payment form
-        console.log("Using Cashfree drop method");
+      // Use the best method based on available methods and requirements
+      if (typeof cashfree.elements === 'function') {
+        // Use elements method for custom payment form (RECOMMENDED)
+        console.log("Using Cashfree elements method - Best for custom UI");
         
         // Render the payment form in the container
         const container = document.getElementById('cashfree-payment-container');
@@ -116,7 +116,55 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         // Clear container
         container.innerHTML = '';
 
-        // Create payment form using drop method
+        // Create custom payment form using elements method
+        const paymentForm = cashfree.elements({
+          orderToken: paymentConfig.orderToken,
+          orderNumber: paymentConfig.orderNumber,
+          appId: paymentConfig.appId,
+          orderAmount: paymentConfig.orderAmount,
+          orderCurrency: paymentConfig.orderCurrency,
+          customerName: paymentConfig.customerName,
+          customerEmail: paymentConfig.customerEmail,
+          customerPhone: paymentConfig.customerPhone,
+          orderNote: paymentConfig.orderNote,
+          source: paymentConfig.source,
+          returnUrl: paymentConfig.returnUrl,
+          notifyUrl: paymentConfig.notifyUrl,
+          style: {
+            backgroundColor: '#1a1a1a',
+            color: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #3b82f6',
+            padding: '16px'
+          },
+          onSuccess: (result) => {
+            console.log("Payment success:", result);
+            onSuccess(result);
+          },
+          onFailure: (error) => {
+            console.error("Payment failure:", error);
+            onError("Payment failed. Please try again.");
+          },
+          onClose: () => {
+            console.log("Payment form closed");
+            onClose();
+          }
+        });
+
+        // Render the form
+        paymentForm.render(container);
+        
+      } else if (typeof cashfree.drop === 'function') {
+        // Fallback to drop method for embedded payment form
+        console.log("Using Cashfree drop method - Fallback option");
+        
+        const container = document.getElementById('cashfree-payment-container');
+        if (!container) {
+          throw new Error("Payment container not found");
+        }
+
+        container.innerHTML = '';
+
         const paymentForm = cashfree.drop({
           orderToken: paymentConfig.orderToken,
           orderNumber: paymentConfig.orderNumber,
@@ -140,12 +188,11 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
           }
         });
 
-        // Render the form
         paymentForm.render(container);
         
       } else if (typeof cashfree.redirect === 'function') {
-        // Use redirect method for redirect-based payment
-        console.log("Using Cashfree redirect method");
+        // Last resort: Use redirect method for redirect-based payment
+        console.log("Using Cashfree redirect method - Last resort");
         
         const redirectUrl = cashfree.redirect({
           orderToken: paymentConfig.orderToken,
@@ -167,6 +214,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         
       } else {
         console.error("No suitable Cashfree payment method found");
+        console.log("Available methods:", Object.keys(cashfree));
         throw new Error("Payment gateway not properly initialized");
       }
     } catch (error) {
@@ -222,12 +270,12 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
           {loading && (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-300">
-                {!import.meta.env.VITE_CASHFREE_APP_ID 
-                  ? "Test Mode: Simulating payment..." 
-                  : "Loading payment form..."
-                }
-              </p>
+                             <p className="text-gray-300">
+                 {!import.meta.env.VITE_CASHFREE_APP_ID 
+                   ? "Test Mode: Simulating payment..." 
+                   : "Loading secure payment form..."
+                 }
+               </p>
             </div>
           )}
 
