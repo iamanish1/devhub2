@@ -132,6 +132,40 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
 
         // Create custom payment form using elements method
         try {
+          // Create a comprehensive callback configuration that covers all possible naming variations
+          const callbackConfig = {
+            // Try all possible success callback names
+            onPaymentSuccess: (result) => {
+              console.log("✅ onPaymentSuccess callback triggered:", result);
+              onSuccess(result);
+            },
+            onSuccess: (result) => {
+              console.log("✅ onSuccess callback triggered:", result);
+              onSuccess(result);
+            },
+            // Try all possible error callback names
+            onPaymentFailure: (error) => {
+              console.log("❌ onPaymentFailure callback triggered:", error);
+              onError("Payment failed. Please try again.");
+            },
+            onError: (error) => {
+              console.log("❌ onError callback triggered:", error);
+              onError("Payment failed. Please try again.");
+            },
+            onFailure: (error) => {
+              console.log("❌ onFailure callback triggered:", error);
+              onError("Payment failed. Please try again.");
+            },
+            // Close callback
+            onClose: () => {
+              console.log("🔒 onClose callback triggered");
+              onClose();
+            }
+          };
+
+          console.log("🔧 Using comprehensive callback config with all possible names");
+          console.log("📋 Callback names provided:", Object.keys(callbackConfig));
+
           const paymentForm = cashfree.elements({
             orderToken: paymentConfig.orderToken,
             orderNumber: paymentConfig.orderNumber,
@@ -152,18 +186,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
               border: '1px solid #3b82f6',
               padding: '16px'
             },
-            onPaymentSuccess: (result) => {
-              console.log("Payment success:", result);
-              onSuccess(result);
-            },
-            onPaymentFailure: (error) => {
-              console.error("Payment failure:", error);
-              onError("Payment failed. Please try again.");
-            },
-            onClose: () => {
-              console.log("Payment form closed");
-              onClose();
-            }
+            ...callbackConfig
           });
 
           // Render the form in the container
@@ -190,6 +213,40 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
         container.innerHTML = '';
 
         try {
+          // Create a comprehensive callback configuration that covers all possible naming variations
+          const callbackConfig = {
+            // Try all possible success callback names
+            onPaymentSuccess: (result) => {
+              console.log("✅ onPaymentSuccess callback triggered:", result);
+              onSuccess(result);
+            },
+            onSuccess: (result) => {
+              console.log("✅ onSuccess callback triggered:", result);
+              onSuccess(result);
+            },
+            // Try all possible error callback names
+            onPaymentFailure: (error) => {
+              console.log("❌ onPaymentFailure callback triggered:", error);
+              onError("Payment failed. Please try again.");
+            },
+            onError: (error) => {
+              console.log("❌ onError callback triggered:", error);
+              onError("Payment failed. Please try again.");
+            },
+            onFailure: (error) => {
+              console.log("❌ onFailure callback triggered:", error);
+              onError("Payment failed. Please try again.");
+            },
+            // Close callback
+            onClose: () => {
+              console.log("🔒 onClose callback triggered");
+              onClose();
+            }
+          };
+
+          console.log("🔧 Using comprehensive callback config with all possible names (drop method)");
+          console.log("📋 Callback names provided:", Object.keys(callbackConfig));
+
           cashfree.drop({
             orderToken: paymentConfig.orderToken,
             orderNumber: paymentConfig.orderNumber,
@@ -203,18 +260,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
             source: paymentConfig.source,
             returnUrl: paymentConfig.returnUrl,
             notifyUrl: paymentConfig.notifyUrl,
-            onPaymentSuccess: (result) => {
-              console.log("Payment success:", result);
-              onSuccess(result);
-            },
-            onPaymentFailure: (error) => {
-              console.error("Payment failure:", error);
-              onError("Payment failed. Please try again.");
-            },
-            onClose: () => {
-              console.log("Payment form closed");
-              onClose();
-            }
+            ...callbackConfig
           });
         } catch (dropError) {
           console.error("Cashfree drop method failed:", dropError);
