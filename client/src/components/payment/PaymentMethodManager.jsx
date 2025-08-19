@@ -25,7 +25,7 @@ const PaymentMethodManager = () => {
     {
       id: '2',
       type: 'upi',
-      provider: 'razorpay',
+      provider: 'cashfree',
       upiId: 'john.doe@okicici',
       isDefault: false,
       name: 'John Doe'
