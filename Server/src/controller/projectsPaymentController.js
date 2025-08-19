@@ -1,6 +1,6 @@
 import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
-import { createTransfer } from '../services/razorpay.js';
+import { createPayout } from '../services/payouts.js';
 import { logPaymentEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 
@@ -43,7 +43,7 @@ export const completeProject = async (req, res) => {
       contributorsCount: project.selectedContributors.length
     });
 
-    // Process Razorpay Route transfers to each contributor
+    // Process Cashfree payouts to each contributor
     const transferResults = [];
     for (const contributor of project.selectedContributors) {
       try {
@@ -56,15 +56,12 @@ export const completeProject = async (req, res) => {
           continue;
         }
 
-        // Create Route transfer
-        const transfer = await createTransfer({
-          account: contributor.linkedAccountId,
+        // Create Cashfree payout
+        const payout = await createPayout({
+          userId: contributor.userId,
+          projectId: id,
           amount: perContributor,
-          notes: { 
-            projectId: id.toString(), 
-            userId: contributor.userId.toString(),
-            purpose: 'project_completion_bonus'
-          }
+          provider: 'cashfree'
         });
 
         // Update bonus pool splits
@@ -75,7 +72,7 @@ export const completeProject = async (req, res) => {
           },
           { 
             $set: { 
-              'splits.$.routeTransferId': transfer.id,
+              'splits.$.payoutId': payout.payoutId,
               'splits.$.amount': perContributor
             } 
           },
@@ -85,19 +82,19 @@ export const completeProject = async (req, res) => {
         transferResults.push({
           userId: contributor.userId,
           amount: perContributor,
-          transferId: transfer.id,
+          payoutId: payout.payoutId,
           status: 'success'
         });
 
-        logPaymentEvent('transfer_successful', {
+        logPaymentEvent('payout_successful', {
           projectId: id,
           userId: contributor.userId,
           amount: perContributor,
-          transferId: transfer.id
+          payoutId: payout.payoutId
         });
 
       } catch (error) {
-        logPaymentEvent('transfer_failed', {
+        logPaymentEvent('payout_failed', {
           projectId: id,
           userId: contributor.userId,
           amount: perContributor,
@@ -119,9 +116,9 @@ export const completeProject = async (req, res) => {
 
     logPaymentEvent('project_completion_finished', {
       projectId: id,
-      transferResults,
-      totalTransfers: transferResults.length,
-      successfulTransfers: transferResults.filter(r => r.status === 'success').length
+      payoutResults: transferResults,
+      totalPayouts: transferResults.length,
+      successfulPayouts: transferResults.filter(r => r.status === 'success').length
     });
 
     res.status(200).json({
@@ -133,7 +130,7 @@ export const completeProject = async (req, res) => {
         commission: pool.commission.amount,
         netAmount,
         perContributor,
-        transferResults,
+        payoutResults: transferResults,
         summary: {
           total: transferResults.length,
           successful: transferResults.filter(r => r.status === 'success').length,
