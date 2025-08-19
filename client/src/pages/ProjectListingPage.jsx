@@ -5,6 +5,10 @@ import { useLocation, useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FileUploadField from "../components/FileUploadField.jsx";
+import { usePayment } from "../context/PaymentContext";
+import PaymentModal from "../components/payment/PaymentModal";
+import BonusPoolCard from "../components/payment/BonusPoolCard";
+import { PAYMENT_TYPES } from "../constants/paymentConstants";
 
 import axios from "axios";
 
@@ -42,6 +46,13 @@ const ProjectListingPage = () => {
   const [showSSLInfo, setShowSSLInfo] = useState(false);
   const [showNDAInfo, setShowNDAInfo] = useState(false);
   const [showVerifiedInfo, setShowVerifiedInfo] = useState(false);
+  
+  // Payment states
+  const [showBonusFunding, setShowBonusFunding] = useState(false);
+  const [createdProjectId, setCreatedProjectId] = useState(null);
+  
+  // Payment context
+  const { hasActiveSubscription } = usePayment();
 
   useEffect(() => {
     if (!editingProject && params.id) {
@@ -284,26 +295,10 @@ const ProjectListingPage = () => {
         );
 
         if (response.status === 201) {
-          // Reset form data
-          setFormData({
-            project_Title: "",
-            project_duration: "",
-            Project_Bid_Amount: "",
-            Project_Contributor: "",
-            Project_Number_Of_Bids: "",
-            Project_Description: "",
-            Project_tech_stack: "",
-            Project_Features: "",
-            Project_looking: "",
-            Project_gitHub_link: "",
-            Project_cover_photo: "",
-            project_starting_bid: "",
-          });
-          setCoverImage(null);
-          setProjectImages([]);
-          setCurrentStep(1);
-          alert("Project submitted successfully!");
-          navigate("/dashboard"); // Navigate to dashboard instead of staying on form
+          const projectId = response.data.projectId || response.data._id;
+          setCreatedProjectId(projectId);
+          setShowBonusFunding(true);
+          // Don't navigate yet, show bonus funding option
         }
       }
     } catch (error) {
@@ -1280,6 +1275,63 @@ const ProjectListingPage = () => {
                 </div>
               </div>
             </div>
+            
+            {/* Bonus Funding Section */}
+            {showBonusFunding && createdProjectId && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div className="bg-[#1E1E1E] rounded-xl p-6 border border-gray-700 max-w-md w-full">
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      🎉 Project Created Successfully!
+                    </h3>
+                    <p className="text-gray-400">
+                      Would you like to create a bonus pool to reward contributors?
+                    </p>
+                  </div>
+                  
+                  <BonusPoolCard projectId={createdProjectId} />
+                  
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      onClick={() => {
+                        setShowBonusFunding(false);
+                        // Reset form and navigate
+                        setFormData({
+                          project_Title: "",
+                          project_duration: "",
+                          Project_Bid_Amount: "",
+                          Project_Contributor: "",
+                          Project_Number_Of_Bids: "",
+                          Project_Description: "",
+                          Project_tech_stack: "",
+                          Project_Features: "",
+                          Project_looking: "",
+                          Project_gitHub_link: "",
+                          Project_cover_photo: "",
+                          project_starting_bid: "",
+                        });
+                        setCoverImage(null);
+                        setProjectImages([]);
+                        setCurrentStep(1);
+                        navigate("/dashboard");
+                      }}
+                      className="btn-secondary flex-1"
+                    >
+                      Skip for Now
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBonusFunding(false);
+                        navigate("/dashboard");
+                      }}
+                      className="btn-primary flex-1"
+                    >
+                      Go to Dashboard
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
          </div>
        </main>
      </div>

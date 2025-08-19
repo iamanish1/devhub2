@@ -9,6 +9,8 @@ import SearchBar from "../components/SearchBar";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorBoundary from "../components/ErrorBoundary";
 import EmptyState from "../components/EmptyState";
+import SubscriptionStatus from "../components/payment/SubscriptionStatus";
+import { usePayment } from "../context/PaymentContext";
 
 // ===== Constants =====
 const ITEMS_PER_PAGE = 20;
@@ -279,13 +281,21 @@ const DashboardPage = () => {
 
                                            {/* SIDEBAR: its own scroll on large screens; doesn't cause main to scroll */}
             <div className="lg:sticky lg:top-20 lg:h-[calc(100vh-2rem)] lg:overflow-y-auto lg:w-80 lg:flex-shrink-0">
-            <FilterSidebar
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onClearFilters={handleClearFilters}
-              isOpen={mobileFilterOpen}
-              onClose={() => setMobileFilterOpen(false)}
-            />
+              <div className="p-4">
+                {/* Subscription Status */}
+                <div className="mb-6">
+                  <SubscriptionStatus />
+                </div>
+                
+                {/* Filters */}
+                <FilterSidebar
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  onClearFilters={handleClearFilters}
+                  isOpen={mobileFilterOpen}
+                  onClose={() => setMobileFilterOpen(false)}
+                />
+              </div>
           </div>
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                {/* MAIN COLUMN: never scrolls */}

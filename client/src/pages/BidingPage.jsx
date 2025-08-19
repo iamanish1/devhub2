@@ -5,6 +5,9 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { db } from "../Config/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
+import { usePayment } from "../context/PaymentContext";
+import PaymentModal from "../components/payment/PaymentModal";
+import { PAYMENT_TYPES } from "../constants/paymentConstants";
 const BidingPage = () => {
   const { _id } = useParams();
   const { projectId } = useParams();
@@ -17,6 +20,11 @@ const BidingPage = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [hasBid, setHasBid] = useState(null);
   const [savingProject, setSavingProject] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingBidId, setPendingBidId] = useState(null);
+  
+  // Payment context
+  const { hasActiveSubscription, canPerformAction } = usePayment();
 
   // Real-time listener for project data updates
   useEffect(() => {
@@ -505,28 +513,55 @@ const BidingPage = () => {
                 You can bid for the next project.
               </div>
             ) : (
-              <Link to={hasBid ? "#" : `/bidingproposal/${_id}`}>
-                <button
-                  className={`px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30 ${
-                    hasBid ? "opacity-60 cursor-not-allowed" : ""
-                  }`}
-                  onClick={(e) => {
-                    if (hasBid) {
-                      e.preventDefault();
-                      alert(
-                        "You already placed a bid for this project. Wait for the bid completion."
-                      );
-                    }
-                  }}
-                  disabled={hasBid}
-                >
-                  {hasBid ? "You already placed a bid" : "Place a Bid Now"}
-                </button>
-              </Link>
+              <div>
+                {hasBid ? (
+                  <div className="p-4 bg-yellow-900/40 border border-yellow-500/30 rounded-lg text-yellow-300 font-semibold text-center">
+                    You already placed a bid for this project. Wait for the bid completion.
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (hasActiveSubscription()) {
+                        // User has subscription, redirect to bid proposal
+                        window.location.href = `/bidingproposal/${_id}`;
+                      } else {
+                        // User needs to pay bid fee
+                        setShowPaymentModal(true);
+                      }
+                    }}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg rounded-lg hover:from-blue-700 hover:to-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-blue-500/30"
+                  >
+                    {hasActiveSubscription() ? "Place a Bid Now" : "Pay ₹9 & Place Bid"}
+                  </button>
+                )}
+                
+                {/* Subscription notice */}
+                {!hasActiveSubscription() && !hasBid && (
+                  <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                    <p className="text-blue-300 text-sm text-center">
+                      💡 <strong>Save money:</strong> Get unlimited bids with our ₹299/month subscription!
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </section>
       </main>
+      
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        paymentType={PAYMENT_TYPES.BID_FEE}
+        projectId={_id}
+        onSuccess={(result) => {
+          console.log('Bid fee payment successful:', result);
+          setShowPaymentModal(false);
+          // Redirect to bid proposal page after successful payment
+          window.location.href = `/bidingproposal/${_id}`;
+        }}
+      />
     </div>
   );
 };
