@@ -2,14 +2,20 @@ import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { CloseIcon, LockIcon } from "../../utils/iconUtils.jsx";
 
+/**
+ * Checkout-only version for Cashfree v3 SDK.
+ * Assumes index.html includes:
+ *   <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+ *
+ * Flow:
+ *  - Guard env + SDK presence
+ *  - Require `payment_session_id` in paymentData.order (or `order_token` fallback)
+ *  - Call cashfree.checkout({ paymentSessionId, redirectTarget: "_modal" })
+ *  - Success/failure confirmed via webhook + optional GET from your backend
+ */
 const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [ready, setReady] = useState(false);
-
-  const containerRef = useRef(null);
-  const cardRef = useRef(null);      // Cashfree card element
-  const cashfreeRef = useRef(null);  // SDK instance
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -18,14 +24,9 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
       initializePayment();
     }
     return () => {
-      try {
-        cardRef.current?.unmount?.();
-      } catch {
-        // Ignore unmount errors
-      }
-      if (containerRef.current) containerRef.current.innerHTML = "";
       initializedRef.current = false;
-      setReady(false);
+      setError("");
+      setLoading(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, paymentData]);
@@ -34,185 +35,35 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
     setLoading(true);
     setError("");
 
-    const appId = import.meta.env.VITE_CASHFREE_APP_ID;
-    const mode = (import.meta.env.VITE_CASHFREE_MODE || "sandbox").toLowerCase();
-
     try {
+      // Guards
+      const appId = import.meta.env.VITE_CASHFREE_APP_ID;
       if (!appId) throw new Error("Cashfree App ID not configured");
-      if (typeof window === "undefined" || typeof window.Cashfree === "undefined")
+      if (typeof window === "undefined" || typeof window.Cashfree === "undefined") {
         throw new Error("Cashfree SDK not loaded");
+      }
 
       const order = paymentData?.order || {};
       const paymentSessionId = order.payment_session_id || order.order_token || null;
       if (!paymentSessionId) throw new Error("Missing payment session id");
 
-      console.log("🔧 Initializing Cashfree SDK with mode:", mode);
+      const mode = (import.meta.env.VITE_CASHFREE_MODE || "sandbox").toLowerCase();
       const cashfree = new window.Cashfree({ mode });
-      cashfreeRef.current = cashfree;
 
-      console.log("🔧 Available Cashfree methods:", Object.keys(cashfree));
+      // ✅ Checkout Modal (v3)
+      await cashfree.checkout({
+        paymentSessionId,
+        redirectTarget: "_modal", // or "_self" for full-page redirect
+      });
 
-      // ---- OPTION A: Modern Checkout Modal (preferred) ----
-      if (typeof cashfree.checkout === "function") {
-        console.log("🔧 Using modern checkout method");
-        await cashfree.checkout({
-          paymentSessionId,
-          redirectTarget: "_modal", // "_self" to redirect full page
-        });
-        return;
-      }
-
-      // ---- OPTION B: Modern Elements API ----
-      if (typeof cashfree.create === "function") {
-        console.log("🔧 Using modern Elements API");
-        const container = containerRef.current || document.getElementById("cashfree-payment-container");
-        if (!container) throw new Error("Payment container not found");
-        container.innerHTML = "";
-
-        // Create card element
-        const card = cashfree.create("card", {
-          style: {
-            base: {
-              fontSize: '16px',
-              color: '#ffffff',
-              backgroundColor: '#1a1a1a',
-              border: '1px solid #3b82f6',
-              borderRadius: '8px',
-              padding: '12px'
-            }
-          }
-        });
-        cardRef.current = card;
-
-        console.log("🔧 Card element created:", card);
-
-        // Mount the card
-        try {
-          card.mount("#cashfree-payment-container");
-          console.log("🔧 Card mounted successfully using selector");
-        } catch {
-          console.log("🔧 Selector mount failed, trying DOM element mount");
-          if (!(container instanceof Element)) throw new Error("Container is not a valid DOM element");
-          card.mount(container);
-          console.log("🔧 Card mounted successfully using DOM element");
-        }
-
-        setReady(true); // enable "Pay Now" button
-        return;
-      }
-
-      // ---- OPTION C: Legacy Methods (fallback) ----
-      console.log("🔧 Modern API not available, trying legacy methods");
-      
-      if (typeof cashfree.elements === "function") {
-        console.log("🔧 Using legacy elements method");
-        const container = containerRef.current || document.getElementById("cashfree-payment-container");
-        if (!container) throw new Error("Payment container not found");
-        container.innerHTML = "";
-
-        const paymentForm = cashfree.elements({
-          orderToken: paymentSessionId,
-          orderNumber: order.order_id,
-          appId: appId,
-          orderAmount: paymentData.amount,
-          orderCurrency: "INR",
-          customerName: localStorage.getItem("username") || "User",
-          customerEmail: localStorage.getItem("email") || order.customer_details?.customer_email || "user@example.com",
-          customerPhone: localStorage.getItem("phone") || order.customer_details?.customer_phone || "9999999999",
-          orderNote: order.order_note || "Bid payment",
-          source: "web",
-          returnUrl: `${window.location.origin}?payment=success`,
-          notifyUrl: `${import.meta.env.VITE_API_URL}/api/webhooks/cashfree`,
-          style: {
-            backgroundColor: '#1a1a1a',
-            color: '#ffffff',
-            borderRadius: '8px',
-            border: '1px solid #3b82f6',
-            padding: '16px'
-          },
-          onPaymentSuccess: (result) => {
-            console.log("✅ Payment success:", result);
-            onSuccess?.(result);
-          },
-          onPaymentFailure: (error) => {
-            console.log("❌ Payment failure:", error);
-            onError?.("Payment failed. Please try again.");
-          },
-          onClose: () => {
-            console.log("🔒 Payment form closed");
-            onClose?.();
-          }
-        });
-
-        if (typeof paymentForm.render === 'function') {
-          paymentForm.render(container);
-        } else {
-          container.appendChild(paymentForm);
-        }
-        return;
-      }
-
-      if (typeof cashfree.drop === "function") {
-        console.log("🔧 Using legacy drop method");
-        const container = containerRef.current || document.getElementById("cashfree-payment-container");
-        if (!container) throw new Error("Payment container not found");
-        container.innerHTML = "";
-
-        cashfree.drop({
-          orderToken: paymentSessionId,
-          orderNumber: order.order_id,
-          appId: appId,
-          orderAmount: paymentData.amount,
-          orderCurrency: "INR",
-          customerName: localStorage.getItem("username") || "User",
-          customerEmail: localStorage.getItem("email") || order.customer_details?.customer_email || "user@example.com",
-          customerPhone: localStorage.getItem("phone") || order.customer_details?.customer_phone || "9999999999",
-          orderNote: order.order_note || "Bid payment",
-          source: "web",
-          returnUrl: `${window.location.origin}?payment=success`,
-          notifyUrl: `${import.meta.env.VITE_API_URL}/api/webhooks/cashfree`,
-          onPaymentSuccess: (result) => {
-            console.log("✅ Payment success:", result);
-            onSuccess?.(result);
-          },
-          onPaymentFailure: (error) => {
-            console.log("❌ Payment failure:", error);
-            onError?.("Payment failed. Please try again.");
-          },
-          onClose: () => {
-            console.log("🔒 Payment form closed");
-            onClose?.();
-          }
-        });
-        return;
-      }
-
-      throw new Error("No compatible Cashfree payment method found");
+      // From here, rely on your webhook + optional backend verification.
+      // If you want optimistic UI, you can show a "processing" state here.
 
     } catch (err) {
       console.error("Payment init error:", err);
-      setError(err.message || "Payment failed. Please try again.");
-      onError?.(err.message || "Payment failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePayNow = async () => {
-    try {
-      setLoading(true);
-      const order = paymentData?.order || {};
-      const paymentSessionId = order.payment_session_id || order.order_token || null;
-
-      const result = await cashfreeRef.current.pay({
-        paymentSessionId,
-        paymentMethod: cardRef.current,
-        savePaymentInstrument: false,
-      });
-      onSuccess?.(result);
-    } catch (e) {
-      console.error("Cashfree pay error:", e);
-      onError?.("Payment failed. Please try again.");
+      const msg = err?.message || "Payment failed. Please try again.";
+      setError(msg);
+      onError?.(msg);
     } finally {
       setLoading(false);
     }
@@ -249,7 +100,9 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
                 <span>Total Payment:</span>
                 <span>₹{paymentData?.amount || 9}</span>
               </div>
-              <div className="text-xs text-gray-400">Includes bid amount + ₹9 fee</div>
+              <div className="text-xs text-gray-400">
+                Includes bid amount + ₹9 fee
+              </div>
             </div>
           </div>
 
@@ -260,7 +113,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
               <p className="text-gray-300">
                 {!import.meta.env.VITE_CASHFREE_APP_ID
                   ? "Test Mode: Simulating payment..."
-                  : "Loading payment form..."}
+                  : "Opening secure payment..."}
               </p>
             </div>
           )}
@@ -272,18 +125,7 @@ const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) =
             </div>
           )}
 
-          {/* Container for Elements */}
-          <div id="cashfree-payment-container" ref={containerRef} className="min-h-[300px]" />
-
-          {/* Pay Now button (only when Elements is active) */}
-          {ready && !loading && (
-            <button
-              onClick={handlePayNow}
-              className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Pay Now
-            </button>
-          )}
+          {/* Note: No Elements container needed for v3 Checkout */}
 
           <div className="mt-4 text-center">
             <p className="text-xs text-gray-400">

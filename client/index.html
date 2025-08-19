@@ -2,42 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DevHub - Developer Collaboration Platform</title>
-    <!-- Cashfree Payment Gateway SDK - Latest Version with Elements API -->
-    <script src="https://sdk.cashfree.com/js/ui/3.0.0/cashfree.prod.js"></script>
-    <script>
-      // Check if Cashfree SDK loaded properly
-      window.addEventListener('load', function() {
-        if (typeof window.Cashfree === 'undefined') {
-          console.error('❌ Cashfree SDK failed to load');
-        } else {
-          console.log('✅ Cashfree SDK loaded successfully');
-          // Test SDK initialization and check for Elements API
-          try {
-            const testInstance = new window.Cashfree({ mode: 'sandbox' });
-            console.log('✅ Cashfree SDK initialization test successful');
-            
-            // Check if modern Elements API is available
-            if (typeof testInstance.create === 'function') {
-              console.log('✅ Modern Elements API (create method) is available');
-            } else {
-              console.warn('⚠️ Modern Elements API not available, only legacy methods');
-            }
-            
-            // Check available methods
-            console.log('🔧 Available Cashfree methods:', Object.keys(testInstance));
-            
-          } catch (error) {
-            console.error('❌ Cashfree SDK initialization test failed:', error);
-          }
-        }
-      });
-    </script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+
+    <!--
+      OPTIONAL: Content Security Policy.
+      If you use a CSP, make sure cashfree domains are allowed.
+      Adjust other directives (img-src, connect-src, frame-src) to your app needs.
+    -->
+    <!--
+    <meta http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' https://sdk.cashfree.com 'unsafe-inline' 'unsafe-eval';
+        connect-src 'self' https://*.cashfree.com;
+        img-src 'self' data: https://*.cashfree.com;
+        frame-src https://*.cashfree.com;
+        style-src 'self' 'unsafe-inline';
+        font-src 'self' data:;
+      ">
+    -->
+
+    <title>DevHubs</title>
+
+    <!-- Cashfree Checkout SDK (choose ONE) -->
+    <!-- ✅ SANDBOX (use this in test/sandbox) -->
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+
+    <!-- 🚀 PRODUCTION (uncomment for live) -->
+    <!-- <script src="https://sdk.cashfree.com/js/v3/cashfree.prod.js"></script> -->
+
+    <!--
+      IMPORTANT:
+      - Do NOT include both sandbox and prod scripts at the same time.
+      - Your React code will call: new Cashfree({ mode: 'sandbox' | 'production' }) and use checkout().
+      - Make sure your domain is whitelisted in the Cashfree Dashboard for the environment you use.
+    -->
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Your app entry (Vite) -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
