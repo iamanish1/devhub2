@@ -182,7 +182,7 @@ export const createBid = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error creating bid:", error);
+    console.error("Error creating bid:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
