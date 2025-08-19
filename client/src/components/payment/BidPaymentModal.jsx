@@ -2,27 +2,28 @@ import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { CloseIcon, LockIcon } from "../../utils/iconUtils.jsx";
 
-const BidPaymentModal = ({
-  isOpen,
-  onClose,
-  paymentData,
-  onSuccess,
-  onError,
-}) => {
+const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [ready, setReady] = useState(false);
+
   const containerRef = useRef(null);
-  const cardRef = useRef(null); // holds the Elements card instance
-  const cashfreeRef = useRef(null); // holds the SDK instance
+  const cardRef = useRef(null);      // Cashfree card element
+  const cashfreeRef = useRef(null);  // SDK instance
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen && paymentData) initializePayment();
-    // cleanup on close/unmount
+    if (isOpen && paymentData && !initializedRef.current) {
+      initializedRef.current = true;
+      initializePayment();
+    }
     return () => {
       try {
         cardRef.current?.unmount?.();
       } catch {}
       if (containerRef.current) containerRef.current.innerHTML = "";
+      initializedRef.current = false;
+      setReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, paymentData]);
@@ -32,100 +33,73 @@ const BidPaymentModal = ({
     setError("");
 
     const appId = import.meta.env.VITE_CASHFREE_APP_ID;
-    const mode = (
-      import.meta.env.VITE_CASHFREE_MODE || "sandbox"
-    ).toLowerCase();
+    const mode = (import.meta.env.VITE_CASHFREE_MODE || "sandbox").toLowerCase();
 
     try {
-      // 1) Basic guards
-      if (!appId) {
-        setError("Cashfree App ID not configured");
-        setLoading(false);
-        return;
-      }
-      if (
-        typeof window === "undefined" ||
-        typeof window.Cashfree === "undefined"
-      ) {
-        setError("Cashfree SDK not loaded");
-        setLoading(false);
-        return;
-      }
+      if (!appId) throw new Error("Cashfree App ID not configured");
+      if (typeof window === "undefined" || typeof window.Cashfree === "undefined")
+        throw new Error("Cashfree SDK not loaded");
 
-      // 2) Extract the *correct* token → paymentSessionId
       const order = paymentData?.order || {};
-      const paymentSessionId =
-        order.payment_session_id ||
-        order.order_token || // some backends name it this way
-        order.cf_order_id || // not ideal, but leaving as last fallback
-        null;
+      const paymentSessionId = order.payment_session_id || order.order_token || null;
+      if (!paymentSessionId) throw new Error("Missing payment session id");
 
-      if (!paymentSessionId) {
-        setError("Missing payment session id");
-        setLoading(false);
-        return;
-      }
-
-      // 3) Init SDK
-      const cashfree = new window.Cashfree({ mode }); // "sandbox" | "production"
+      const cashfree = new window.Cashfree({ mode });
       cashfreeRef.current = cashfree;
 
-      // ---- Option A: Hosted Checkout (recommended & easy) ----
+      // ---- OPTION A: Checkout Modal (preferred & easiest) ----
       if (typeof cashfree.checkout === "function") {
-        try {
-          await cashfree.checkout({
-            paymentSessionId,
-            redirectTarget: "_modal", // or "_self" to redirect page
-          });
-          // Cashfree handles UI; result comes via redirect/webhook. You can still optimistically notify:
-          return;
-        } catch (e) {
-          console.warn("Checkout fallback to Elements due to error:", e);
-          // fall through to Elements
-        }
+        await cashfree.checkout({
+          paymentSessionId,
+          redirectTarget: "_modal", // "_self" to redirect full page
+        });
+        return;
       }
 
-      // ---- Option B: Elements (create → mount → pay) ----
-      // Ensure container exists in DOM
-      const container =
-        containerRef.current ||
-        document.getElementById("cashfree-payment-container");
+      // ---- OPTION B: Elements ----
+      const container = containerRef.current || document.getElementById("cashfree-payment-container");
       if (!container) throw new Error("Payment container not found");
-
-      // Clear container to avoid duplicate mounts
       container.innerHTML = "";
 
-      if (typeof cashfree.create !== "function") {
-        throw new Error(
-          "Cashfree Elements API not available in this SDK build"
-        );
-      }
+      if (typeof cashfree.create !== "function")
+        throw new Error("Cashfree Elements API not available");
 
-      // Create the card element and mount it into a REAL DOM node
-      const card = cashfree.create("card", {
-        // optional style/values config here
-      });
+      const card = cashfree.create("card", {});
       cardRef.current = card;
-      card.mount(container); // ✅ pass DOM node (not a string without '#')
 
-      // You control when to pay; here we auto-trigger once mounted.
-      // Alternatively, attach to a "Pay" button click.
+      // Try selector mount first, fallback to DOM node
       try {
-        const result = await cashfree.pay({
-          paymentSessionId, // ✅ correct param
-          paymentMethod: card, // pass the element instance
-          savePaymentInstrument: false,
-        });
-        // Success callback
-        onSuccess?.(result);
-      } catch (payErr) {
-        console.error("Cashfree pay error:", payErr);
-        onError?.("Payment failed. Please try again.");
+        card.mount("#cashfree-payment-container");
+      } catch {
+        if (!(container instanceof Element)) throw new Error("Container invalid");
+        card.mount(container);
       }
+
+      setReady(true); // enable "Pay Now" button
     } catch (err) {
       console.error("Payment init error:", err);
       setError(err.message || "Payment failed. Please try again.");
       onError?.(err.message || "Payment failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePayNow = async () => {
+    try {
+      setLoading(true);
+      const order = paymentData?.order || {};
+      const paymentSessionId = order.payment_session_id || order.order_token || null;
+
+      const result = await cashfreeRef.current.pay({
+        paymentSessionId,
+        paymentMethod: cardRef.current,
+        savePaymentInstrument: false,
+      });
+      onSuccess?.(result);
+    } catch (e) {
+      console.error("Cashfree pay error:", e);
+      onError?.("Payment failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -146,10 +120,7 @@ const BidPaymentModal = ({
           {/* Header */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-white">Complete Payment</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
+            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
               <CloseIcon className="w-5 h-5" />
             </button>
           </div>
@@ -165,9 +136,7 @@ const BidPaymentModal = ({
                 <span>Total Payment:</span>
                 <span>₹{paymentData?.amount || 9}</span>
               </div>
-              <div className="text-xs text-gray-400">
-                Includes bid amount + ₹9 fee
-              </div>
+              <div className="text-xs text-gray-400">Includes bid amount + ₹9 fee</div>
             </div>
           </div>
 
@@ -190,12 +159,18 @@ const BidPaymentModal = ({
             </div>
           )}
 
-          {/* Payment container for Elements (or left empty when using hosted checkout modal) */}
-          <div
-            id="cashfree-payment-container"
-            ref={containerRef}
-            className="min-h-[300px]"
-          />
+          {/* Container for Elements */}
+          <div id="cashfree-payment-container" ref={containerRef} className="min-h-[300px]" />
+
+          {/* Pay Now button (only when Elements is active) */}
+          {ready && !loading && (
+            <button
+              onClick={handlePayNow}
+              className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Pay Now
+            </button>
+          )}
 
           <div className="mt-4 text-center">
             <p className="text-xs text-gray-400">
