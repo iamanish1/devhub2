@@ -39,8 +39,16 @@ const checkBidEligibility = async (userId) => {
 
 export const createBid = async (req, res) => {
   try {
+    console.log("🚀 [createBid] Function started");
+    console.log("🚀 [createBid] Request params:", req.params);
+    console.log("🚀 [createBid] Request body:", req.body);
+    console.log("🚀 [createBid] User from auth:", req.user ? `User: ${req.user.username}, ID: ${req.user._id}` : "No user found");
+    
     const { id } = req.params; // projectId - changed from _id to id to match route
     const userID = req.user._id;
+
+    console.log("🚀 [createBid] Project ID:", id);
+    console.log("🚀 [createBid] User ID:", userID);
 
     const {
       bid_amount,
@@ -50,8 +58,19 @@ export const createBid = async (req, res) => {
       skills,
     } = req.body;
 
+    console.log("🚀 [createBid] Bid details:", {
+      bid_amount,
+      year_of_experience,
+      bid_description,
+      hours_avilable_per_week,
+      skills
+    });
+
     // Validate project exists
+    console.log("🚀 [createBid] Looking for project with ID:", id);
     const project = await ProjectListing.findById(id);
+    console.log("🚀 [createBid] Project found:", project ? `Project: ${project.Project_Title}` : "Project not found");
+    
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }

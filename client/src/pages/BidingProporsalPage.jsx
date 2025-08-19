@@ -428,6 +428,34 @@ Your bid will be visible to the project owner shortly.`;
     setError("Payment failed. Please try again.");
   };
 
+  // Test function to check authentication
+  const testAuthentication = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("No token found. Please log in.");
+        return;
+      }
+
+      console.log("Testing authentication with token:", token.substring(0, 20) + "...");
+      
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/bid/test-auth`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Authentication test successful:", response.data);
+      alert(`Authentication successful! User: ${response.data.user.username}`);
+    } catch (error) {
+      console.error("Authentication test failed:", error);
+      alert(`Authentication failed: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
   // Test function to manually trigger payment modal
   const testPaymentModal = () => {
     // Only show payment modal if payment is actually required
@@ -645,7 +673,7 @@ Your bid will be visible to the project owner shortly.`;
                       ) : hasActiveSubscription() ? (
                         <p>🎉 Unlimited bids with your subscription! (₹3 fee)</p>
                       ) : (
-                        <p>�� The ₹9 bidding fee will be charged when you place your bid.</p>
+                        <p>🎉 The ₹9 bidding fee will be charged when you place your bid.</p>
                       )}
                     </div>
                     
@@ -659,6 +687,15 @@ Your bid will be visible to the project owner shortly.`;
                       <p>Bid Amount: ₹{bidAmount}</p>
                       <p>Bid Fee: ₹{getBidFee()}</p>
                       <p>Total Amount: ₹{bidAmount + getBidFee()}</p>
+                      
+                      {/* Authentication Test Button */}
+                      <button
+                        onClick={testAuthentication}
+                        className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 mr-2"
+                      >
+                        Test Auth
+                      </button>
+                      
                       {/* Test Payment Button - Only show if payment is required */}
                       {requiresPayment() && (
                         <button
