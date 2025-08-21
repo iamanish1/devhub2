@@ -9,17 +9,17 @@
 
     <!--
       OPTIONAL: Content Security Policy.
-      If you use a CSP, make sure cashfree domains are allowed.
+      If you use a CSP, make sure razorpay domains are allowed.
       Adjust other directives (img-src, connect-src, frame-src) to your app needs.
     -->
     <!--
     <meta http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self' https://sdk.cashfree.com 'unsafe-inline' 'unsafe-eval';
-        connect-src 'self' https://*.cashfree.com;
-        img-src 'self' data: https://*.cashfree.com;
-        frame-src https://*.cashfree.com;
+        script-src 'self' https://checkout.razorpay.com 'unsafe-inline' 'unsafe-eval';
+        connect-src 'self' https://*.razorpay.com;
+        img-src 'self' data: https://*.razorpay.com;
+        frame-src https://*.razorpay.com;
         style-src 'self' 'unsafe-inline';
         font-src 'self' data:;
       ">
@@ -27,18 +27,13 @@
 
     <title>DevHubs</title>
 
-    <!-- Cashfree Checkout SDK (choose ONE) -->
-    <!-- ✅ SANDBOX (use this in test/sandbox) -->
-    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
-
-    <!-- 🚀 PRODUCTION (uncomment for live) -->
-    <!-- <script src="https://sdk.cashfree.com/js/v3/cashfree.prod.js"></script> -->
+    <!-- Razorpay Checkout SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
     <!--
       IMPORTANT:
-      - Do NOT include both sandbox and prod scripts at the same time.
-      - Your React code will call: new Cashfree({ mode: 'sandbox' | 'production' }) and use checkout().
-      - Make sure your domain is whitelisted in the Cashfree Dashboard for the environment you use.
+      - Your React code will call: new Razorpay(options) and use open().
+      - Make sure your domain is whitelisted in the Razorpay Dashboard for the environment you use.
     -->
   </head>
   <body>

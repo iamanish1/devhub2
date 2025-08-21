@@ -2,7 +2,7 @@ import PaymentIntent from '../Model/PaymentIntentModel.js';
 import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
-import { createOrder as cfCreateOrder } from '../services/cashfree.js';
+import { createOrder as rpCreateOrder, createRefund } from '../services/razorpay.js';
 import { BID_FEE, LISTING_FEE, BONUS_PER_CONTRIBUTOR } from '../utils/flags.js';
 import { logPaymentEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
@@ -30,7 +30,7 @@ export const createBidFee = async (req, res) => {
 
     // Create payment intent
     const intent = await PaymentIntent.create({
-      provider: 'cashfree',
+      provider: 'razorpay',
       purpose: 'bid_fee',
       amount: BID_FEE,
       userId,
@@ -39,8 +39,8 @@ export const createBidFee = async (req, res) => {
       notes: { bidId }
     });
 
-    // Create Cashfree order
-    const order = await cfCreateOrder({
+    // Create Razorpay order
+    const order = await rpCreateOrder({
       orderId: intent._id.toString(),
       amount: BID_FEE,
       customer: { 
@@ -57,7 +57,7 @@ export const createBidFee = async (req, res) => {
 
     // Update bid with payment info
     await Bidding.findByIdAndUpdate(bidId, {
-      'feePayment.provider': 'cashfree',
+      'feePayment.provider': 'razorpay',
       'feePayment.orderId': order.order_id,
       'feePayment.status': 'pending'
     });
@@ -74,7 +74,7 @@ export const createBidFee = async (req, res) => {
       success: true,
       message: 'Bid fee payment initiated',
       data: {
-        provider: 'cashfree',
+        provider: 'razorpay',
         order,
         intentId: intent._id
       }
@@ -109,7 +109,7 @@ export const createListing = async (req, res) => {
 
     // Create payment intent
     const intent = await PaymentIntent.create({
-      provider: 'cashfree',
+      provider: 'razorpay',
       purpose: 'listing',
       amount: LISTING_FEE,
       userId,
@@ -117,8 +117,8 @@ export const createListing = async (req, res) => {
       status: 'created'
     });
 
-    // Create Cashfree order
-    const order = await cfCreateOrder({
+    // Create Razorpay order
+    const order = await rpCreateOrder({
       orderId: intent._id.toString(),
       amount: LISTING_FEE,
       customer: { 
@@ -144,7 +144,7 @@ export const createListing = async (req, res) => {
       success: true,
       message: 'Listing fee payment initiated',
       data: {
-        provider: 'cashfree',
+        provider: 'razorpay',
         order,
         intentId: intent._id
       }
@@ -181,7 +181,7 @@ export const createBonus = async (req, res) => {
 
     // Create payment intent
     const intent = await PaymentIntent.create({
-      provider: 'cashfree',
+      provider: 'razorpay',
       purpose: 'bonus_funding',
       amount: minBonus,
       userId,
@@ -190,8 +190,8 @@ export const createBonus = async (req, res) => {
       notes: { contributorsCount }
     });
 
-    // Create Cashfree order
-    const order = await cfCreateOrder({
+    // Create Razorpay order
+    const order = await rpCreateOrder({
       orderId: intent._id.toString(),
       amount: minBonus,
       customer: { 
@@ -210,7 +210,7 @@ export const createBonus = async (req, res) => {
     await ProjectListing.findByIdAndUpdate(projectId, {
       $set: { 
         'bonus.minRequired': minBonus,
-        'bonus.cashfreeOrderId': order.order_id
+        'bonus.razorpayOrderId': order.order_id
       }
     });
 
@@ -227,7 +227,7 @@ export const createBonus = async (req, res) => {
       success: true,
       message: 'Bonus funding initiated',
       data: {
-        provider: 'cashfree',
+        provider: 'razorpay',
         order,
         intentId: intent._id,
         amount: minBonus
@@ -266,7 +266,7 @@ export const createSubscription = async (req, res) => {
 
     // Create payment intent
     const intent = await PaymentIntent.create({
-      provider: 'cashfree',
+      provider: 'razorpay',
       purpose: 'subscription',
       amount: subscriptionAmount,
       userId,
@@ -274,8 +274,8 @@ export const createSubscription = async (req, res) => {
       notes: { planType }
     });
 
-    // Create Cashfree order
-    const order = await cfCreateOrder({
+    // Create Razorpay order
+    const order = await rpCreateOrder({
       orderId: intent._id.toString(),
       amount: subscriptionAmount,
       customer: { 
@@ -302,7 +302,7 @@ export const createSubscription = async (req, res) => {
       success: true,
       message: 'Subscription payment initiated',
       data: {
-        provider: 'cashfree',
+        provider: 'razorpay',
         order,
         intentId: intent._id,
         planType,
@@ -335,7 +335,7 @@ export const createWithdrawal = async (req, res) => {
 
     // Create payment intent
     const intent = await PaymentIntent.create({
-      provider: 'cashfree',
+      provider: 'razorpay',
       purpose: 'withdrawal_fee',
       amount: totalAmount,
       userId,
@@ -346,8 +346,8 @@ export const createWithdrawal = async (req, res) => {
       }
     });
 
-    // Create Cashfree order
-    const order = await cfCreateOrder({
+    // Create Razorpay order
+    const order = await rpCreateOrder({
       orderId: intent._id.toString(),
       amount: totalAmount,
       customer: { 
@@ -374,7 +374,7 @@ export const createWithdrawal = async (req, res) => {
       success: true,
       message: 'Withdrawal fee payment initiated',
       data: {
-        provider: 'cashfree',
+        provider: 'razorpay',
         order,
         intentId: intent._id,
         withdrawalAmount: amount,
@@ -416,9 +416,9 @@ export const processRefund = async (req, res) => {
       throw new ApiError(400, 'Payment must be completed before refund');
     }
 
-    // Create refund through Cashfree
+    // Create refund through Razorpay
     const refund = await createRefund(
-      paymentIntent.orderId,
+      paymentIntent.paymentId, // Use paymentId for Razorpay refunds
       `refund_${Date.now()}`,
       paymentIntent.amount,
       reason || 'User requested refund'

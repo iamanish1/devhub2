@@ -1,19 +1,19 @@
 import express from 'express';
-import { cashfreeWebhook } from '../controller/webhooksController.js';
-import { checkCashfreeHealth, getCashfreeConfig } from '../services/cashfree.js';
+import { razorpayWebhook } from '../controller/webhooksController.js';
+import { checkRazorpayHealth, getRazorpayConfig } from '../services/razorpay.js';
 
 const webhooksRoutes = express.Router();
 
-// Cashfree webhook
-webhooksRoutes.post('/cashfree',
-  cashfreeWebhook
+// Razorpay webhook
+webhooksRoutes.post('/razorpay',
+  razorpayWebhook
 );
 
-// Health check endpoint for Cashfree configuration
-webhooksRoutes.get('/cashfree/health', async (req, res) => {
+// Health check endpoint for Razorpay configuration
+webhooksRoutes.get('/razorpay/health', async (req, res) => {
   try {
-    const config = getCashfreeConfig();
-    const health = await checkCashfreeHealth();
+    const config = getRazorpayConfig();
+    const health = await checkRazorpayHealth();
     
     res.json({
       timestamp: new Date().toISOString(),
@@ -25,7 +25,7 @@ webhooksRoutes.get('/cashfree/health', async (req, res) => {
     res.status(500).json({
       error: 'Health check failed',
       message: error.message,
-      config: getCashfreeConfig()
+      config: getRazorpayConfig()
     });
   }
 });

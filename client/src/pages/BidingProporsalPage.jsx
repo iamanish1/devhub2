@@ -4,7 +4,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import Navbar from "../components/NavBar";
-import BidPaymentModal from "../components/payment/BidPaymentModal.jsx";
+import RazorpayPaymentModal from "../components/payment/RazorpayPaymentModal.jsx";
 
 // Animation variants
 const fadeInUp = {
@@ -1136,7 +1136,7 @@ Your bid will be visible to the project owner shortly.`;
       `}</style>
 
       {/* Payment Modal */}
-      <BidPaymentModal
+              <RazorpayPaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         paymentData={paymentData}

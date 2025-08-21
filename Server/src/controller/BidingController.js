@@ -2,7 +2,7 @@ import Bidding from "../Model/BiddingModel.js";
 import ProjectListing from "../Model/ProjectListingModel.js";
 import user from "../Model/UserModel.js";
 import PaymentIntent from "../Model/PaymentIntentModel.js";
-import { createOrder as cfCreateOrder } from "../services/cashfree.js";
+import { createOrder as rpCreateOrder } from "../services/razorpay.js";
 import { logPaymentEvent } from "../utils/logger.js";
 import { ApiError } from "../utils/error.js";
 import mongoose from "mongoose";
@@ -117,11 +117,11 @@ export const createBid = async (req, res) => {
 
     // Create payment intent for ALL bids (payment always required)
     let paymentIntent = null;
-    let cashfreeOrder = null;
+    let razorpayOrder = null;
 
     // Create payment intent for the TOTAL amount (bid amount + fee if applicable)
     paymentIntent = await PaymentIntent.create({
-      provider: 'cashfree',
+      provider: 'razorpay',
       purpose: 'bid_fee',
       amount: totalAmount, // Total amount including bid amount + fee (if any)
       userId: userID,
@@ -140,8 +140,8 @@ export const createBid = async (req, res) => {
       }
     });
 
-    // Create Cashfree order for the TOTAL amount
-    cashfreeOrder = await cfCreateOrder({
+    // Create Razorpay order for the TOTAL amount
+    razorpayOrder = await rpCreateOrder({
       orderId: paymentIntent._id.toString(),
       amount: totalAmount, // Total amount including bid amount + fee (if any)
       customer: { 
@@ -155,12 +155,12 @@ export const createBid = async (req, res) => {
     });
 
     // Update payment intent with order ID
-    paymentIntent.orderId = cashfreeOrder.order_id;
+    paymentIntent.orderId = razorpayOrder.order_id;
     await paymentIntent.save();
 
     logPaymentEvent('bid_fee_created', {
       intentId: paymentIntent._id,
-      orderId: cashfreeOrder.order_id,
+      orderId: razorpayOrder.order_id,
       userId: userID,
       projectId: _id,
       bidAmount: bid_amount,
@@ -175,8 +175,8 @@ export const createBid = async (req, res) => {
       message: "Payment required before bid creation.",
       paymentRequired: true,
       paymentData: {
-        provider: 'cashfree',
-        order: cashfreeOrder,
+        provider: 'razorpay',
+        order: razorpayOrder,
         intentId: paymentIntent._id,
         amount: totalAmount // Total amount including bid amount + fee (if any)
       },

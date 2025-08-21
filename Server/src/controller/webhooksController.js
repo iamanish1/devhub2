@@ -3,57 +3,58 @@ import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
 import WebhookEvent from '../Model/WebhookEventModel.js';
-import { verifyWebhookSignature as cfVerify, verifyOrderWithCashfree } from '../services/cashfree.js';
+import { verifyWebhookSignature as rpVerify, verifyOrderWithRazorpay } from '../services/razorpay.js';
 import { logWebhookEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 import mongoose from 'mongoose';
 import { firestoreDb } from '../config/firebaseAdmin.js';
 import user from '../Model/UserModel.js';
 
-// Cashfree webhook handler
-export const cashfreeWebhook = async (req, res) => {
+// Razorpay webhook handler
+export const razorpayWebhook = async (req, res) => {
   try {
-    const signature = req.headers['x-webhook-signature'];
+    const signature = req.headers['x-razorpay-signature'];
     const rawBody = req.rawBody || JSON.stringify(req.body);
     
     // Verify webhook payload
-    if (!cfVerify(req.body, signature)) {
-      logWebhookEvent('cashfree', 'webhook_verification_failed', 'unknown', {
+    if (!rpVerify(rawBody, signature)) {
+      logWebhookEvent('razorpay', 'webhook_verification_failed', 'unknown', {
         signature: signature ? 'present' : 'missing',
         payloadKeys: req.body ? Object.keys(req.body) : []
       });
       return res.status(400).send('Invalid webhook payload');
     }
 
-    const eventId = req.body.orderId || req.body.paymentId;
-    const type = req.body.orderStatus || req.body.paymentStatus;
+    const eventId = req.body.payload?.payment?.entity?.id || req.body.payload?.order?.entity?.id;
+    const type = req.body.event || 'payment.captured';
 
     // Check for duplicate webhook
     const exists = await WebhookEvent.findOne({ eventId });
     if (exists) {
-      logWebhookEvent('cashfree', 'duplicate_webhook', eventId, { type });
+      logWebhookEvent('razorpay', 'duplicate_webhook', eventId, { type });
       return res.status(200).end();
     }
 
     // Create webhook event record
     await WebhookEvent.create({ 
-      provider: 'cashfree', 
+      provider: 'razorpay', 
       eventType: type, 
       eventId, 
       signature, 
       processed: true 
     });
 
-    logWebhookEvent('cashfree', type, eventId, req.body);
+    logWebhookEvent('razorpay', type, eventId, req.body);
 
     // Handle payment success events
-    if (type === 'PAID' || type === 'SUCCESS') {
-      const orderId = req.body.orderId;
+    if (type === 'payment.captured' || type === 'order.paid') {
+      const orderId = req.body.payload?.order?.entity?.id || req.body.payload?.payment?.entity?.order_id;
+      const paymentId = req.body.payload?.payment?.entity?.id;
       
       if (orderId) {
-        // Optional: Verify order with Cashfree API for additional security
+        // Optional: Verify order with Razorpay API for additional security
         // This is recommended for production to prevent webhook spoofing
-        const orderVerified = await verifyOrderWithCashfree(orderId);
+        const orderVerified = await verifyOrderWithRazorpay(orderId);
         if (!orderVerified) {
           logger.warn('Order verification failed, but continuing webhook processing', { orderId });
           // You can choose to return error here for stricter security
@@ -64,7 +65,7 @@ export const cashfreeWebhook = async (req, res) => {
           { orderId }, 
           { 
             status: 'paid', 
-            paymentId: req.body.paymentId 
+            paymentId: paymentId 
           }, 
           { new: true }
         );
@@ -157,25 +158,25 @@ export const cashfreeWebhook = async (req, res) => {
                   }
                 }
 
-                console.log(`[Webhook] Bid created after successful payment - bidId: ${newBid._id}, feeAmount: ${feeAmount}`);
-                logWebhookEvent('cashfree', 'bid_created', eventId, {
-                  bidId: newBid._id,
-                  projectId: intent.projectId,
-                  userId: intent.userId,
-                  feeAmount: feeAmount
-                });
+                                 console.log(`[Webhook] Bid created after successful payment - bidId: ${newBid._id}, feeAmount: ${feeAmount}`);
+                 logWebhookEvent('razorpay', 'bid_created', eventId, {
+                   bidId: newBid._id,
+                   projectId: intent.projectId,
+                   userId: intent.userId,
+                   feeAmount: feeAmount
+                 });
               } else {
                 console.log(`[Webhook] Bid already exists for this payment - bidId: ${existingBid._id}`);
               }
               break;
 
-            case 'listing':
-              // Update project listing status
-              await ProjectListing.findByIdAndUpdate(intent.projectId, {
-                'cashfreeOrderId': orderId,
-                status: 'active'
-              });
-              break;
+                         case 'listing':
+               // Update project listing status
+               await ProjectListing.findByIdAndUpdate(intent.projectId, {
+                 'razorpayOrderId': orderId,
+                 status: 'active'
+               });
+               break;
 
             case 'bonus_funding':
               // Create or update bonus pool
@@ -203,11 +204,11 @@ export const cashfreeWebhook = async (req, res) => {
               await ProjectListing.findByIdAndUpdate(intent.projectId, { 
                 $set: { 
                   'bonus.funded': true,
-                  'bonus.cashfreeOrderId': orderId
+                  'bonus.razorpayOrderId': orderId
                 } 
               });
 
-              logWebhookEvent('cashfree', 'bonus_funded', eventId, {
+              logWebhookEvent('razorpay', 'bonus_funded', eventId, {
                 projectId: intent.projectId,
                 amount: bonusAmount,
                 contributorCount
@@ -216,7 +217,7 @@ export const cashfreeWebhook = async (req, res) => {
 
             case 'subscription':
               // Handle subscription activation
-              logWebhookEvent('cashfree', 'subscription_activated', eventId, {
+              logWebhookEvent('razorpay', 'subscription_activated', eventId, {
                 userId: intent.userId,
                 planType: intent.notes?.planType
               });
@@ -224,7 +225,7 @@ export const cashfreeWebhook = async (req, res) => {
 
             case 'withdrawal_fee':
               // Handle withdrawal fee payment
-              logWebhookEvent('cashfree', 'withdrawal_fee_paid', eventId, {
+              logWebhookEvent('razorpay', 'withdrawal_fee_paid', eventId, {
                 userId: intent.userId,
                 withdrawalAmount: intent.notes?.withdrawalAmount
               });
@@ -237,7 +238,7 @@ export const cashfreeWebhook = async (req, res) => {
     return res.status(200).end();
 
   } catch (error) {
-    logWebhookEvent('cashfree', 'webhook_error', 'unknown', { error: error.message });
+    logWebhookEvent('razorpay', 'webhook_error', 'unknown', { error: error.message });
     return res.status(500).send('Webhook processing failed');
   }
 };
