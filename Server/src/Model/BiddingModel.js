@@ -59,7 +59,7 @@ const BiddingSchema = new mongoose.Schema({
   escrow_details: {
     locked_at: Date,
     payment_intent_id: String,
-    provider: { type: String, default: 'cashfree' }
+    provider: { type: String, default: 'razorpay' }
   },
   // Free bid tracking
   is_free_bid: {

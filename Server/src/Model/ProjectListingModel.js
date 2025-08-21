@@ -125,7 +125,7 @@ const ProjectListingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'BonusPool'
   },
-  cashfreeOrderId: String, // Cashfree order id for listing fee
+  razorpayOrderId: String, // Razorpay order id for listing fee
   bonus: {
     minRequired: Number,
     funded: { type: Boolean, default: false },

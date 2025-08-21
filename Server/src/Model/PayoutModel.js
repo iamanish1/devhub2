@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const PayoutSchema = new mongoose.Schema({
   provider: {
     type: String,
-    enum: ['cashfree'],
+    enum: ['cashfree', 'razorpay'],
     required: true
   },
   userId: {
