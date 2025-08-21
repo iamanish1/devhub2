@@ -33,4 +33,12 @@ webhooksRoutes.get('/razorpay/health', async (req, res) => {
 // Manual payment update for testing (REMOVE IN PRODUCTION)
 webhooksRoutes.post('/manual-update/:orderId', manualPaymentUpdate);
 
+// Test webhook endpoint for debugging
+webhooksRoutes.post('/test', (req, res) => {
+  console.log('[Test Webhook] Received test webhook request');
+  console.log('[Test Webhook] Headers:', req.headers);
+  console.log('[Test Webhook] Body:', req.body);
+  res.status(200).json({ message: 'Test webhook received successfully' });
+});
+
 export default webhooksRoutes;
