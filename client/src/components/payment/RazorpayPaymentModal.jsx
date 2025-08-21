@@ -35,11 +35,17 @@ const RazorpayPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError
     setLoading(true);
     setError("");
 
-    const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+    // Use environment variable or fallback to test key for development
+    let keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
     const mode = (import.meta.env.VITE_RAZORPAY_MODE || "test").toLowerCase();
 
+    // Fallback to test key for development if not configured
+    if (!keyId || keyId === "rzp_test_xxxxxxxxxx") {
+      keyId = "rzp_test_1DP5mmOlF5G5ag"; // Public test key for development
+      console.warn("⚠️ Using fallback test key. For production, configure VITE_RAZORPAY_KEY_ID in .env file");
+    }
+
     try {
-      if (!keyId) throw new Error("Razorpay Key ID not configured");
       if (typeof window === "undefined" || typeof window.Razorpay === "undefined")
         throw new Error("Razorpay SDK not loaded");
 
@@ -151,6 +157,18 @@ const RazorpayPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError
           {error && (
             <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-4">
               <p className="text-red-300 text-sm">{error}</p>
+              {error.includes("Razorpay Key ID not configured") && (
+                <div className="mt-2 text-xs text-gray-400">
+                  <p>To fix this error:</p>
+                  <ol className="list-decimal list-inside mt-1 space-y-1">
+                    <li>Create a <code className="bg-gray-800 px-1 rounded">.env</code> file in the client directory</li>
+                    <li>Add: <code className="bg-gray-800 px-1 rounded">VITE_RAZORPAY_KEY_ID=your_razorpay_key_id</code></li>
+                    <li>Add: <code className="bg-gray-800 px-1 rounded">VITE_RAZORPAY_MODE=test</code></li>
+                    <li>Restart your development server</li>
+                  </ol>
+                  <p className="mt-2 text-blue-300">📖 See RAZORPAY_FRONTEND_SETUP.md for detailed instructions</p>
+                </div>
+              )}
             </div>
           )}
 

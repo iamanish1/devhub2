@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { connectDb } from "./config/connectionDB.js";
 import cors from "cors";
+import mongoose from "mongoose";
 import userRoute from "./Routes/userRoutes.js";
 import projectRoutes from "./Routes/ProjectListingRoutes.js";
 import biddingRoutes from "./Routes/BiddingRoutes.js";
@@ -22,6 +23,22 @@ import path from "path";
 
 
 dotenv.config();
+
+// Validate required environment variables
+const requiredEnvVars = ['JWT_SECRET', 'MONGODB_URI'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingEnvVars);
+  console.error('⚠️ Server may not function properly without these variables');
+}
+
+// Log environment status
+console.log('📋 Environment Variables Status:');
+console.log('  JWT_SECRET:', process.env.JWT_SECRET ? '✅ Set' : '❌ Missing');
+console.log('  MONGODB_URI:', process.env.MONGODB_URI ? '✅ Set' : '❌ Missing');
+console.log('  NODE_ENV:', process.env.NODE_ENV || 'development');
+console.log('  PORT:', process.env.PORT || 5000);
 
 // Initialize express app and server
 const app = express();
@@ -101,11 +118,35 @@ app.use("/api/projects", projectsPaymentRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  try {
+    const healthStatus = {
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+      memory: process.memoryUsage(),
+      version: process.version
+    };
+    
+    console.log("🏥 Health check requested:", healthStatus);
+    res.status(200).json(healthStatus);
+  } catch (error) {
+    console.error("❌ Health check error:", error);
+    res.status(500).json({ 
+      status: 'ERROR', 
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Root endpoint for basic connectivity test
+app.get('/', (req, res) => {
   res.status(200).json({ 
-    status: 'OK', 
+    message: 'DevHubs API Server is running',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    version: '1.0.0'
   });
 });
  
@@ -114,6 +155,40 @@ app.get('/api/health', (req, res) => {
 chatSocket(io);
 
 const port = process.env.PORT || 5000;
-connectDb();
 
-server.listen(port, () => console.log(`Server running on port ${port}`));
+// Add error handling for server startup
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${port} is already in use`);
+    process.exit(1);
+  } else {
+    console.error('❌ Server failed to start:', error.message);
+    process.exit(1);
+  }
+});
+
+// Start server with proper error handling
+const startServer = async () => {
+  try {
+    console.log("🚀 Starting DevHubs API Server...");
+    console.log("📋 Environment:", process.env.NODE_ENV || 'development');
+    console.log("🔗 Port:", port);
+    
+    // Connect to database
+    await connectDb();
+    
+    // Start the server
+    server.listen(port, () => {
+      console.log(`✅ Server running on port ${port}`);
+      console.log(`🏥 Health check available at: http://localhost:${port}/api/health`);
+      console.log(`📊 Root endpoint: http://localhost:${port}/`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+startServer();
