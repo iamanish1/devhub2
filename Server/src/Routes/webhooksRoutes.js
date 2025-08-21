@@ -1,5 +1,5 @@
 import express from 'express';
-import { razorpayWebhook } from '../controller/webhooksController.js';
+import { razorpayWebhook, manualPaymentUpdate } from '../controller/webhooksController.js';
 import { checkRazorpayHealth, getRazorpayConfig } from '../services/razorpay.js';
 
 const webhooksRoutes = express.Router();
@@ -29,5 +29,8 @@ webhooksRoutes.get('/razorpay/health', async (req, res) => {
     });
   }
 });
+
+// Manual payment update for testing (REMOVE IN PRODUCTION)
+webhooksRoutes.post('/manual-update/:orderId', manualPaymentUpdate);
 
 export default webhooksRoutes;
