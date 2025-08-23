@@ -1,11 +1,27 @@
-import admin from "../config/firebaseConfig.js";
 import user from "../Model/UserModel.js";
 import jwt from "jsonwebtoken";
 
-// thid id my name 
-
 const JWT_SECRET = process.env.JWT_SECRET;
 console.log(JWT_SECRET);
+
+// Lazy import Firebase configuration to prevent startup failures
+let admin = null;
+let firebaseInitialized = false;
+
+const initializeFirebase = async () => {
+  if (!firebaseInitialized) {
+    try {
+      const { default: firebaseAdmin } = await import("../config/firebaseConfig.js");
+      admin = firebaseAdmin;
+      firebaseInitialized = true;
+      console.log("✅ Firebase Admin SDK loaded successfully");
+    } catch (error) {
+      console.error("❌ Failed to load Firebase Admin SDK:", error.message);
+      firebaseInitialized = false;
+    }
+  }
+  return firebaseInitialized;
+};
 
 const githubAuthentication = async (req, res) => {
   try {
@@ -17,6 +33,17 @@ const githubAuthentication = async (req, res) => {
       });
     }
     console.log("Firebase Token:", firebasetoken);
+
+    // Initialize Firebase if not already done
+    const firebaseReady = await initializeFirebase();
+    
+    // Check if Firebase is available
+    if (!firebaseReady || !admin || !admin.apps || !admin.apps.length) {
+      return res.status(503).json({
+        error: "Firebase service unavailable",
+        message: "Firebase authentication is not configured. Please contact support.",
+      });
+    }
 
     // Verify Firebase ID Token
     const decodedToken = await admin.auth().verifyIdToken(firebasetoken);
@@ -54,6 +81,16 @@ const githubAuthentication = async (req, res) => {
     });
   } catch (error) {
     console.error("Auth Error:", error);
+    
+    // Check if it's a Firebase-related error
+    if (error.message.includes("Firebase Admin SDK not initialized") || 
+        error.message.includes("Firebase service unavailable")) {
+      return res.status(503).json({
+        error: "Firebase service unavailable",
+        message: "Firebase authentication is not configured. Please contact support.",
+      });
+    }
+    
     res.status(500).json({
       error: "Failed to authenticate GitHub user",
       message: error.message,
