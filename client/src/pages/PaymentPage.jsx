@@ -4,21 +4,17 @@ import NavBar from '../components/NavBar';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PaymentHistoryPage from './PaymentHistoryPage';
 import PaymentAnalytics from '../components/payment/PaymentAnalytics';
-import PaymentMethodManager from '../components/payment/PaymentMethodManager';
 import SubscriptionStatus from '../components/payment/SubscriptionStatus';
 import { formatCurrency } from '../utils/paymentUtils.jsx';
 import { PAYMENT_STATUS } from '../constants/paymentConstants';
 
 const PaymentPage = () => {
   const { 
-    paymentHistory, 
     subscription, 
     bonusPools, 
-    withdrawalHistory,
     isProcessing,
     refreshData,
-    getPaymentStats,
-    hasActiveSubscription
+    getPaymentStats
   } = usePayment();
   
   const [activeTab, setActiveTab] = useState('overview');
@@ -44,7 +40,6 @@ const PaymentPage = () => {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'history', label: 'Payment History', icon: '📋' },
     { id: 'analytics', label: 'Analytics', icon: '📈' },
-    { id: 'methods', label: 'Payment Methods', icon: '💳' },
     { id: 'subscription', label: 'Subscription', icon: '⭐' }
   ];
 
@@ -56,8 +51,6 @@ const PaymentPage = () => {
         return <PaymentHistoryPage />;
       case 'analytics':
         return <PaymentAnalytics />;
-      case 'methods':
-        return <PaymentMethodManager />;
       case 'subscription':
         return <SubscriptionStatus />;
       default:
