@@ -217,7 +217,7 @@ const ProjectCard = memo(({ project }) => {
 
           {/* Project details grid */}
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+            className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
@@ -265,6 +265,29 @@ const ProjectCard = memo(({ project }) => {
                 Active Bidders
               </h3>
               <p className="text-xl font-bold text-white">{projectData.bidCount}</p>
+            </motion.div>
+
+            {/* Bonus Pool Card */}
+            <motion.div 
+              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
+              whileHover={{ scale: 1.02 }}
+            >
+              <h3 className="text-gray-400 text-xs uppercase font-medium mb-1 flex items-center">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+                Bonus Pool
+              </h3>
+              <p className="text-xl font-bold text-white">
+                {project.bonus_pool_amount && project.bonus_pool_contributors 
+                  ? `₹${(parseInt(project.bonus_pool_amount) * parseInt(project.bonus_pool_contributors)).toLocaleString('en-IN')}`
+                  : "₹0"}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {project.bonus_pool_amount && project.bonus_pool_contributors 
+                  ? `₹${project.bonus_pool_amount}/contributor`
+                  : "Not set"}
+              </p>
             </motion.div>
           </motion.div>
 

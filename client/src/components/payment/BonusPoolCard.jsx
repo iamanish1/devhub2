@@ -1,34 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { usePayment } from '../../context/PaymentContext';
-import { formatCurrency, calculateBonusPoolAmount } from '../../utils/paymentUtils';
-import { PAYMENT_AMOUNTS } from '../../constants/paymentConstants';
-import PaymentModal from './PaymentModal';
 
-const BonusPoolCard = ({ projectId, currentPool = null }) => {
-  const { bonusPools, bonusPoolsLoading } = usePayment();
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [contributorCount, setContributorCount] = useState(1);
-  const [showCalculator, setShowCalculator] = useState(false);
+const BonusPoolCard = ({ project, onFundBonus, isOwner = false, isFunded = false }) => {
+  const bonusAmount = project.bonus_pool_amount || 0;
+  const contributorCount = project.bonus_pool_contributors || 0;
+  const totalBonusPool = bonusAmount * contributorCount;
 
-  // Find the bonus pool for this project
-  const bonusPool = currentPool || bonusPools.find(pool => pool.projectId === projectId);
-
-  // Calculate total amount
-  const totalAmount = calculateBonusPoolAmount(contributorCount);
-
-  // Get payout status color
-  const getPayoutStatusColor = (status) => {
-    switch (status) {
-      case 'pending':
-        return 'text-yellow-500';
-      case 'completed':
-        return 'text-green-500';
-      case 'failed':
-        return 'text-red-500';
-      default:
-        return 'text-gray-500';
-    }
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
   const cardVariants = {
@@ -50,200 +34,97 @@ const BonusPoolCard = ({ projectId, currentPool = null }) => {
     }
   };
 
-  if (bonusPoolsLoading) {
-    return (
-      <motion.div
-        className="glass rounded-xl p-6 border border-gray-700"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-700 rounded mb-4"></div>
-          <div className="h-8 bg-gray-700 rounded mb-4"></div>
-          <div className="h-4 bg-gray-700 rounded"></div>
-        </div>
-      </motion.div>
-    );
-  }
-
   return (
-    <>
-      <motion.div
-        className="glass rounded-xl p-6 border border-gray-700"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        whileHover="hover"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-xl p-6 border border-[#00A8E8]/20 shadow-lg shadow-[#00A8E8]/10"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] rounded-lg flex items-center justify-center mr-3">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+          </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Bonus Pool</h3>
-            <p className="text-gray-400 text-sm">Reward contributors for their work</p>
+            <h3 className="text-lg font-bold text-white">Bonus Pool</h3>
+            <p className="text-sm text-gray-400">Reward distribution for contributors</p>
           </div>
-          {bonusPool && (
-            <div className="text-right">
-              <div className="gradient-text text-xl font-bold">
-                {formatCurrency(bonusPool.amount)}
-              </div>
-              <div className="text-xs text-gray-400">
-                {bonusPool.contributorCount} contributors
-              </div>
-            </div>
-          )}
         </div>
-
-        {/* Current Pool Status */}
-        {bonusPool ? (
-          <div className="space-y-3 mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-300">Total Amount:</span>
-              <span className="text-white font-bold">
-                {formatCurrency(bonusPool.amount)}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-300">Contributors:</span>
-              <span className="text-white">
-                {bonusPool.contributorCount}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-300">Per Contributor:</span>
-              <span className="text-white">
-                {formatCurrency(bonusPool.amount / bonusPool.contributorCount)}
-              </span>
-            </div>
-            
-            {bonusPool.payoutStatus && (
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Payout Status:</span>
-                <span className={`font-medium ${getPayoutStatusColor(bonusPool.payoutStatus)}`}>
-                  {bonusPool.payoutStatus}
-                </span>
-              </div>
-            )}
+        {isFunded && (
+          <div className="flex items-center bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm">
+            <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+            Funded
           </div>
-        ) : (
-          <div className="mb-4">
-            <div className="text-center mb-4">
-              <div className="text-gray-400 text-sm mb-2">No bonus pool created yet</div>
-              <div className="text-gray-400 mb-4">
-                <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                </svg>
-              </div>
-              <p className="text-gray-400 text-xs">
-                Create a bonus pool to reward contributors
-              </p>
-            </div>
+        )}
+      </div>
+
+      {/* Bonus Pool Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-white">{formatCurrency(totalBonusPool)}</p>
+          <p className="text-xs text-gray-400">Total Pool</p>
+        </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold text-[#00A8E8]">{formatCurrency(bonusAmount)}</p>
+          <p className="text-xs text-gray-400">Per Contributor</p>
+        </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold text-[#0062E6]">{contributorCount}</p>
+          <p className="text-xs text-gray-400">Contributors</p>
+        </div>
+      </div>
+
+      {/* Status and Actions */}
+      <div className="space-y-3">
+        {isOwner && !isFunded && (
+          <motion.button
+            onClick={onFundBonus}
+            className="w-full bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span className="flex items-center justify-center">
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+              Fund Bonus Pool - {formatCurrency(totalBonusPool)}
+            </span>
+          </motion.button>
+        )}
+
+        {isOwner && isFunded && (
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+            <p className="text-green-400 text-sm text-center">
+              ✅ Bonus pool is funded and ready for distribution
+            </p>
           </div>
         )}
 
-        {/* Calculator */}
-        <div className="mb-4">
-          <button
-            onClick={() => setShowCalculator(!showCalculator)}
-            className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
-          >
-            {showCalculator ? 'Hide' : 'Show'} Calculator
-          </button>
-          
-          {showCalculator && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-3 space-y-3"
-            >
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Number of Contributors
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={contributorCount}
-                  onChange={(e) => setContributorCount(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              
-              <div className="bg-gray-800 rounded-lg p-3">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-gray-300 text-sm">Per Contributor:</span>
-                  <span className="text-white font-medium">
-                    {formatCurrency(PAYMENT_AMOUNTS.BONUS_PER_CONTRIBUTOR)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Total Amount:</span>
-                  <span className="gradient-text font-bold">
-                    {formatCurrency(totalAmount)}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          {bonusPool ? (
-            <>
-              <button
-                onClick={() => {
-                  setContributorCount(bonusPool.contributorCount);
-                  setShowPaymentModal(true);
-                }}
-                className="btn-primary flex-1"
-              >
-                Add More Funding
-              </button>
-              <button className="btn-secondary flex-1">
-                View Details
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              className="btn-primary w-full"
-            >
-              Create Bonus Pool
-            </button>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="mt-4 p-3 bg-gray-800 rounded-lg">
-          <div className="text-center">
-            <p className="text-gray-400 text-sm">
-              ₹{PAYMENT_AMOUNTS.BONUS_PER_CONTRIBUTOR} per contributor
-            </p>
-            <p className="text-gray-500 text-xs mt-1">
-              Contributors will receive equal shares from the bonus pool
+        {!isOwner && (
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+            <p className="text-blue-400 text-sm text-center">
+              💰 Earn up to {formatCurrency(bonusAmount)} bonus by contributing to this project
             </p>
           </div>
-        </div>
-      </motion.div>
+        )}
 
-      {/* Payment Modal */}
-      <PaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        paymentType="bonus_funding"
-        projectId={projectId}
-        contributorCount={contributorCount}
-        onSuccess={(result) => {
-          console.log('Bonus funding payment successful:', result);
-          setShowPaymentModal(false);
-        }}
-      />
-    </>
+        {/* Info Section */}
+        <div className="bg-gray-800/50 rounded-lg p-3">
+          <h4 className="text-sm font-semibold text-gray-300 mb-2">How it works:</h4>
+          <ul className="text-xs text-gray-400 space-y-1">
+            <li>• Project owner funds the bonus pool upfront</li>
+            <li>• Bonus is distributed equally among selected contributors</li>
+            <li>• Minimum ₹200 per contributor required</li>
+            <li>• Bonus is paid upon project completion</li>
+          </ul>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 

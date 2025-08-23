@@ -14,6 +14,8 @@ const ListProject = async (req, res) => {
       Project_gitHub_link,
       Project_cover_photo,
       project_starting_bid,
+      bonus_pool_amount,
+      bonus_pool_contributors,
     } = req.body;
 
     // Handle uploaded files
@@ -84,6 +86,8 @@ const ListProject = async (req, res) => {
       Project_cover_photo: coverPhotoUrl,
       Project_images: projectImages,
       project_starting_bid,
+      bonus_pool_amount: bonus_pool_amount || 200,
+      bonus_pool_contributors: bonus_pool_contributors || 1,
     });
     await project.save();
     res.status(200).json({

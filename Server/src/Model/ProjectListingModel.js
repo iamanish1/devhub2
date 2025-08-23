@@ -103,6 +103,17 @@ const ProjectListingSchema = new mongoose.Schema({
     url: String,
     size: Number
   }],
+  // Bonus pool fields
+  bonus_pool_amount: {
+    type: Number,
+    default: 200,
+    min: 200
+  },
+  bonus_pool_contributors: {
+    type: Number,
+    default: 1,
+    min: 1
+  },
   // Payment and bonus related fields
   selectedContributors: [{
     userId: {

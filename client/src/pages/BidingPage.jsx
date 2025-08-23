@@ -89,10 +89,11 @@ const BidingPage = () => {
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/project/getlistproject/${_id}`
         );
-        setProject(response.data.project);
+        const projectData = response.data.project;
+        setProject(projectData);
         setLoading(false);
         console.log("_id:", _id);
-        console.log(response.data.project);
+        console.log(projectData);
         
         // Calculate countdown based on project end date
         if (response.data.project.project_duration) {
@@ -311,7 +312,7 @@ const BidingPage = () => {
           </div>
 
           {/* Bid Details Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <div className="bg-[#252525] p-4 rounded-lg border border-blue-500/30 shadow-lg hover:shadow-blue-500/20 transition-all hover:-translate-y-1">
               <p className="text-gray-400 text-sm">Starting Bid</p>
               <p className="text-2xl font-bold text-white">
@@ -336,7 +337,68 @@ const BidingPage = () => {
                 {project.Project_Number_Of_Bids}
               </p>
             </div>
+            <div className="bg-[#252525] p-4 rounded-lg border border-[#00A8E8]/30 shadow-lg hover:shadow-[#00A8E8]/20 transition-all hover:-translate-y-1">
+              <p className="text-gray-400 text-sm">Bonus Pool</p>
+              <p className="text-2xl font-bold text-[#00A8E8]">
+                {project.bonus_pool_amount && project.bonus_pool_contributors 
+                  ? `₹${(parseInt(project.bonus_pool_amount) * parseInt(project.bonus_pool_contributors)).toLocaleString('en-IN')}`
+                  : "₹0"}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {project.bonus_pool_amount && project.bonus_pool_contributors 
+                  ? `₹${project.bonus_pool_amount}/contributor`
+                  : "Not set"}
+              </p>
+            </div>
           </div>
+
+          {/* Bonus Pool Section */}
+          {project.bonus_pool_amount && project.bonus_pool_contributors && (
+            <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-xl p-6 border border-[#00A8E8]/20 shadow-lg shadow-[#00A8E8]/10 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] rounded-lg flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Bonus Pool Available</h3>
+                    <p className="text-sm text-gray-400">Extra rewards for contributors</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-[#00A8E8]">
+                    ₹{(parseInt(project.bonus_pool_amount) * parseInt(project.bonus_pool_contributors)).toLocaleString('en-IN')}
+                  </p>
+                  <p className="text-sm text-gray-400">Total Pool</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-white">{project.bonus_pool_amount}</p>
+                  <p className="text-xs text-gray-400">Per Contributor</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[#00A8E8]">{project.bonus_pool_contributors}</p>
+                  <p className="text-xs text-gray-400">Contributors</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[#0062E6]">
+                    ₹{parseInt(project.bonus_pool_amount) * parseInt(project.bonus_pool_contributors)}
+                  </p>
+                  <p className="text-xs text-gray-400">Total Amount</p>
+                </div>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-blue-400 text-sm text-center">
+                  💰 Earn up to ₹{project.bonus_pool_amount} bonus by contributing to this project
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Project Description */}
           <div className="bg-[#232323] rounded-xl p-6 border border-gray-700/50 mb-8">
