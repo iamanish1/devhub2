@@ -100,85 +100,53 @@ export const razorpayWebhook = async (req, res) => {
           switch (intent.purpose) {
             case 'bid_fee':
               console.log(`[Webhook] Processing bid_fee payment`);
-              // Create the bid after successful payment
-              const { bidAmount, bidFee, totalAmount, feeAmount } = intent.notes;
-              console.log(`[Webhook] Bid details from notes:`, { bidAmount, bidFee, totalAmount, feeAmount });
               
-              // Check if bid already exists (prevent duplicate)
-              const existingBid = await Bidding.findOne({
-                project_id: intent.projectId,
-                user_id: intent.userId,
-                payment_status: 'paid'
-              });
+              // Get the bid ID from payment intent notes
+              const bidId = intent.notes?.bidId;
+              console.log(`[Webhook] Bid ID from payment intent: ${bidId}`);
+              
+              if (!bidId) {
+                console.error(`[Webhook] No bid ID found in payment intent notes`);
+                logWebhookEvent('razorpay', 'bid_fee_missing_bid_id', eventId, {
+                  intentId: intent._id,
+                  projectId: intent.projectId,
+                  userId: intent.userId
+                });
+                break;
+              }
 
-              // Also check for pending bids that should be updated
-              const pendingBid = await Bidding.findOne({
-                project_id: intent.projectId,
-                user_id: intent.userId,
-                payment_status: 'pending'
-              });
-
-              console.log(`[Webhook] Checking for existing bid - projectId: ${intent.projectId}, userId: ${intent.userId}, existingBid: ${existingBid ? existingBid._id : 'none'}, pendingBid: ${pendingBid ? pendingBid._id : 'none'}`);
-
-              if (!existingBid) {
-                let bidToUpdate = null;
+              try {
+                // Find and update the existing bid
+                const bidToUpdate = await Bidding.findById(bidId);
                 
-                // If there's a pending bid, update it instead of creating a new one
-                if (pendingBid) {
-                  console.log(`[Webhook] Updating existing pending bid - bidId: ${pendingBid._id}`);
-                  bidToUpdate = await Bidding.findByIdAndUpdate(
-                    pendingBid._id,
-                    {
-                      payment_status: 'paid',
-                      escrow_details: {
-                        ...pendingBid.escrow_details,
-                        payment_intent_id: intent._id.toString()
-                      }
-                    },
-                    { new: true }
-                  );
-                  console.log(`[Webhook] Updated pending bid to paid - bidId: ${bidToUpdate._id}`);
-                } else {
-                  // Create new bid only if no pending bid exists
-                  console.log(`[Webhook] Creating new bid after payment`);
-                  console.log(`[Webhook] Bid data:`, {
-                    project_id: intent.projectId,
-                    user_id: intent.userId,
-                    bid_amount: bidAmount,
-                    bid_fee: bidFee,
-                    total_amount: totalAmount,
-                    year_of_experience: intent.notes.year_of_experience || 1,
-                    bid_description: intent.notes.bid_description || '',
-                    hours_avilable_per_week: intent.notes.hours_avilable_per_week || 10,
-                    skills: intent.notes.skills || [],
-                    is_free_bid: feeAmount === 0,
-                    payment_status: 'paid'
+                if (!bidToUpdate) {
+                  console.error(`[Webhook] Bid not found with ID: ${bidId}`);
+                  logWebhookEvent('razorpay', 'bid_fee_bid_not_found', eventId, {
+                    bidId,
+                    intentId: intent._id,
+                    projectId: intent.projectId,
+                    userId: intent.userId
                   });
-                  
-                  const newBid = new Bidding({
-                    project_id: intent.projectId,
-                    user_id: intent.userId,
-                    bid_amount: bidAmount,
-                    bid_fee: bidFee,
-                    total_amount: totalAmount,
-                    year_of_experience: intent.notes.year_of_experience || 1,
-                    bid_description: intent.notes.bid_description || '',
-                    hours_avilable_per_week: intent.notes.hours_avilable_per_week || 10,
-                    skills: intent.notes.skills || [],
-                    is_free_bid: feeAmount === 0, // True if no fee was charged
-                    payment_status: 'paid'
-                  });
-
-                  try {
-                    bidToUpdate = await newBid.save();
-                    console.log(`[Webhook] Created new bid successfully - bidId: ${bidToUpdate._id}`);
-                  } catch (saveError) {
-                    console.error(`[Webhook] Error saving bid:`, saveError);
-                    throw saveError;
-                  }
+                  break;
                 }
 
+                console.log(`[Webhook] Found bid to update - bidId: ${bidToUpdate._id}, current status: ${bidToUpdate.payment_status}`);
+
+                // Update bid payment status to paid
+                const updatedBid = await Bidding.findByIdAndUpdate(
+                  bidId,
+                  {
+                    payment_status: 'paid',
+                    'escrow_details.payment_intent_id': intent._id.toString(),
+                    'escrow_details.locked_at': new Date()
+                  },
+                  { new: true }
+                );
+
+                console.log(`[Webhook] Bid payment status updated to paid - bidId: ${updatedBid._id}`);
+
                 // Update user's free bid statistics if fee was waived (free bid)
+                const feeAmount = intent.notes?.feeAmount || 0;
                 if (feeAmount === 0) {
                   const User = await user.findById(intent.userId);
                   if (User && User.freeBids?.remaining > 0) {
@@ -194,19 +162,23 @@ export const razorpayWebhook = async (req, res) => {
                 const projectObjectId = new mongoose.Types.ObjectId(intent.projectId);
                 const totalBids = await Bidding.countDocuments({
                   project_id: projectObjectId,
+                  payment_status: 'paid' // Only count paid bids
                 });
-                const allBids = await Bidding.find({ project_id: projectObjectId });
+                const allPaidBids = await Bidding.find({ 
+                  project_id: projectObjectId,
+                  payment_status: 'paid'
+                });
 
                 const uniqueContributors = [
-                  ...new Set(allBids.map((b) => b.user_id.toString())),
+                  ...new Set(allPaidBids.map((b) => b.user_id.toString())),
                 ].length;
 
-                // Calculate current bid amount (sum of all bid amounts, not including fees)
+                // Calculate current bid amount (sum of all paid bid amounts, not including fees)
                 let currentBidAmount = 0;
-                if (allBids.length === 1) {
-                  currentBidAmount = allBids[0].bid_amount;
-                } else if (allBids.length > 1) {
-                  currentBidAmount = allBids.reduce((sum, b) => sum + b.bid_amount, 0);
+                if (allPaidBids.length === 1) {
+                  currentBidAmount = allPaidBids[0].bid_amount;
+                } else if (allPaidBids.length > 1) {
+                  currentBidAmount = allPaidBids.reduce((sum, b) => sum + b.bid_amount, 0);
                 }
 
                 await ProjectListing.findByIdAndUpdate(projectObjectId, {
@@ -234,15 +206,23 @@ export const razorpayWebhook = async (req, res) => {
                   }
                 }
 
-                                 console.log(`[Webhook] Bid processed after successful payment - bidId: ${bidToUpdate._id}, feeAmount: ${feeAmount}`);
-                 logWebhookEvent('razorpay', 'bid_created', eventId, {
-                   bidId: bidToUpdate._id,
-                   projectId: intent.projectId,
-                   userId: intent.userId,
-                   feeAmount: feeAmount
-                 });
-              } else {
-                console.log(`[Webhook] Bid already exists for this payment - bidId: ${existingBid._id}`);
+                console.log(`[Webhook] Bid processed successfully after payment - bidId: ${updatedBid._id}, feeAmount: ${feeAmount}`);
+                logWebhookEvent('razorpay', 'bid_payment_completed', eventId, {
+                  bidId: updatedBid._id,
+                  projectId: intent.projectId,
+                  userId: intent.userId,
+                  feeAmount: feeAmount,
+                  totalBids: totalBids,
+                  currentBidAmount: currentBidAmount
+                });
+
+              } catch (bidUpdateError) {
+                console.error(`[Webhook] Error updating bid:`, bidUpdateError);
+                logWebhookEvent('razorpay', 'bid_fee_update_error', eventId, {
+                  bidId,
+                  intentId: intent._id,
+                  error: bidUpdateError.message
+                });
               }
               break;
 
@@ -370,59 +350,81 @@ export const manualPaymentUpdate = async (req, res) => {
 
     // Process the payment update
     if (intent.purpose === 'bid_fee') {
-      const { bidAmount, bidFee, totalAmount, feeAmount } = intent.notes;
+      const bidId = intent.notes?.bidId;
       
-      // Check for existing bids
-      const existingBid = await Bidding.findOne({
-        project_id: intent.projectId,
-        user_id: intent.userId,
-        payment_status: 'paid'
-      });
+      if (!bidId) {
+        console.error(`[Manual Update] No bid ID found in payment intent notes`);
+        return res.status(400).json({ 
+          message: 'No bid ID found in payment intent',
+          intent: intent
+        });
+      }
 
-      const pendingBid = await Bidding.findOne({
-        project_id: intent.projectId,
-        user_id: intent.userId,
-        payment_status: 'pending'
-      });
-
-      console.log(`[Manual Update] Checking bids - existingBid: ${existingBid ? existingBid._id : 'none'}, pendingBid: ${pendingBid ? pendingBid._id : 'none'}`);
-
-      if (!existingBid) {
-        let bidToUpdate = null;
+      try {
+        // Find and update the existing bid
+        const bidToUpdate = await Bidding.findById(bidId);
         
-        if (pendingBid) {
-          console.log(`[Manual Update] Updating pending bid - bidId: ${pendingBid._id}`);
-          bidToUpdate = await Bidding.findByIdAndUpdate(
-            pendingBid._id,
-            {
-              payment_status: 'paid',
-              escrow_details: {
-                ...pendingBid.escrow_details,
-                payment_intent_id: intent._id.toString()
-              }
-            },
-            { new: true }
-          );
-        } else {
-          console.log(`[Manual Update] Creating new bid`);
-          const newBid = new Bidding({
-            project_id: intent.projectId,
-            user_id: intent.userId,
-            bid_amount: bidAmount,
-            bid_fee: bidFee,
-            total_amount: totalAmount,
-            year_of_experience: intent.notes.year_of_experience || 1,
-            bid_description: intent.notes.bid_description || '',
-            hours_avilable_per_week: intent.notes.hours_avilable_per_week || 10,
-            skills: intent.notes.skills || [],
-            is_free_bid: feeAmount === 0,
-            payment_status: 'paid'
+        if (!bidToUpdate) {
+          console.error(`[Manual Update] Bid not found with ID: ${bidId}`);
+          return res.status(404).json({ 
+            message: 'Bid not found',
+            bidId: bidId,
+            intent: intent
           });
-
-          bidToUpdate = await newBid.save();
         }
 
-        console.log(`[Manual Update] Bid processed - bidId: ${bidToUpdate._id}`);
+        console.log(`[Manual Update] Found bid to update - bidId: ${bidToUpdate._id}, current status: ${bidToUpdate.payment_status}`);
+
+        // Update bid payment status to paid
+        const updatedBid = await Bidding.findByIdAndUpdate(
+          bidId,
+          {
+            payment_status: 'paid',
+            'escrow_details.payment_intent_id': intent._id.toString(),
+            'escrow_details.locked_at': new Date()
+          },
+          { new: true }
+        );
+
+        console.log(`[Manual Update] Bid payment status updated to paid - bidId: ${updatedBid._id}`);
+
+        // Update project statistics
+        const projectObjectId = new mongoose.Types.ObjectId(intent.projectId);
+        const totalBids = await Bidding.countDocuments({
+          project_id: projectObjectId,
+          payment_status: 'paid' // Only count paid bids
+        });
+        const allPaidBids = await Bidding.find({ 
+          project_id: projectObjectId,
+          payment_status: 'paid'
+        });
+
+        const uniqueContributors = [
+          ...new Set(allPaidBids.map((b) => b.user_id.toString())),
+        ].length;
+
+        // Calculate current bid amount (sum of all paid bid amounts, not including fees)
+        let currentBidAmount = 0;
+        if (allPaidBids.length === 1) {
+          currentBidAmount = allPaidBids[0].bid_amount;
+        } else if (allPaidBids.length > 1) {
+          currentBidAmount = allPaidBids.reduce((sum, b) => sum + b.bid_amount, 0);
+        }
+
+        await ProjectListing.findByIdAndUpdate(projectObjectId, {
+          Project_Number_Of_Bids: totalBids,
+          Project_Bid_Amount: currentBidAmount,
+        });
+
+        console.log(`[Manual Update] Bid processed successfully - bidId: ${updatedBid._id}`);
+
+      } catch (bidUpdateError) {
+        console.error(`[Manual Update] Error updating bid:`, bidUpdateError);
+        return res.status(500).json({ 
+          message: 'Error updating bid',
+          error: bidUpdateError.message,
+          intent: intent
+        });
       }
     }
 
@@ -436,6 +438,142 @@ export const manualPaymentUpdate = async (req, res) => {
     console.error('[Manual Update] Error:', error);
     res.status(500).json({ 
       message: 'Error updating payment status',
+      error: error.message 
+    });
+  }
+};
+
+// Check payment status and update bid if needed (fallback for failed webhooks)
+export const checkPaymentAndUpdateBid = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user._id;
+    
+    console.log(`[Payment Check] Checking payment status for orderId: ${orderId}, userId: ${userId}`);
+    
+    // Find payment intent
+    const intent = await PaymentIntent.findOne({
+      orderId: orderId,
+      userId: userId,
+      purpose: 'bid_fee'
+    });
+
+    if (!intent) {
+      return res.status(404).json({ 
+        message: 'Payment intent not found',
+        orderId: orderId
+      });
+    }
+
+    console.log(`[Payment Check] Found payment intent - status: ${intent.status}, bidId: ${intent.notes?.bidId}`);
+
+    // If payment is already marked as paid, check if bid needs updating
+    if (intent.status === 'paid') {
+      const bidId = intent.notes?.bidId;
+      
+      if (bidId) {
+        const bid = await Bidding.findById(bidId);
+        
+        if (bid && bid.payment_status === 'pending') {
+          console.log(`[Payment Check] Updating bid status from pending to paid - bidId: ${bidId}`);
+          
+          // Update bid status
+          await Bidding.findByIdAndUpdate(bidId, {
+            payment_status: 'paid',
+            'escrow_details.payment_intent_id': intent._id.toString(),
+            'escrow_details.locked_at': new Date()
+          });
+
+          // Update project statistics
+          const projectObjectId = new mongoose.Types.ObjectId(intent.projectId);
+          const totalBids = await Bidding.countDocuments({
+            project_id: projectObjectId,
+            payment_status: 'paid'
+          });
+          const allPaidBids = await Bidding.find({ 
+            project_id: projectObjectId,
+            payment_status: 'paid'
+          });
+
+          const uniqueContributors = [
+            ...new Set(allPaidBids.map((b) => b.user_id.toString())),
+          ].length;
+
+          let currentBidAmount = 0;
+          if (allPaidBids.length === 1) {
+            currentBidAmount = allPaidBids[0].bid_amount;
+          } else if (allPaidBids.length > 1) {
+            currentBidAmount = allPaidBids.reduce((sum, b) => sum + b.bid_amount, 0);
+          }
+
+          await ProjectListing.findByIdAndUpdate(projectObjectId, {
+            Project_Number_Of_Bids: totalBids,
+            Project_Bid_Amount: currentBidAmount,
+          });
+
+          console.log(`[Payment Check] Bid status updated successfully - bidId: ${bidId}`);
+          
+          return res.status(200).json({
+            message: 'Bid status updated successfully',
+            paymentStatus: 'paid',
+            bidStatus: 'paid',
+            totalBids: totalBids,
+            currentBidAmount: currentBidAmount
+          });
+        } else if (bid && bid.payment_status === 'paid') {
+          return res.status(200).json({
+            message: 'Bid is already paid',
+            paymentStatus: 'paid',
+            bidStatus: 'paid'
+          });
+        }
+      }
+    }
+
+    // If payment is not paid, try to verify with Razorpay
+    if (intent.status !== 'paid') {
+      try {
+        const { verifyOrderWithRazorpay } = await import('../services/razorpay.js');
+        const orderVerified = await verifyOrderWithRazorpay(orderId);
+        
+        if (orderVerified) {
+          console.log(`[Payment Check] Order verified with Razorpay - updating payment status`);
+          
+          // Update payment intent status
+          intent.status = 'paid';
+          await intent.save();
+          
+          // Update bid status
+          const bidId = intent.notes?.bidId;
+          if (bidId) {
+            await Bidding.findByIdAndUpdate(bidId, {
+              payment_status: 'paid',
+              'escrow_details.payment_intent_id': intent._id.toString(),
+              'escrow_details.locked_at': new Date()
+            });
+          }
+          
+          return res.status(200).json({
+            message: 'Payment verified and bid status updated',
+            paymentStatus: 'paid',
+            bidStatus: 'paid'
+          });
+        }
+      } catch (verifyError) {
+        console.error(`[Payment Check] Error verifying order:`, verifyError);
+      }
+    }
+
+    return res.status(200).json({
+      message: 'Payment status checked',
+      paymentStatus: intent.status,
+      bidStatus: 'pending'
+    });
+
+  } catch (error) {
+    console.error('[Payment Check] Error:', error);
+    res.status(500).json({ 
+      message: 'Error checking payment status',
       error: error.message 
     });
   }

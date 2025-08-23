@@ -400,8 +400,67 @@ Your Bid Details:
     try {
       console.log("Payment successful, bid will be created automatically via webhook");
       
-      const successMessage = `Payment successful! Your bid has been submitted.
+      // Wait a moment for webhook to process
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Check if payment was processed successfully
+      if (paymentData?.order?.order_id) {
+        try {
+          const token = localStorage.getItem("token");
+          const checkResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL}/webhooks/check-payment/${paymentData.order.order_id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          
+          console.log("Payment status check result:", checkResponse.data);
+          
+          if (checkResponse.data.bidStatus === 'paid') {
+            const successMessage = `Payment successful! Your bid has been submitted and activated.
+            
+Your Bid Details:
+• Original Bid: ₹${bidAmount}
+• Bidding Fee: ₹${getBidFee()}
+• Total Amount: ₹${bidAmount + getBidFee()}
+• Payment Type: ${isFreeBid() ? 'Free Bid' : hasActiveSubscription() ? 'Subscription Bid' : 'Paid Bid'}
+
+Your bid is now visible to the project owner.`;
+
+            alert(successMessage);
+            navigate(`/bidingPage/${_id}`, { 
+              state: { 
+                success: true, 
+                message: "Payment successful! Bid submitted and activated." 
+              } 
+            });
+          } else {
+            // Payment successful but bid not yet activated
+            const pendingMessage = `Payment successful! Your bid is being processed.
+            
+Your Bid Details:
+• Original Bid: ₹${bidAmount}
+• Bidding Fee: ₹${getBidFee()}
+• Total Amount: ₹${bidAmount + getBidFee()}
+• Payment Type: ${isFreeBid() ? 'Free Bid' : hasActiveSubscription() ? 'Subscription Bid' : 'Paid Bid'}
+
+Your bid will be activated shortly. If you don't see it within a few minutes, please contact support.`;
+
+            alert(pendingMessage);
+            navigate(`/bidingPage/${_id}`, { 
+              state: { 
+                success: true, 
+                message: "Payment successful! Bid is being processed." 
+              } 
+            });
+          }
+        } catch (checkError) {
+          console.error("Error checking payment status:", checkError);
+          // Fallback to original success message
+          const successMessage = `Payment successful! Your bid has been submitted.
+          
 Your Bid Details:
 • Original Bid: ₹${bidAmount}
 • Bidding Fee: ₹${getBidFee()}
@@ -410,13 +469,34 @@ Your Bid Details:
 
 Your bid will be visible to the project owner shortly.`;
 
-      alert(successMessage);
-      navigate(`/bidingPage/${_id}`, { 
-        state: { 
-          success: true, 
-          message: "Payment successful! Bid submitted." 
-        } 
-      });
+          alert(successMessage);
+          navigate(`/bidingPage/${_id}`, { 
+            state: { 
+              success: true, 
+              message: "Payment successful! Bid submitted." 
+            } 
+          });
+        }
+      } else {
+        // No order ID available, use fallback message
+        const successMessage = `Payment successful! Your bid has been submitted.
+        
+Your Bid Details:
+• Original Bid: ₹${bidAmount}
+• Bidding Fee: ₹${getBidFee()}
+• Total Amount: ₹${bidAmount + getBidFee()}
+• Payment Type: ${isFreeBid() ? 'Free Bid' : hasActiveSubscription() ? 'Subscription Bid' : 'Paid Bid'}
+
+Your bid will be visible to the project owner shortly.`;
+
+        alert(successMessage);
+        navigate(`/bidingPage/${_id}`, { 
+          state: { 
+            success: true, 
+            message: "Payment successful! Bid submitted." 
+          } 
+        });
+      }
       
     } catch (error) {
       console.error("Error handling payment success:", error);

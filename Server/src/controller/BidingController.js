@@ -115,12 +115,32 @@ export const createBid = async (req, res) => {
     console.log(`[Bid Creation] Eligibility check result:`, eligibility);
     console.log(`[Bid Creation] Fee calculation - bidFee: ₹${bidFee}, totalAmount: ₹${totalAmount}, reason: ${eligibility.reason}`);
 
-    // Create payment intent for ALL bids (payment always required)
-    let paymentIntent = null;
-    let razorpayOrder = null;
+    // Create the bid record immediately with pending payment status
+    console.log(`[Bid Creation] Creating bid record with pending payment status`);
+    const newBid = new Bidding({
+      project_id: _id,
+      user_id: userID,
+      bid_amount: bid_amount,
+      bid_fee: bidFee,
+      total_amount: totalAmount,
+      year_of_experience,
+      bid_description,
+      hours_avilable_per_week,
+      skills,
+      bid_status: "Pending",
+      payment_status: "pending", // Will be updated to 'paid' when payment is successful
+      is_free_bid: eligibility.feeAmount === 0,
+      escrow_details: {
+        provider: 'razorpay'
+      }
+    });
+
+    // Save the bid record
+    const savedBid = await newBid.save();
+    console.log(`[Bid Creation] Bid record created successfully - bidId: ${savedBid._id}`);
 
     // Create payment intent for the TOTAL amount (bid amount + fee if applicable)
-    paymentIntent = await PaymentIntent.create({
+    const paymentIntent = await PaymentIntent.create({
       provider: 'razorpay',
       purpose: 'bid_fee',
       amount: totalAmount, // Total amount including bid amount + fee (if any)
@@ -128,6 +148,7 @@ export const createBid = async (req, res) => {
       projectId: _id,
       status: 'created',
       notes: { 
+        bidId: savedBid._id.toString(), // Link to the created bid
         bidAmount: bid_amount,
         bidFee: bidFee,
         totalAmount: totalAmount,
@@ -141,7 +162,7 @@ export const createBid = async (req, res) => {
     });
 
     // Create Razorpay order for the TOTAL amount
-    razorpayOrder = await rpCreateOrder({
+    const razorpayOrder = await rpCreateOrder({
       orderId: paymentIntent._id.toString(),
       amount: totalAmount, // Total amount including bid amount + fee (if any)
       customer: { 
@@ -158,9 +179,15 @@ export const createBid = async (req, res) => {
     paymentIntent.orderId = razorpayOrder.order_id;
     await paymentIntent.save();
 
+    // Update bid with payment intent reference
+    await Bidding.findByIdAndUpdate(savedBid._id, {
+      'escrow_details.payment_intent_id': paymentIntent._id.toString()
+    });
+
     logPaymentEvent('bid_fee_created', {
       intentId: paymentIntent._id,
       orderId: razorpayOrder.order_id,
+      bidId: savedBid._id,
       userId: userID,
       projectId: _id,
       bidAmount: bid_amount,
@@ -172,7 +199,7 @@ export const createBid = async (req, res) => {
     // Return payment data for ALL bids (payment always required)
     console.log(`[Bid Creation] Payment required for all bids - returning payment data`);
     res.status(201).json({ 
-      message: "Payment required before bid creation.",
+      message: "Bid created successfully. Payment required to activate bid.",
       paymentRequired: true,
       paymentData: {
         provider: 'razorpay',
@@ -181,6 +208,7 @@ export const createBid = async (req, res) => {
         amount: totalAmount // Total amount including bid amount + fee (if any)
       },
       bidInfo: {
+        bidId: savedBid._id,
         originalAmount: bid_amount,
         fee: bidFee,
         totalAmount: totalAmount,
@@ -225,10 +253,39 @@ export const getBid = async (req, res) => {
       });
     }
 
+    // Check if bid needs payment status update
+    if (existingBid.payment_status === 'pending' && existingBid.escrow_details?.payment_intent_id) {
+      try {
+        // Check if payment intent is marked as paid
+        const paymentIntent = await PaymentIntent.findById(existingBid.escrow_details.payment_intent_id);
+        if (paymentIntent && paymentIntent.status === 'paid' && existingBid.payment_status === 'pending') {
+          console.log(`[getBid] Updating bid payment status from pending to paid - bidId: ${existingBid._id}`);
+          
+          // Update bid status
+          await Bidding.findByIdAndUpdate(existingBid._id, {
+            payment_status: 'paid',
+            'escrow_details.locked_at': new Date()
+          });
+          
+          // Update the existingBid object for response
+          existingBid.payment_status = 'paid';
+          existingBid.escrow_details.locked_at = new Date();
+        }
+      } catch (updateError) {
+        console.error(`[getBid] Error updating bid status:`, updateError);
+      }
+    }
+
     res.status(200).json({
       message: "Bid fetched successfully",
       existingBid,
-      eligibility: eligibility
+      eligibility: eligibility,
+      bidStatus: {
+        exists: true,
+        paymentStatus: existingBid.payment_status,
+        bidStatus: existingBid.bid_status,
+        isActive: existingBid.payment_status === 'paid'
+      }
     });
   } catch (error) {
     console.error("Error fetching bid:", error);

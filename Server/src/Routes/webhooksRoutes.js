@@ -1,6 +1,7 @@
 import express from 'express';
-import { razorpayWebhook, manualPaymentUpdate } from '../controller/webhooksController.js';
+import { razorpayWebhook, manualPaymentUpdate, checkPaymentAndUpdateBid } from '../controller/webhooksController.js';
 import { checkRazorpayHealth, getRazorpayConfig } from '../services/razorpay.js';
+import authMiddleware from '../Middleware/authenticateMiddelware.js';
 
 const webhooksRoutes = express.Router();
 
@@ -32,6 +33,9 @@ webhooksRoutes.get('/razorpay/health', async (req, res) => {
 
 // Manual payment update for testing (REMOVE IN PRODUCTION)
 webhooksRoutes.post('/manual-update/:orderId', manualPaymentUpdate);
+
+// Check payment status and update bid (fallback for failed webhooks)
+webhooksRoutes.get('/check-payment/:orderId', authMiddleware, checkPaymentAndUpdateBid);
 
 // Test webhook endpoint for debugging
 webhooksRoutes.post('/test', (req, res) => {
