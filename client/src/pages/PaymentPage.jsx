@@ -4,6 +4,7 @@ import PaymentModal from '../components/payment/PaymentModal';
 import BonusPoolCard from '../components/payment/BonusPoolCard';
 import SubscriptionStatus from '../components/payment/SubscriptionStatus';
 import LoadingSpinner from '../components/LoadingSpinner';
+import NavBar from '../components/NavBar';
 import { 
   PAYMENT_TYPES, 
   PAYMENT_AMOUNTS, 
@@ -93,6 +94,7 @@ const PaymentPage = () => {
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
+      <NavBar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
