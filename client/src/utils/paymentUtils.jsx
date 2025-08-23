@@ -188,10 +188,10 @@ export const isRecentPayment = (paymentDate) => {
 export const generatePaymentSummary = (payment) => {
   if (!payment) return null;
   
-  const { type, amount, status, createdAt, provider } = payment;
+  const { type, purpose, amount, status, createdAt, provider } = payment;
   
   return {
-    type: getPaymentTypeDisplayName(type),
+    type: getPaymentTypeDisplayName(type || purpose),
     amount: formatCurrency(amount),
     status: status,
     date: formatPaymentDate(createdAt),
@@ -217,7 +217,8 @@ export const validatePaymentData = (payment) => {
     errors.push('Valid payment amount is required');
   }
   
-  if (!payment.type) {
+  // Check for either 'type' or 'purpose' field
+  if (!payment.type && !payment.purpose) {
     errors.push('Payment type is required');
   }
   
