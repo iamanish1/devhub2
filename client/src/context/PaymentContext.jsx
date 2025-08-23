@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import paymentApi from '../services/paymentApi.js';
-import { PAYMENT_STATUS } from '../constants/paymentConstants.js';
+import { PAYMENT_STATUS, PAYMENT_ERRORS } from '../constants/paymentConstants.js';
+import { validatePaymentData } from '../utils/paymentUtils.jsx';
+import { db } from '../Config/firebase.js';
+import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 
 // Initial state
 const initialState = {
@@ -27,7 +30,14 @@ const initialState = {
   
   // Withdrawal state
   withdrawalHistory: [],
-  withdrawalHistoryLoading: false
+  withdrawalHistoryLoading: false,
+  
+  // Analytics
+  paymentAnalytics: null,
+  analyticsLoading: false,
+  
+  // Real-time updates
+  lastUpdated: null
 };
 
 // Action types
@@ -44,7 +54,11 @@ const PAYMENT_ACTIONS = {
   SET_WITHDRAWAL_HISTORY: 'SET_WITHDRAWAL_HISTORY',
   SET_WITHDRAWAL_HISTORY_LOADING: 'SET_WITHDRAWAL_HISTORY_LOADING',
   ADD_PAYMENT_TO_HISTORY: 'ADD_PAYMENT_TO_HISTORY',
-  UPDATE_BONUS_POOL: 'UPDATE_BONUS_POOL'
+  UPDATE_BONUS_POOL: 'UPDATE_BONUS_POOL',
+  SET_PAYMENT_ANALYTICS: 'SET_PAYMENT_ANALYTICS',
+  SET_ANALYTICS_LOADING: 'SET_ANALYTICS_LOADING',
+  UPDATE_PAYMENT_STATUS: 'UPDATE_PAYMENT_STATUS',
+  SET_LAST_UPDATED: 'SET_LAST_UPDATED'
 };
 
 // Reducer
@@ -86,7 +100,8 @@ const paymentReducer = (state, action) => {
     case PAYMENT_ACTIONS.ADD_PAYMENT_TO_HISTORY:
       return { 
         ...state, 
-        paymentHistory: [action.payload, ...state.paymentHistory] 
+        paymentHistory: [action.payload, ...state.paymentHistory],
+        lastUpdated: new Date().toISOString()
       };
       
     case PAYMENT_ACTIONS.UPDATE_BONUS_POOL:
@@ -96,6 +111,26 @@ const paymentReducer = (state, action) => {
           pool._id === action.payload._id ? action.payload : pool
         )
       };
+      
+    case PAYMENT_ACTIONS.SET_PAYMENT_ANALYTICS:
+      return { ...state, paymentAnalytics: action.payload };
+      
+    case PAYMENT_ACTIONS.SET_ANALYTICS_LOADING:
+      return { ...state, analyticsLoading: action.payload };
+      
+    case PAYMENT_ACTIONS.UPDATE_PAYMENT_STATUS:
+      return {
+        ...state,
+        paymentHistory: state.paymentHistory.map(payment => 
+          payment._id === action.payload.paymentId 
+            ? { ...payment, status: action.payload.status }
+            : payment
+        ),
+        lastUpdated: new Date().toISOString()
+      };
+      
+    case PAYMENT_ACTIONS.SET_LAST_UPDATED:
+      return { ...state, lastUpdated: action.payload };
       
     default:
       return state;
@@ -129,6 +164,53 @@ export const PaymentProvider = ({ children }) => {
     loadWithdrawalHistory();
   }, []);
 
+  // Load payment analytics on mount
+  useEffect(() => {
+    loadPaymentAnalytics();
+  }, []);
+
+  // Set up real-time payment updates with Firebase
+  useEffect(() => {
+    const userId = localStorage.getItem('userId');
+    if (!userId || !db) return;
+
+    // Listen for real-time payment updates
+    const paymentsRef = collection(db, 'payments');
+    const paymentsQuery = query(
+      paymentsRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(paymentsQuery, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added' || change.type === 'modified') {
+          const paymentData = { id: change.doc.id, ...change.doc.data() };
+          
+          // Validate payment data
+          const validation = validatePaymentData(paymentData);
+          if (!validation.isValid) {
+            console.warn('Invalid payment data received:', validation.errors);
+            return;
+          }
+
+          // Update payment in history
+          dispatch({
+            type: PAYMENT_ACTIONS.UPDATE_PAYMENT_STATUS,
+            payload: {
+              paymentId: paymentData.id,
+              status: paymentData.status
+            }
+          });
+        }
+      });
+    }, (error) => {
+      console.error('Firebase payment listener error:', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Load subscription status
   const loadSubscriptionStatus = async () => {
     try {
@@ -145,7 +227,18 @@ export const PaymentProvider = ({ children }) => {
     dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY_LOADING, payload: true });
     try {
       const history = await paymentApi.getPaymentHistory();
-      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY, payload: Array.isArray(history) ? history : [] });
+      const validatedHistory = Array.isArray(history) 
+        ? history.filter(payment => {
+            const validation = validatePaymentData(payment);
+            if (!validation.isValid) {
+              console.warn('Invalid payment in history:', validation.errors);
+              return false;
+            }
+            return true;
+          })
+        : [];
+      
+      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY, payload: validatedHistory });
     } catch (error) {
       console.error('Error loading payment history:', error);
       dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY, payload: [] });
@@ -182,6 +275,20 @@ export const PaymentProvider = ({ children }) => {
     }
   };
 
+  // Load payment analytics
+  const loadPaymentAnalytics = async () => {
+    dispatch({ type: PAYMENT_ACTIONS.SET_ANALYTICS_LOADING, payload: true });
+    try {
+      const analytics = await paymentApi.getPaymentAnalytics();
+      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_ANALYTICS, payload: analytics });
+    } catch (error) {
+      console.error('Error loading payment analytics:', error);
+      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_ANALYTICS, payload: null });
+    } finally {
+      dispatch({ type: PAYMENT_ACTIONS.SET_ANALYTICS_LOADING, payload: false });
+    }
+  };
+
   // Payment actions
   const paymentActions = {
     // Start payment processing
@@ -193,6 +300,14 @@ export const PaymentProvider = ({ children }) => {
 
     // Complete payment
     completePayment: (paymentResult) => {
+      // Validate payment result
+      const validation = validatePaymentData(paymentResult);
+      if (!validation.isValid) {
+        console.error('Invalid payment result:', validation.errors);
+        dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_ERROR, payload: PAYMENT_ERRORS.PAYMENT_FAILED });
+        return;
+      }
+
       dispatch({ type: PAYMENT_ACTIONS.SET_PROCESSING, payload: false });
       dispatch({ type: PAYMENT_ACTIONS.SET_CURRENT_PAYMENT, payload: null });
       dispatch({ type: PAYMENT_ACTIONS.ADD_PAYMENT_TO_HISTORY, payload: paymentResult });
@@ -207,7 +322,9 @@ export const PaymentProvider = ({ children }) => {
     handlePaymentError: (error) => {
       dispatch({ type: PAYMENT_ACTIONS.SET_PROCESSING, payload: false });
       dispatch({ type: PAYMENT_ACTIONS.SET_CURRENT_PAYMENT, payload: null });
-      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_ERROR, payload: error.message });
+      
+      const errorMessage = error?.message || error || PAYMENT_ERRORS.PAYMENT_FAILED;
+      dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_ERROR, payload: errorMessage });
     },
 
     // Clear payment error
@@ -216,11 +333,21 @@ export const PaymentProvider = ({ children }) => {
     },
 
     // Refresh data
-    refreshData: () => {
+    refreshData: useCallback(() => {
       loadSubscriptionStatus();
       loadPaymentHistory();
       loadBonusPools();
       loadWithdrawalHistory();
+      loadPaymentAnalytics();
+      dispatch({ type: PAYMENT_ACTIONS.SET_LAST_UPDATED, payload: new Date().toISOString() });
+    }, []),
+
+    // Update payment status manually
+    updatePaymentStatus: (paymentId, status) => {
+      dispatch({
+        type: PAYMENT_ACTIONS.UPDATE_PAYMENT_STATUS,
+        payload: { paymentId, status }
+      });
     }
   };
 
@@ -237,11 +364,29 @@ export const PaymentProvider = ({ children }) => {
     return true;
   };
 
+  // Get payment statistics
+  const getPaymentStats = () => {
+    const payments = state.paymentHistory;
+    
+    return {
+      totalPayments: payments.length,
+      totalAmount: payments
+        .filter(p => p.status === PAYMENT_STATUS.SUCCESS || p.status === PAYMENT_STATUS.PAID)
+        .reduce((sum, p) => sum + (p.amount || 0), 0),
+      successfulPayments: payments.filter(p => 
+        p.status === PAYMENT_STATUS.SUCCESS || p.status === PAYMENT_STATUS.PAID
+      ).length,
+      failedPayments: payments.filter(p => p.status === PAYMENT_STATUS.FAILED).length,
+      pendingPayments: payments.filter(p => p.status === PAYMENT_STATUS.PENDING).length
+    };
+  };
+
   const value = {
     ...state,
     ...paymentActions,
     hasActiveSubscription,
-    canPerformAction
+    canPerformAction,
+    getPaymentStats
   };
 
   return (

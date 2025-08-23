@@ -1,303 +1,293 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePayment } from '../../context/PaymentContext';
-import { 
-  PAYMENT_TYPES, 
-  PAYMENT_STATUS,
-  PAYMENT_PROVIDERS 
-} from '../../constants/paymentConstants';
-import { 
-  formatCurrency, 
-  calculateSubscriptionSavings,
-  generatePaymentSummary 
-} from '../../utils/paymentUtils';
+import { formatCurrency, formatPaymentAmount } from '../../utils/paymentUtils.jsx';
+import { PAYMENT_ANALYTICS_PERIODS, PAYMENT_TYPES } from '../../constants/paymentConstants';
+import LoadingSpinner from '../LoadingSpinner';
 
 const PaymentAnalytics = () => {
-  const { paymentHistory, withdrawalHistory, subscription } = usePayment();
-  const [timeRange, setTimeRange] = useState('month');
-  const [selectedMetric, setSelectedMetric] = useState('revenue');
+  const { paymentAnalytics, analyticsLoading, paymentHistory, refreshData } = usePayment();
+  const [selectedPeriod, setSelectedPeriod] = useState(PAYMENT_ANALYTICS_PERIODS.MONTH);
+  const [error, setError] = useState(null);
 
-  // Calculate analytics data
-  const calculateAnalytics = () => {
-    if (!paymentHistory || !Array.isArray(paymentHistory)) return {};
+  // Calculate analytics from payment history if server analytics not available
+  const calculatedAnalytics = useMemo(() => {
+    if (!paymentHistory || !Array.isArray(paymentHistory)) return null;
 
     const now = new Date();
-    const timeRanges = {
-      week: 7,
-      month: 30,
-      quarter: 90,
-      year: 365
-    };
-
-    const daysAgo = timeRanges[timeRange];
-    const cutoffDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    let startDate;
+    
+    switch (selectedPeriod) {
+      case PAYMENT_ANALYTICS_PERIODS.WEEK:
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case PAYMENT_ANALYTICS_PERIODS.MONTH:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case PAYMENT_ANALYTICS_PERIODS.QUARTER:
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case PAYMENT_ANALYTICS_PERIODS.YEAR:
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
 
     const filteredPayments = paymentHistory.filter(payment => 
-      new Date(payment.createdAt) >= cutoffDate
+      new Date(payment.createdAt) >= startDate
     );
 
-    const successfulPayments = filteredPayments.filter(p => 
-      p.status === PAYMENT_STATUS.SUCCESS
-    );
+    // Group by payment type
+    const byType = filteredPayments.reduce((acc, payment) => {
+      const type = payment.type || payment.purpose;
+      if (!acc[type]) {
+        acc[type] = { count: 0, amount: 0, successful: 0, failed: 0 };
+      }
+      acc[type].count++;
+      acc[type].amount += payment.amount || 0;
+      if (payment.status === 'success' || payment.status === 'paid') {
+        acc[type].successful++;
+      } else if (payment.status === 'failed') {
+        acc[type].failed++;
+      }
+      return acc;
+    }, {});
 
-    const totalRevenue = successfulPayments.reduce((sum, p) => sum + p.amount, 0);
-    const totalTransactions = successfulPayments.length;
-    const averageTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
-
-    // Payment type breakdown
-    const typeBreakdown = {};
-    successfulPayments.forEach(payment => {
-      typeBreakdown[payment.type] = (typeBreakdown[payment.type] || 0) + payment.amount;
+    // Monthly trends
+    const monthlyTrends = [];
+    const months = {};
+    
+    filteredPayments.forEach(payment => {
+      const date = new Date(payment.createdAt);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!months[monthKey]) {
+        months[monthKey] = { amount: 0, count: 0 };
+      }
+      months[monthKey].amount += payment.amount || 0;
+      months[monthKey].count++;
     });
 
-    // Provider breakdown
-    const providerBreakdown = {};
-    successfulPayments.forEach(payment => {
-      providerBreakdown[payment.provider] = (providerBreakdown[payment.provider] || 0) + payment.amount;
+    Object.entries(months).forEach(([period, data]) => {
+      monthlyTrends.push({ period, ...data });
     });
-
-    // Daily revenue for chart
-    const dailyRevenue = {};
-    successfulPayments.forEach(payment => {
-      const date = new Date(payment.createdAt).toDateString();
-      dailyRevenue[date] = (dailyRevenue[date] || 0) + payment.amount;
-    });
-
-    // Success rate
-    const successRate = filteredPayments.length > 0 
-      ? (successfulPayments.length / filteredPayments.length) * 100 
-      : 0;
 
     return {
-      totalRevenue,
-      totalTransactions,
-      averageTransactionValue,
-      typeBreakdown,
-      providerBreakdown,
-      dailyRevenue,
-      successRate,
-      filteredPayments: successfulPayments
+      period: selectedPeriod,
+      summary: {
+        totalPayments: filteredPayments.length,
+        totalAmount: filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+        successfulPayments: filteredPayments.filter(p => 
+          p.status === 'success' || p.status === 'paid'
+        ).length,
+        failedPayments: filteredPayments.filter(p => p.status === 'failed').length
+      },
+      byPurpose: Object.entries(byType).map(([type, data]) => ({
+        _id: type,
+        count: data.count,
+        totalAmount: data.amount,
+        successfulPayments: data.successful,
+        failedPayments: data.failed
+      })),
+      monthlyTrends,
+      recentActivity: filteredPayments.slice(0, 10).map(payment => ({
+        id: payment.id || payment._id,
+        purpose: payment.type || payment.purpose,
+        amount: payment.amount,
+        status: payment.status,
+        provider: payment.provider,
+        projectTitle: payment.projectId?.project_Title || 'N/A',
+        createdAt: payment.createdAt
+      }))
     };
-  };
+  }, [paymentHistory, selectedPeriod]);
 
-  const analytics = calculateAnalytics();
+  const analytics = paymentAnalytics || calculatedAnalytics;
 
-  // Generate chart data
-  const generateChartData = () => {
-    const { dailyRevenue } = analytics;
-    const dates = Object.keys(dailyRevenue).sort();
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setError(null);
+        await refreshData();
+      } catch (err) {
+        setError('Failed to load analytics data');
+        console.error('Error loading analytics:', err);
+      }
+    };
     
-    return dates.map(date => ({
-      date: new Date(date).toLocaleDateString(),
-      revenue: dailyRevenue[date]
-    }));
-  };
+    loadAnalytics();
+  }, [refreshData]);
 
-  const chartData = generateChartData();
+  if (analyticsLoading) {
+    return (
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
-  // Get top performing metrics
-  const getTopMetrics = () => {
-    const { typeBreakdown, providerBreakdown } = analytics;
-    
-    const topPaymentType = Object.entries(typeBreakdown)
-      .sort(([,a], [,b]) => b - a)[0];
-    
-    const topProvider = Object.entries(providerBreakdown)
-      .sort(([,a], [,b]) => b - a)[0];
+  if (error) {
+    return (
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => refreshData()}
+            className="btn-primary"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-    return { topPaymentType, topProvider };
-  };
-
-  const { topPaymentType, topProvider } = getTopMetrics();
+  if (!analytics) {
+    return (
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <div className="text-center">
+          <p className="text-gray-400">No analytics data available</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Payment Analytics</h2>
-        <div className="text-sm text-gray-400">
-          Last updated: {new Date().toLocaleDateString()}
+      {/* Period Selector */}
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-white">Payment Analytics</h2>
+          <select
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="bg-[#1E1E1E] text-white px-3 py-1 rounded border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
+          >
+            <option value={PAYMENT_ANALYTICS_PERIODS.WEEK}>Last 7 Days</option>
+            <option value={PAYMENT_ANALYTICS_PERIODS.MONTH}>Last 30 Days</option>
+            <option value={PAYMENT_ANALYTICS_PERIODS.QUARTER}>Last 90 Days</option>
+            <option value={PAYMENT_ANALYTICS_PERIODS.YEAR}>Last Year</option>
+          </select>
         </div>
-      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="glass rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Revenue</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(analytics.totalRevenue)}</p>
-            </div>
-            <div className="text-[#00A8E8]">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-              </svg>
-            </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
+            <p className="text-gray-400 text-sm">Total Payments</p>
+            <p className="text-2xl font-bold text-white">{analytics.summary.totalPayments}</p>
           </div>
-        </div>
-
-        <div className="glass rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Total Transactions</p>
-              <p className="text-2xl font-bold text-white">{analytics.totalTransactions}</p>
-            </div>
-            <div className="text-[#00A8E8]">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-              </svg>
-            </div>
+          <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
+            <p className="text-gray-400 text-sm">Total Amount</p>
+            <p className="text-2xl font-bold text-white">{formatCurrency(analytics.summary.totalAmount)}</p>
           </div>
-        </div>
-
-        <div className="glass rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Avg Transaction</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(analytics.averageTransaction)}</p>
-            </div>
-            <div className="text-[#00A8E8]">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-              </svg>
-            </div>
+          <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
+            <p className="text-gray-400 text-sm">Success Rate</p>
+            <p className="text-2xl font-bold text-green-400">
+              {analytics.summary.totalPayments > 0 
+                ? Math.round((analytics.summary.successfulPayments / analytics.summary.totalPayments) * 100)
+                : 0}%
+            </p>
           </div>
-        </div>
-
-        <div className="glass rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-sm">Success Rate</p>
-              <p className="text-2xl font-bold text-white">{analytics.successRate}%</p>
-            </div>
-            <div className="text-[#00A8E8]">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
+          <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
+            <p className="text-gray-400 text-sm">Failed Payments</p>
+            <p className="text-2xl font-bold text-red-400">{analytics.summary.failedPayments}</p>
           </div>
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Trend */}
+      {/* Payment Types Breakdown */}
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Payment Types Breakdown</h3>
+        <div className="space-y-4">
+          {analytics.byPurpose.map((type) => (
+            <div key={type._id} className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-white font-medium">
+                  {type._id === 'bid_fee' ? 'Bid Fees' :
+                   type._id === 'bonus_funding' ? 'Bonus Funding' :
+                   type._id === 'subscription' ? 'Subscriptions' :
+                   type._id === 'withdrawal_fee' ? 'Withdrawal Fees' :
+                   type._id === 'listing' ? 'Listing Fees' : type._id}
+                </h4>
+                <span className="text-gray-400 text-sm">{type.count} payments</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-white font-bold">{formatCurrency(type.totalAmount)}</span>
+                  <span className="text-green-400 text-sm">{type.successfulPayments} successful</span>
+                  {type.failedPayments > 0 && (
+                    <span className="text-red-400 text-sm">{type.failedPayments} failed</span>
+                  )}
+                </div>
+                <div className="w-24 bg-gray-600 rounded-full h-2">
+                  <div 
+                    className="bg-green-500 h-2 rounded-full"
+                    style={{ 
+                      width: `${type.count > 0 ? (type.successfulPayments / type.count) * 100 : 0}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Monthly Trends */}
+      {analytics.monthlyTrends && analytics.monthlyTrends.length > 0 && (
         <div className="glass rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4">Revenue Trend</h3>
-          <div className="h-64 flex items-end justify-between gap-2">
-            {analytics.revenueTrend.map((value, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <div
-                  className="w-full bg-gradient-to-t from-[#00A8E8] to-[#0062E6] rounded-t"
-                  style={{ height: `${(value / Math.max(...analytics.revenueTrend)) * 200}px` }}
-                />
-                <span className="text-gray-400 text-xs mt-2">
-                  {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][index]}
-                </span>
+          <h3 className="text-lg font-semibold text-white mb-4">Monthly Trends</h3>
+          <div className="space-y-3">
+            {analytics.monthlyTrends.map((trend) => (
+              <div key={trend.period} className="flex items-center justify-between bg-[#2A2A2A] rounded-lg p-3 border border-gray-600">
+                <span className="text-white font-medium">{trend.period}</span>
+                <div className="flex items-center gap-4">
+                  <span className="text-gray-400 text-sm">{trend.count} payments</span>
+                  <span className="text-white font-bold">{formatCurrency(trend.amount)}</span>
+                </div>
               </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* Payment Type Breakdown */}
+      {/* Recent Activity */}
+      {analytics.recentActivity && analytics.recentActivity.length > 0 && (
         <div className="glass rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4">Payment Types</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
           <div className="space-y-3">
-            {analytics.paymentTypeBreakdown.map((type) => (
-              <div key={type.name} className="flex items-center justify-between">
+            {analytics.recentActivity.map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between bg-[#2A2A2A] rounded-lg p-3 border border-gray-600">
                 <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-[#00A8E8]" />
-                  <span className="text-gray-300">{type.name}</span>
+                  <div className={`w-3 h-3 rounded-full ${
+                    activity.status === 'success' || activity.status === 'paid' 
+                      ? 'bg-green-500' 
+                      : activity.status === 'failed' 
+                      ? 'bg-red-500' 
+                      : 'bg-yellow-500'
+                  }`}></div>
+                  <div>
+                    <p className="text-white text-sm">
+                      {activity.purpose === 'bid_fee' ? 'Bid Fee' :
+                       activity.purpose === 'bonus_funding' ? 'Bonus Funding' :
+                       activity.purpose === 'subscription' ? 'Subscription' :
+                       activity.purpose === 'withdrawal_fee' ? 'Withdrawal Fee' :
+                       activity.purpose === 'listing' ? 'Listing Fee' : activity.purpose}
+                    </p>
+                    <p className="text-gray-400 text-xs">{activity.projectTitle}</p>
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-medium">{formatCurrency(type.amount)}</p>
-                  <p className="text-gray-400 text-sm">{type.percentage}%</p>
+                  <p className="text-white font-medium">{formatCurrency(activity.amount)}</p>
+                  <p className="text-gray-400 text-xs">
+                    {new Date(activity.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Provider Breakdown */}
-      <div className="glass rounded-xl p-6 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Payment Providers</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {analytics.providerBreakdown.map((provider) => (
-            <div key={provider.name} className="bg-[#2A2A2A] rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-white font-medium">{provider.name}</span>
-                <span className="text-[#00A8E8] font-bold">{provider.percentage}%</span>
-              </div>
-              <div className="w-full bg-[#1E1E1E] rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-[#00A8E8] to-[#0062E6] h-2 rounded-full"
-                  style={{ width: `${provider.percentage}%` }}
-                />
-              </div>
-              <div className="flex justify-between mt-2 text-sm">
-                <span className="text-gray-400">{provider.transactions} transactions</span>
-                <span className="text-white">{formatCurrency(provider.amount)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Insights */}
-      <div className="glass rounded-xl p-6 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Key Insights</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {analytics.insights.map((insight, index) => (
-            <div key={index} className="bg-[#2A2A2A] rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <div className="text-[#00A8E8]">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-white font-medium mb-1">{insight.title}</p>
-                  <p className="text-gray-400 text-sm">{insight.description}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Subscription Impact */}
-      <div className="glass rounded-xl p-6 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Subscription Impact</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-[#00A8E8] mb-2">
-              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-              </svg>
-            </div>
-            <p className="text-white font-bold text-xl">{analytics.subscriptionImpact.activeSubscriptions}</p>
-            <p className="text-gray-400 text-sm">Active Subscriptions</p>
-          </div>
-          <div className="text-center">
-            <div className="text-[#00A8E8] mb-2">
-              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-              </svg>
-            </div>
-            <p className="text-white font-bold text-xl">{formatCurrency(analytics.subscriptionImpact.monthlyRevenue)}</p>
-            <p className="text-gray-400 text-sm">Monthly Revenue</p>
-          </div>
-          <div className="text-center">
-            <div className="text-[#00A8E8] mb-2">
-              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-              </svg>
-            </div>
-            <p className="text-white font-bold text-xl">{analytics.subscriptionImpact.growthRate}%</p>
-            <p className="text-gray-400 text-sm">Growth Rate</p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,96 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { usePayment } from '../context/PaymentContext';
-import PaymentModal from '../components/payment/PaymentModal';
-import BonusPoolCard from '../components/payment/BonusPoolCard';
-import SubscriptionStatus from '../components/payment/SubscriptionStatus';
-import LoadingSpinner from '../components/LoadingSpinner';
 import NavBar from '../components/NavBar';
-import { 
-  PAYMENT_TYPES, 
-  PAYMENT_AMOUNTS, 
-  PAYMENT_STATUS,
-  SUBSCRIPTION_BENEFITS 
-} from '../constants/paymentConstants';
-import { 
-  formatCurrency, 
-  getPaymentStatusColor, 
-  getPaymentStatusIcon, 
-  formatPaymentDate,
-  getPaymentTypeDisplayName,
-  calculateSubscriptionSavings,
-  generatePaymentSummary
-} from '../utils/paymentUtils';
+import LoadingSpinner from '../components/LoadingSpinner';
+import PaymentHistoryPage from './PaymentHistoryPage';
+import PaymentAnalytics from '../components/payment/PaymentAnalytics';
+import PaymentMethodManager from '../components/payment/PaymentMethodManager';
+import SubscriptionStatus from '../components/payment/SubscriptionStatus';
+import { formatCurrency } from '../utils/paymentUtils.jsx';
+import { PAYMENT_STATUS } from '../constants/paymentConstants';
 
 const PaymentPage = () => {
-  const {
-    subscription,
-    paymentHistory,
+  const { 
+    paymentHistory, 
+    subscription, 
+    bonusPools, 
     withdrawalHistory,
-    bonusPools,
     isProcessing,
-    refreshData
+    refreshData,
+    getPaymentStats,
+    hasActiveSubscription
   } = usePayment();
-
+  
   const [activeTab, setActiveTab] = useState('overview');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentType, setPaymentType] = useState(null);
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    refreshData();
+    const loadData = async () => {
+      try {
+        setError(null);
+        await refreshData();
+      } catch (err) {
+        setError('Failed to load payment data. Please try again.');
+        console.error('Error loading payment data:', err);
+      }
+    };
+    
+    loadData();
   }, [refreshData]);
 
-  const handlePayment = (type) => {
-    setPaymentType(type);
-    setShowPaymentModal(true);
-  };
-
-  const handleWithdrawal = () => {
-    if (!withdrawalAmount || withdrawalAmount <= 0) return;
-    setShowWithdrawalModal(true);
-  };
+  const stats = getPaymentStats();
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-      </svg>
-    ) },
-    { id: 'history', label: 'Payment History', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-      </svg>
-    ) },
-    { id: 'withdrawals', label: 'Withdrawals', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-      </svg>
-    ) },
-    { id: 'bonus-pools', label: 'Bonus Pools', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-      </svg>
-    ) },
-    { id: 'subscription', label: 'Subscription', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-      </svg>
-    ) }
+    { id: 'overview', label: 'Overview', icon: '📊' },
+    { id: 'history', label: 'Payment History', icon: '📋' },
+    { id: 'analytics', label: 'Analytics', icon: '📈' },
+    { id: 'methods', label: 'Payment Methods', icon: '💳' },
+    { id: 'subscription', label: 'Subscription', icon: '⭐' }
   ];
 
-  const recentPayments = paymentHistory?.slice(0, 5) || [];
-  const recentWithdrawals = withdrawalHistory?.slice(0, 5) || [];
-
-  const totalSpent = paymentHistory?.reduce((sum, payment) => 
-    payment.status === PAYMENT_STATUS.SUCCESS ? sum + payment.amount : sum, 0
-  ) || 0;
-
-  const totalWithdrawn = withdrawalHistory?.reduce((sum, withdrawal) => 
-    withdrawal.status === PAYMENT_STATUS.SUCCESS ? sum + withdrawal.amount : sum, 0
-  ) || 0;
-
-  const activeBonusPools = bonusPools?.filter(pool => pool.status === 'active') || [];
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return <OverviewTab stats={stats} subscription={subscription} bonusPools={bonusPools} />;
+      case 'history':
+        return <PaymentHistoryPage />;
+      case 'analytics':
+        return <PaymentAnalytics />;
+      case 'methods':
+        return <PaymentMethodManager />;
+      case 'subscription':
+        return <SubscriptionStatus />;
+      default:
+        return <OverviewTab stats={stats} subscription={subscription} bonusPools={bonusPools} />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
@@ -98,21 +71,42 @@ const PaymentPage = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 mt-[5vmin]">
-          <h1 className="text-4xl font-bold text-white mb-2">Payment Center</h1>
-          <p className="text-gray-300">Manage your payments, subscriptions, and withdrawals</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">Payment Center</h1>
+              <p className="text-gray-300">Manage your payments, subscriptions, and payment methods</p>
+            </div>
+            <button
+              onClick={refreshData}
+              disabled={isProcessing}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Refresh
+            </button>
+          </div>
+          
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <p className="text-red-400">{error}</p>
+            </div>
+          )}
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-2 glass rounded-xl p-2">
+        {/* Tabs */}
+        <div className="glass rounded-xl p-2 border border-gray-700 mb-8">
+          <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white shadow-lg'
-                    : 'text-gray-300 hover:text-white hover:bg-[#2A2A2A]'
+                    ? 'bg-[#00A8E8] text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -123,257 +117,189 @@ const PaymentPage = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="space-y-8">
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Stats Cards */}
-              <div className="glass rounded-xl p-6 border border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Total Spent</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalSpent)}</p>
-                  </div>
-                  <div className="text-[#00A8E8]">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass rounded-xl p-6 border border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Total Withdrawn</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(totalWithdrawn)}</p>
-                  </div>
-                  <div className="text-[#00A8E8]">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass rounded-xl p-6 border border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Active Pools</p>
-                    <p className="text-2xl font-bold text-white">{activeBonusPools.length}</p>
-                  </div>
-                  <div className="text-[#00A8E8]">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass rounded-xl p-6 border border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Subscription</p>
-                    <p className="text-2xl font-bold text-white">
-                      {subscription?.isActive ? 'Active' : 'Inactive'}
-                    </p>
-                  </div>
-                  <div className="text-[#00A8E8]">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-                    </svg>
-                  </div>
-                </div>
-              </div>
+        <div className="min-h-[600px]">
+          {isProcessing ? (
+            <div className="flex items-center justify-center py-12">
+              <LoadingSpinner />
             </div>
-          )}
-
-          {/* Payment History Tab */}
-          {activeTab === 'history' && (
-            <div className="glass rounded-xl p-6 border border-gray-700">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Payment History</h2>
-                <button
-                  onClick={() => handlePayment(PAYMENT_TYPES.BID_FEE)}
-                  className="btn-primary"
-                >
-                  New Payment
-                </button>
-              </div>
-
-              {isProcessing ? (
-                <LoadingSpinner />
-              ) : paymentHistory?.length > 0 ? (
-                <div className="space-y-4">
-                  {paymentHistory.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`p-2 rounded-lg ${getPaymentStatusColor(payment.status)}`}>
-                            {getPaymentStatusIcon(payment.status)}
-                          </div>
-                          <div>
-                            <p className="text-white font-medium">
-                              {getPaymentTypeDisplayName(payment.type)}
-                            </p>
-                            <p className="text-gray-400 text-sm">
-                              {formatPaymentDate(payment.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white font-bold">{formatCurrency(payment.amount)}</p>
-                          <p className={`text-sm ${getPaymentStatusColor(payment.status)}`}>
-                            {payment.status}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No payment history found</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Withdrawals Tab */}
-          {activeTab === 'withdrawals' && (
-            <div className="glass rounded-xl p-6 border border-gray-700">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Withdrawals</h2>
-                <button
-                  onClick={() => setShowWithdrawalModal(true)}
-                  className="btn-primary"
-                >
-                  New Withdrawal
-                </button>
-              </div>
-
-              {/* Withdrawal Form */}
-              <div className="bg-[#2A2A2A] rounded-lg p-6 mb-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Request Withdrawal</h3>
-                <div className="flex gap-4">
-                  <input
-                    type="number"
-                    placeholder="Amount (max ₹10,000)"
-                    value={withdrawalAmount}
-                    onChange={(e) => setWithdrawalAmount(e.target.value)}
-                    className="flex-1 bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-500 focus:border-[#00A8E8] focus:outline-none"
-                    max="10000"
-                  />
-                  <button
-                    onClick={handleWithdrawal}
-                    disabled={!withdrawalAmount || withdrawalAmount <= 0}
-                    className="btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
-                  >
-                    Withdraw
-                  </button>
-                </div>
-                <p className="text-gray-400 text-sm mt-2">
-                  Withdrawal fee: ₹15 (up to ₹10,000 limit)
-                </p>
-              </div>
-
-              {/* Withdrawal History */}
-              {withdrawalHistory?.length > 0 ? (
-                <div className="space-y-4">
-                  {withdrawalHistory.map((withdrawal) => (
-                    <div
-                      key={withdrawal.id}
-                      className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`p-2 rounded-lg ${getPaymentStatusColor(withdrawal.status)}`}>
-                            {getPaymentStatusIcon(withdrawal.status)}
-                          </div>
-                          <div>
-                            <p className="text-white font-medium">Withdrawal</p>
-                            <p className="text-gray-400 text-sm">
-                              {formatPaymentDate(withdrawal.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white font-bold">{formatCurrency(withdrawal.amount)}</p>
-                          <p className={`text-sm ${getPaymentStatusColor(withdrawal.status)}`}>
-                            {withdrawal.status}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No withdrawal history found</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Bonus Pools Tab */}
-          {activeTab === 'bonus-pools' && (
-            <div className="glass rounded-xl p-6 border border-gray-700">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Bonus Pools</h2>
-                <button
-                  onClick={() => handlePayment(PAYMENT_TYPES.BONUS_FUNDING)}
-                  className="btn-primary"
-                >
-                  Create Pool
-                </button>
-              </div>
-
-              {bonusPools?.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {bonusPools.map((pool) => (
-                    <BonusPoolCard key={pool.id} pool={pool} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No bonus pools found</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Subscription Tab */}
-          {activeTab === 'subscription' && (
-            <div className="glass rounded-xl p-6 border border-gray-700">
-              <SubscriptionStatus />
-            </div>
+          ) : (
+            renderTabContent()
           )}
         </div>
+      </div>
+    </div>
+  );
+};
 
-        {/* Payment Modal */}
-        {showPaymentModal && paymentType && (
-          <PaymentModal
-            paymentType={paymentType}
-            isOpen={showPaymentModal}
-            onClose={() => {
-              setShowPaymentModal(false);
-              setPaymentType(null);
-            }}
-          />
-        )}
+// Overview Tab Component
+const OverviewTab = ({ stats, subscription, bonusPools }) => {
+  return (
+    <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="glass rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Total Payments</p>
+              <p className="text-2xl font-bold text-white">{stats.totalPayments}</p>
+            </div>
+            <div className="text-[#00A8E8]">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
 
-        {/* Withdrawal Modal */}
-        {showWithdrawalModal && (
-          <PaymentModal
-            paymentType={PAYMENT_TYPES.WITHDRAWAL_FEE}
-            isOpen={showWithdrawalModal}
-            onClose={() => setShowWithdrawalModal(false)}
-            customAmount={withdrawalAmount}
-          />
-        )}
+        <div className="glass rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Total Spent</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalAmount)}</p>
+            </div>
+            <div className="text-[#00A8E8]">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Success Rate</p>
+              <p className="text-2xl font-bold text-green-400">
+                {stats.totalPayments > 0 
+                  ? Math.round((stats.successfulPayments / stats.totalPayments) * 100)
+                  : 0}%
+              </p>
+            </div>
+            <div className="text-green-400">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass rounded-xl p-6 border border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Failed Payments</p>
+              <p className="text-2xl font-bold text-red-400">{stats.failedPayments}</p>
+            </div>
+            <div className="text-red-400">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription Status */}
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <h2 className="text-xl font-semibold text-white mb-4">Subscription Status</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-gray-400 text-sm">Premium Subscription</p>
+            <p className={`text-lg font-semibold ${subscription.isActive ? 'text-green-400' : 'text-gray-400'}`}>
+              {subscription.isActive ? 'Active' : 'Inactive'}
+            </p>
+            {subscription.isActive && subscription.expiresAt && (
+              <p className="text-gray-500 text-sm">
+                Expires: {new Date(subscription.expiresAt).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            {subscription.isActive ? (
+              <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm border border-green-500/30">
+                Premium
+              </span>
+            ) : (
+              <span className="bg-gray-500/20 text-gray-400 px-3 py-1 rounded-full text-sm border border-gray-500/30">
+                Free Plan
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Bonus Pools */}
+      {bonusPools && bonusPools.length > 0 && (
+        <div className="glass rounded-xl p-6 border border-gray-700">
+          <h2 className="text-xl font-semibold text-white mb-4">Bonus Pools</h2>
+          <div className="space-y-3">
+            {bonusPools.slice(0, 3).map((pool) => (
+              <div key={pool.id} className="flex items-center justify-between bg-[#2A2A2A] rounded-lg p-3 border border-gray-600">
+                <div>
+                  <p className="text-white font-medium">{pool.projectTitle}</p>
+                  <p className="text-gray-400 text-sm">
+                    {pool.contributorCount} contributors • {formatCurrency(pool.minRequired)}
+                  </p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  pool.status === 'active' 
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                    : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                }`}>
+                  {pool.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button className="bg-[#2A2A2A] hover:bg-[#333] text-white p-4 rounded-lg border border-gray-600 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="text-[#00A8E8]">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+              </div>
+              <div className="text-left">
+                <p className="font-medium">New Payment</p>
+                <p className="text-gray-400 text-sm">Make a payment</p>
+              </div>
+            </div>
+          </button>
+          
+          <button className="bg-[#2A2A2A] hover:bg-[#333] text-white p-4 rounded-lg border border-gray-600 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="text-[#00A8E8]">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+              </div>
+              <div className="text-left">
+                <p className="font-medium">View History</p>
+                <p className="text-gray-400 text-sm">Payment history</p>
+              </div>
+            </div>
+          </button>
+          
+          <button className="bg-[#2A2A2A] hover:bg-[#333] text-white p-4 rounded-lg border border-gray-600 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="text-[#00A8E8]">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+              </div>
+              <div className="text-left">
+                <p className="font-medium">Settings</p>
+                <p className="text-gray-400 text-sm">Payment settings</p>
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );

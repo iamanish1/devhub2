@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatCurrency } from '../../utils/paymentUtils';
-import { getPaymentTypeDisplayName } from '../../utils/paymentUtils';
+import { formatCurrency } from '../../utils/paymentUtils.jsx';
+import { getPaymentTypeDisplayName } from '../../utils/paymentUtils.jsx';
 import { ErrorIcon } from '../../utils/iconUtils';
 
 const PaymentErrorModal = ({ 

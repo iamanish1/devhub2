@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePayment } from '../context/PaymentContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import NavBar from '../components/NavBar';
 import { 
   PAYMENT_TYPES, 
   PAYMENT_STATUS,
-  PAYMENT_PROVIDERS 
+  PAYMENT_PROVIDERS,
+  PAYMENT_FILTERS,
+  PAYMENT_SORT_OPTIONS,
+  PAYMENT_SORT_ORDERS
 } from '../constants/paymentConstants';
 import { 
   formatCurrency, 
@@ -14,25 +17,46 @@ import {
   formatPaymentDate,
   getPaymentTypeDisplayName,
   getPaymentProviderDisplayName,
-  isRecentPayment
-} from '../utils/paymentUtils';
+  isRecentPayment,
+  getPaymentStatusBadgeColor,
+  validatePaymentData
+} from '../utils/paymentUtils.jsx';
 
 const PaymentHistoryPage = () => {
-  const { paymentHistory, isProcessing, refreshData } = usePayment();
+  const { 
+    paymentHistory, 
+    isProcessing, 
+    refreshData, 
+    getPaymentStats,
+    lastUpdated 
+  } = usePayment();
   
   const [filteredPayments, setFilteredPayments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(PAYMENT_FILTERS.STATUS.ALL);
+  const [typeFilter, setTypeFilter] = useState(PAYMENT_FILTERS.TYPE.ALL);
   const [providerFilter, setProviderFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('date');
-  const [sortOrder, setSortOrder] = useState('desc');
+  const [dateFilter, setDateFilter] = useState(PAYMENT_FILTERS.DATE.ALL);
+  const [sortBy, setSortBy] = useState(PAYMENT_SORT_OPTIONS.DATE);
+  const [sortOrder, setSortOrder] = useState(PAYMENT_SORT_ORDERS.DESC);
+  const [error, setError] = useState(null);
 
+  // Load data on component mount
   useEffect(() => {
-    refreshData();
+    const loadData = async () => {
+      try {
+        setError(null);
+        await refreshData();
+      } catch (err) {
+        setError('Failed to load payment history. Please try again.');
+        console.error('Error loading payment history:', err);
+      }
+    };
+    
+    loadData();
   }, [refreshData]);
 
+  // Filter and sort payments
   useEffect(() => {
     if (!paymentHistory || !Array.isArray(paymentHistory)) {
       setFilteredPayments([]);
@@ -41,59 +65,80 @@ const PaymentHistoryPage = () => {
 
     let filtered = [...paymentHistory];
 
+    // Validate and filter out invalid payments
+    filtered = filtered.filter(payment => {
+      const validation = validatePaymentData(payment);
+      if (!validation.isValid) {
+        console.warn('Invalid payment data:', validation.errors);
+        return false;
+      }
+      return true;
+    });
+
     // Search filter
-    if (searchTerm) {
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(payment => 
-        payment.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getPaymentTypeDisplayName(payment.type).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        payment.amount.toString().includes(searchTerm)
+        (payment.id || payment._id || '').toLowerCase().includes(searchLower) ||
+        getPaymentTypeDisplayName(payment.type || payment.purpose).toLowerCase().includes(searchLower) ||
+        (payment.amount?.toString() || '').includes(searchTerm) ||
+        (payment.projectId?.project_Title || '').toLowerCase().includes(searchLower)
       );
     }
 
     // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(payment => payment.status === statusFilter);
+    if (statusFilter !== PAYMENT_FILTERS.STATUS.ALL) {
+      filtered = filtered.filter(payment => 
+        (payment.status || '').toLowerCase() === statusFilter.toLowerCase()
+      );
     }
 
     // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(payment => payment.type === typeFilter);
+    if (typeFilter !== PAYMENT_FILTERS.TYPE.ALL) {
+      filtered = filtered.filter(payment => 
+        (payment.type || payment.purpose || '').toLowerCase() === typeFilter.toLowerCase()
+      );
     }
 
     // Provider filter
     if (providerFilter !== 'all') {
-      filtered = filtered.filter(payment => payment.provider === providerFilter);
+      filtered = filtered.filter(payment => 
+        (payment.provider || '').toLowerCase() === providerFilter.toLowerCase()
+      );
     }
 
     // Date filter
-    if (dateFilter !== 'all') {
+    if (dateFilter !== PAYMENT_FILTERS.DATE.ALL) {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       
-      switch (dateFilter) {
-        case 'today':
-          filtered = filtered.filter(payment => {
-            const paymentDate = new Date(payment.createdAt);
-            return paymentDate >= today;
-          });
-          break;
-        case 'week':
-          const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-          filtered = filtered.filter(payment => {
-            const paymentDate = new Date(payment.createdAt);
-            return paymentDate >= weekAgo;
-          });
-          break;
-        case 'month':
-          const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-          filtered = filtered.filter(payment => {
-            const paymentDate = new Date(payment.createdAt);
-            return paymentDate >= monthAgo;
-          });
-          break;
-        default:
-          break;
-      }
+              switch (dateFilter) {
+          case PAYMENT_FILTERS.DATE.TODAY: {
+            filtered = filtered.filter(payment => {
+              const paymentDate = new Date(payment.createdAt);
+              return paymentDate >= today;
+            });
+            break;
+          }
+          case PAYMENT_FILTERS.DATE.WEEK: {
+            const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            filtered = filtered.filter(payment => {
+              const paymentDate = new Date(payment.createdAt);
+              return paymentDate >= weekAgo;
+            });
+            break;
+          }
+          case PAYMENT_FILTERS.DATE.MONTH: {
+            const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+            filtered = filtered.filter(payment => {
+              const paymentDate = new Date(payment.createdAt);
+              return paymentDate >= monthAgo;
+            });
+            break;
+          }
+          default:
+            break;
+        }
     }
 
     // Sorting
@@ -101,24 +146,28 @@ const PaymentHistoryPage = () => {
       let aValue, bValue;
       
       switch (sortBy) {
-        case 'amount':
-          aValue = a.amount;
-          bValue = b.amount;
+        case PAYMENT_SORT_OPTIONS.AMOUNT:
+          aValue = a.amount || 0;
+          bValue = b.amount || 0;
           break;
-        case 'date':
+        case PAYMENT_SORT_OPTIONS.DATE:
           aValue = new Date(a.createdAt);
           bValue = new Date(b.createdAt);
           break;
-        case 'type':
-          aValue = getPaymentTypeDisplayName(a.type);
-          bValue = getPaymentTypeDisplayName(b.type);
+        case PAYMENT_SORT_OPTIONS.TYPE:
+          aValue = getPaymentTypeDisplayName(a.type || a.purpose);
+          bValue = getPaymentTypeDisplayName(b.type || b.purpose);
+          break;
+        case PAYMENT_SORT_OPTIONS.STATUS:
+          aValue = a.status || '';
+          bValue = b.status || '';
           break;
         default:
           aValue = new Date(a.createdAt);
           bValue = new Date(b.createdAt);
       }
 
-      if (sortOrder === 'asc') {
+      if (sortOrder === PAYMENT_SORT_ORDERS.ASC) {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
@@ -128,17 +177,32 @@ const PaymentHistoryPage = () => {
     setFilteredPayments(filtered);
   }, [paymentHistory, searchTerm, statusFilter, typeFilter, providerFilter, dateFilter, sortBy, sortOrder]);
 
-  const totalAmount = filteredPayments.reduce((sum, payment) => 
-    payment.status === PAYMENT_STATUS.SUCCESS ? sum + payment.amount : sum, 0
-  );
+  // Calculate statistics
+  const stats = useMemo(() => {
+    return getPaymentStats();
+  }, [getPaymentStats]);
 
-  const successfulPayments = filteredPayments.filter(payment => 
-    payment.status === PAYMENT_STATUS.SUCCESS
-  ).length;
+  // Handle refresh
+  const handleRefresh = async () => {
+    try {
+      setError(null);
+      await refreshData();
+    } catch (err) {
+      setError('Failed to refresh data. Please try again.');
+      console.error('Error refreshing data:', err);
+    }
+  };
 
-  const failedPayments = filteredPayments.filter(payment => 
-    payment.status === PAYMENT_STATUS.FAILED
-  ).length;
+  // Clear filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter(PAYMENT_FILTERS.STATUS.ALL);
+    setTypeFilter(PAYMENT_FILTERS.TYPE.ALL);
+    setProviderFilter('all');
+    setDateFilter(PAYMENT_FILTERS.DATE.ALL);
+    setSortBy(PAYMENT_SORT_OPTIONS.DATE);
+    setSortOrder(PAYMENT_SORT_ORDERS.DESC);
+  };
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
@@ -146,8 +210,36 @@ const PaymentHistoryPage = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 mt-[5vmin]">
-          <h1 className="text-4xl font-bold text-white mb-2">Payment History</h1>
-          <p className="text-gray-300">Track all your payment transactions and activities</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">Payment History</h1>
+              <p className="text-gray-300">Track all your payment transactions and activities</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleRefresh}
+                disabled={isProcessing}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Refresh
+              </button>
+              {lastUpdated && (
+                <span className="text-xs text-gray-400">
+                  Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <p className="text-red-400">{error}</p>
+            </div>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -156,7 +248,7 @@ const PaymentHistoryPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Transactions</p>
-                <p className="text-2xl font-bold text-white">{filteredPayments.length}</p>
+                <p className="text-2xl font-bold text-white">{stats.totalPayments}</p>
               </div>
               <div className="text-[#00A8E8]">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,7 +262,7 @@ const PaymentHistoryPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Amount</p>
-                <p className="text-2xl font-bold text-white">{formatCurrency(totalAmount)}</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalAmount)}</p>
               </div>
               <div className="text-[#00A8E8]">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,9 +276,9 @@ const PaymentHistoryPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Successful</p>
-                <p className="text-2xl font-bold text-white">{successfulPayments}</p>
+                <p className="text-2xl font-bold text-white">{stats.successfulPayments}</p>
               </div>
-              <div className="text-[#00A8E8]">
+              <div className="text-green-400">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
@@ -198,9 +290,9 @@ const PaymentHistoryPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Failed</p>
-                <p className="text-2xl font-bold text-white">{failedPayments}</p>
+                <p className="text-2xl font-bold text-white">{stats.failedPayments}</p>
               </div>
-              <div className="text-[#00A8E8]">
+              <div className="text-red-400">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
@@ -211,7 +303,15 @@ const PaymentHistoryPage = () => {
 
         {/* Filters */}
         <div className="glass rounded-xl p-6 border border-gray-700 mb-8">
-          <h2 className="text-xl font-semibold text-white mb-4">Filters & Search</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-white">Filters & Search</h2>
+            <button
+              onClick={clearFilters}
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Clear All
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {/* Search */}
@@ -232,11 +332,13 @@ const PaymentHistoryPage = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
-                <option value="all">All Status</option>
+                <option value={PAYMENT_FILTERS.STATUS.ALL}>All Status</option>
                 <option value={PAYMENT_STATUS.SUCCESS}>Success</option>
+                <option value={PAYMENT_STATUS.PAID}>Paid</option>
                 <option value={PAYMENT_STATUS.PENDING}>Pending</option>
                 <option value={PAYMENT_STATUS.FAILED}>Failed</option>
                 <option value={PAYMENT_STATUS.CANCELLED}>Cancelled</option>
+                <option value={PAYMENT_STATUS.REFUNDED}>Refunded</option>
               </select>
             </div>
 
@@ -247,11 +349,12 @@ const PaymentHistoryPage = () => {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
-                <option value="all">All Types</option>
+                <option value={PAYMENT_FILTERS.TYPE.ALL}>All Types</option>
                 <option value={PAYMENT_TYPES.BID_FEE}>Bid Fee</option>
                 <option value={PAYMENT_TYPES.BONUS_FUNDING}>Bonus Funding</option>
                 <option value={PAYMENT_TYPES.SUBSCRIPTION}>Subscription</option>
                 <option value={PAYMENT_TYPES.WITHDRAWAL_FEE}>Withdrawal</option>
+                <option value={PAYMENT_TYPES.LISTING}>Listing</option>
               </select>
             </div>
 
@@ -264,6 +367,7 @@ const PaymentHistoryPage = () => {
               >
                 <option value="all">All Providers</option>
                 <option value={PAYMENT_PROVIDERS.RAZORPAY}>Razorpay</option>
+                <option value={PAYMENT_PROVIDERS.CASHFREE}>Cashfree</option>
               </select>
             </div>
 
@@ -274,10 +378,10 @@ const PaymentHistoryPage = () => {
                 onChange={(e) => setDateFilter(e.target.value)}
                 className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
+                <option value={PAYMENT_FILTERS.DATE.ALL}>All Time</option>
+                <option value={PAYMENT_FILTERS.DATE.TODAY}>Today</option>
+                <option value={PAYMENT_FILTERS.DATE.WEEK}>This Week</option>
+                <option value={PAYMENT_FILTERS.DATE.MONTH}>This Month</option>
               </select>
             </div>
           </div>
@@ -290,15 +394,16 @@ const PaymentHistoryPage = () => {
               onChange={(e) => setSortBy(e.target.value)}
               className="bg-[#1E1E1E] text-white px-3 py-1 rounded border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
             >
-              <option value="date">Date</option>
-              <option value="amount">Amount</option>
-              <option value="type">Type</option>
+              <option value={PAYMENT_SORT_OPTIONS.DATE}>Date</option>
+              <option value={PAYMENT_SORT_OPTIONS.AMOUNT}>Amount</option>
+              <option value={PAYMENT_SORT_OPTIONS.TYPE}>Type</option>
+              <option value={PAYMENT_SORT_OPTIONS.STATUS}>Status</option>
             </select>
             <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              onClick={() => setSortOrder(sortOrder === PAYMENT_SORT_ORDERS.ASC ? PAYMENT_SORT_ORDERS.DESC : PAYMENT_SORT_ORDERS.ASC)}
               className="bg-[#1E1E1E] hover:bg-[#2A2A2A] text-white px-3 py-1 rounded border border-gray-600 transition-colors"
             >
-              {sortOrder === 'asc' ? '↑' : '↓'}
+              {sortOrder === PAYMENT_SORT_ORDERS.ASC ? '↑' : '↓'}
             </button>
           </div>
         </div>
@@ -311,7 +416,7 @@ const PaymentHistoryPage = () => {
             <div className="space-y-4">
               {filteredPayments.map((payment) => (
                 <div
-                  key={payment.id}
+                  key={payment.id || payment._id}
                   className={`bg-[#2A2A2A] rounded-lg p-6 border border-gray-600 transition-all duration-200 hover:bg-[#333] ${
                     isRecentPayment(payment.createdAt) ? 'ring-2 ring-[#00A8E8]/50' : ''
                   }`}
@@ -324,7 +429,7 @@ const PaymentHistoryPage = () => {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-white font-semibold">
-                            {getPaymentTypeDisplayName(payment.type)}
+                            {getPaymentTypeDisplayName(payment.type || payment.purpose)}
                           </p>
                           {isRecentPayment(payment.createdAt) && (
                             <span className="bg-[#00A8E8] text-white text-xs px-2 py-1 rounded-full">
@@ -336,17 +441,22 @@ const PaymentHistoryPage = () => {
                           {formatPaymentDate(payment.createdAt)}
                         </p>
                         <p className="text-gray-500 text-sm">
-                          ID: {payment.id} • {getPaymentProviderDisplayName(payment.provider)}
+                          ID: {payment.id || payment._id} • {getPaymentProviderDisplayName(payment.provider)}
                         </p>
+                        {payment.projectId?.project_Title && (
+                          <p className="text-gray-500 text-sm">
+                            Project: {payment.projectId.project_Title}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-white font-bold text-lg">{formatCurrency(payment.amount)}</p>
-                      <p className={`text-sm font-medium ${getPaymentStatusColor(payment.status)}`}>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getPaymentStatusBadgeColor(payment.status)}`}>
                         {payment.status}
-                      </p>
+                      </span>
                       {payment.fee && (
-                        <p className="text-gray-400 text-xs">
+                        <p className="text-gray-400 text-xs mt-1">
                           Fee: {formatCurrency(payment.fee)}
                         </p>
                       )}

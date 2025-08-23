@@ -16,7 +16,7 @@ import {
   calculateWithdrawalFee,
   calculateTotalWithdrawalAmount,
   validateWithdrawalAmount
-} from '../utils/paymentUtils';
+} from '../utils/paymentUtils.jsx';
 
 const WithdrawalPage = () => {
   const { 

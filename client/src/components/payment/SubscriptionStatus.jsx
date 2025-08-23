@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { usePayment } from '../../context/PaymentContext';
-import { formatCurrency } from '../../utils/paymentUtils';
+import { formatCurrency } from '../../utils/paymentUtils.jsx';
 import { PAYMENT_AMOUNTS, SUBSCRIPTION_BENEFITS } from '../../constants/paymentConstants';
 import PaymentModal from './PaymentModal';
 import { CheckIcon } from '../../utils/iconUtils';
