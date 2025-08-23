@@ -35,6 +35,10 @@ const authenticateUser = async (req, res) => {
       email,
       password: hashedPassword,
       usertype,
+      freeBids: {
+        remaining: 5,
+        used: 0
+      }
     });
 
     await newUser.save();

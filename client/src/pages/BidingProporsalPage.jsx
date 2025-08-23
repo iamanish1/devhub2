@@ -758,37 +758,58 @@ Your bid will be visible to the project owner shortly.`;
                       )}
                     </div>
                     
-                    {/* Debug Info */}
+                    {/* Eligibility Status */}
                     <div className="mt-3 p-2 bg-gray-800/50 rounded text-xs">
-                      <p><strong>Debug Info:</strong></p>
-                      <p>Eligibility: {JSON.stringify(bidEligibility)}</p>
-                      <p>Is Free Bid: {isFreeBid() ? 'Yes' : 'No'}</p>
-                      <p>Has Subscription: {hasActiveSubscription() ? 'Yes' : 'No'}</p>
-                      <p>Requires Payment: {requiresPayment() ? 'Yes' : 'No'}</p>
-                      <p>Bid Amount: ₹{bidAmount}</p>
-                      <p>Bid Fee: ₹{getBidFee()}</p>
-                      <p>Total Amount: ₹{bidAmount + getBidFee()}</p>
+                      <p className="font-semibold text-blue-300 mb-2">Eligibility Status:</p>
+                      <div className="space-y-1">
+                        <p><strong>Type:</strong> {bidEligibility?.reason === 'free_bid' ? 'Free Bid' : bidEligibility?.reason === 'subscription' ? 'Subscription' : 'Paid Bid'}</p>
+                        <p><strong>Fee Amount:</strong> ₹{bidEligibility?.feeAmount || 0}</p>
+                        <p><strong>Free Bids Remaining:</strong> {bidEligibility?.remaining || 0}</p>
+                        <p><strong>Can Bid:</strong> {bidEligibility?.canBid ? 'Yes' : 'No'}</p>
+                      </div>
                       
-                      {/* Authentication Test Button */}
-                      <button
-                        onClick={testAuthentication}
-                        className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 mr-2"
-                      >
-                        Test Auth
-                      </button>
-                      
-                      {/* Test Payment Button - Only show if payment is required */}
-                      {requiresPayment() && (
+                      {/* Test Buttons */}
+                      <div className="mt-3 space-y-2">
                         <button
+                          type="button"
+                          onClick={testAuthentication}
+                          className="w-full bg-blue-600 text-white py-1 px-2 rounded text-xs hover:bg-blue-700 transition-colors"
+                        >
+                          Test Authentication
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const token = localStorage.getItem("token");
+                              const response = await axios.post(
+                                `${import.meta.env.VITE_API_URL}/webhooks/reset-free-bids`,
+                                {},
+                                {
+                                  headers: {
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                }
+                              );
+                              alert(`Free bids reset! ${JSON.stringify(response.data)}`);
+                              // Refresh eligibility
+                              window.location.reload();
+                            } catch (error) {
+                              alert(`Error resetting free bids: ${error.response?.data?.message || error.message}`);
+                            }
+                          }}
+                          className="w-full bg-green-600 text-white py-1 px-2 rounded text-xs hover:bg-green-700 transition-colors"
+                        >
+                          Reset Free Bids (Test)
+                        </button>
+                        <button
+                          type="button"
                           onClick={testPaymentModal}
-                          className="mt-2 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                          className="w-full bg-purple-600 text-white py-1 px-2 rounded text-xs hover:bg-purple-700 transition-colors"
                         >
                           Test Payment Modal
                         </button>
-                      )}
-                      {!requiresPayment() && (
-                        <p className="mt-2 text-green-400">✅ No payment required - you have free bids or subscription!</p>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>

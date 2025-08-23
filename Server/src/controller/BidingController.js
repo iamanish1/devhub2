@@ -20,19 +20,26 @@ const checkBidEligibility = async (userId) => {
   console.log(`[Bid Eligibility] Free bids - remaining: ${User.freeBids?.remaining}, used: ${User.freeBids?.used}`);
   console.log(`[Bid Eligibility] Subscription - isActive: ${User.subscription?.isActive}, expiresAt: ${User.subscription?.expiresAt}`);
 
-  // Check if user has active subscription
+  // Initialize freeBids if not set (for existing users)
+  if (!User.freeBids) {
+    User.freeBids = { remaining: 5, used: 0 };
+    await User.save();
+    console.log(`[Bid Eligibility] Initialized freeBids for existing user`);
+  }
+
+  // Check if user has active subscription (₹3 fee)
   if (User.subscription?.isActive && User.subscription?.expiresAt > new Date()) {
     console.log(`[Bid Eligibility] User has active subscription - ₹3 fee`);
     return { canBid: true, feeAmount: 3, reason: 'subscription' };
   }
 
   // Check if user has free bids remaining (₹0 fee)
-  if (User.freeBids?.remaining > 0) {
+  if (User.freeBids.remaining > 0) {
     console.log(`[Bid Eligibility] User has ${User.freeBids.remaining} free bids remaining - ₹0 fee`);
     return { canBid: true, feeAmount: 0, reason: 'free_bid', remaining: User.freeBids.remaining };
   }
 
-  // User needs to pay full bid fee (₹9 fee)
+  // User needs to pay full bid fee (₹9 fee) - no free bids left
   console.log(`[Bid Eligibility] User has no free bids or subscription - ₹9 fee required`);
   return { canBid: true, feeAmount: 9, reason: 'payment_required' };
 };
@@ -333,6 +340,12 @@ export const getUserBidStats = async (req, res) => {
 
     // Get user details for free bids info
     const userDetails = await user.findById(userId).select('freeBids subscription');
+
+    // Initialize freeBids if not set
+    if (userDetails && !userDetails.freeBids) {
+      userDetails.freeBids = { remaining: 5, used: 0 };
+      await userDetails.save();
+    }
 
     const stats = {
       eligibility: {
