@@ -162,22 +162,30 @@ export const createListing = async (req, res) => {
 // Create bonus pool funding (₹200 × contributors)
 export const createBonus = async (req, res) => {
   try {
-    const { projectId, contributorsCount } = req.body;
+    const { projectId, contributorsCount, projectTitle, amountPerContributor, isNewProject } = req.body;
     const userId = req.user._id;
 
-    // Validate project ownership
-    const project = await ProjectListing.findOne({ _id: projectId, user: userId });
-    if (!project) {
-      throw new ApiError(404, 'Project not found or access denied');
-    }
+    let project = null;
+    let minBonus = 0;
 
-    // Check if bonus already funded
-    if (project.bonus?.funded) {
-      throw new ApiError(400, 'Bonus already funded for this project');
-    }
+    if (isNewProject) {
+      // For new projects, use the provided amount per contributor
+      minBonus = amountPerContributor * contributorsCount;
+    } else {
+      // For existing projects, validate project ownership
+      project = await ProjectListing.findOne({ _id: projectId, user: userId });
+      if (!project) {
+        throw new ApiError(404, 'Project not found or access denied');
+      }
 
-    // Calculate minimum bonus amount
-    const minBonus = BONUS_PER_CONTRIBUTOR * contributorsCount;
+      // Check if bonus already funded
+      if (project.bonus?.funded) {
+        throw new ApiError(400, 'Bonus already funded for this project');
+      }
+
+      // Calculate minimum bonus amount
+      minBonus = BONUS_PER_CONTRIBUTOR * contributorsCount;
+    }
 
     // Create payment intent
     const intent = await PaymentIntent.create({
@@ -185,9 +193,14 @@ export const createBonus = async (req, res) => {
       purpose: 'bonus_funding',
       amount: minBonus,
       userId,
-      projectId,
+      projectId: projectId || null,
       status: 'created',
-      notes: { contributorsCount }
+      notes: { 
+        contributorsCount,
+        isNewProject,
+        projectTitle,
+        amountPerContributor
+      }
     });
 
     // Create Razorpay order
@@ -206,21 +219,24 @@ export const createBonus = async (req, res) => {
     intent.orderId = order.order_id;
     await intent.save();
 
-    // Update project with bonus info
-    await ProjectListing.findByIdAndUpdate(projectId, {
-      $set: { 
-        'bonus.minRequired': minBonus,
-        'bonus.razorpayOrderId': order.order_id
-      }
-    });
+    // Update project with bonus info (only for existing projects)
+    if (projectId && project) {
+      await ProjectListing.findByIdAndUpdate(projectId, {
+        $set: { 
+          'bonus.minRequired': minBonus,
+          'bonus.razorpayOrderId': order.order_id
+        }
+      });
+    }
 
     logPaymentEvent('bonus_funding_created', {
       intentId: intent._id,
       orderId: order.order_id,
       userId,
-      projectId,
+      projectId: projectId || 'new_project',
       amount: minBonus,
-      contributorsCount
+      contributorsCount,
+      isNewProject
     });
 
     res.status(201).json({
@@ -230,7 +246,8 @@ export const createBonus = async (req, res) => {
         provider: 'razorpay',
         order,
         intentId: intent._id,
-        amount: minBonus
+        amount: minBonus,
+        purpose: 'bonus_funding'
       }
     });
 

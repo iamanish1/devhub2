@@ -135,9 +135,16 @@ const RazorpayPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError
             <div className="text-white">
               <div className="flex justify-between mb-1">
                 <span>Total Payment:</span>
-                <span>₹{paymentData?.amount || 9}</span>
+                <span>₹{paymentData?.amount || 0}</span>
               </div>
-              <div className="text-xs text-gray-400">Includes bid amount + ₹9 fee</div>
+              <div className="text-xs text-gray-400">
+                {paymentData?.purpose === 'bonus_funding' 
+                  ? 'Bonus pool funding payment'
+                  : paymentData?.purpose === 'bid_fee'
+                  ? 'Includes bid amount + ₹9 fee'
+                  : 'Payment for service'
+                }
+              </div>
             </div>
           </div>
 

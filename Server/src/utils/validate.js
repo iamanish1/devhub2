@@ -26,8 +26,21 @@ export const listingFeeSchema = Joi.object({
 });
 
 export const bonusSchema = Joi.object({
-  projectId: Joi.string().required(),
-  contributorsCount: Joi.number().integer().min(1).required()
+  projectId: Joi.string().optional(), // Optional for new projects
+  contributorsCount: Joi.number().integer().min(1).required(),
+  projectTitle: Joi.string().optional(), // For new projects
+  amountPerContributor: Joi.number().integer().min(200).optional(), // For new projects
+  isNewProject: Joi.boolean().optional() // For new projects
+}).custom((value, helpers) => {
+  // For existing projects, projectId is required
+  if (value.isNewProject === false && !value.projectId) {
+    return helpers.error('any.invalid', { message: 'Project ID is required for existing projects' });
+  }
+  // For new projects, projectTitle and amountPerContributor are required
+  if (value.isNewProject === true && (!value.projectTitle || !value.amountPerContributor)) {
+    return helpers.error('any.invalid', { message: 'Project title and amount per contributor are required for new projects' });
+  }
+  return value;
 });
 
 export const subscriptionSchema = Joi.object({

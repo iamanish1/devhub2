@@ -262,35 +262,55 @@ export const razorpayWebhook = async (req, res) => {
               const bonusAmount = intent.amount;
               const contributorCount = intent.notes?.contributorsCount || 1;
               const amountPerContributor = Math.floor(bonusAmount / contributorCount);
+              const isNewProject = intent.notes?.isNewProject;
               
-              await BonusPool.findOneAndUpdate(
-                { projectId: intent.projectId },
-                { 
+              if (isNewProject) {
+                // For new projects, create a temporary bonus pool record
+                await BonusPool.create({
+                  projectId: null, // Will be updated when project is created
+                  projectOwner: intent.userId,
+                  totalAmount: bonusAmount,
+                  contributorCount,
+                  amountPerContributor,
+                  status: 'funded',
+                  paymentIntentId: intent._id,
+                  orderId: orderId,
+                  fundedAt: new Date(),
+                  projectTitle: intent.notes?.projectTitle,
+                  isNewProject: true
+                });
+              } else {
+                // For existing projects, update the bonus pool
+                await BonusPool.findOneAndUpdate(
+                  { projectId: intent.projectId },
+                  { 
+                    $set: { 
+                      projectOwner: intent.userId,
+                      totalAmount: bonusAmount,
+                      contributorCount,
+                      amountPerContributor,
+                      status: 'funded',
+                      paymentIntentId: intent._id,
+                      orderId: orderId,
+                      fundedAt: new Date()
+                    } 
+                  },
+                  { upsert: true }
+                );
+                
+                await ProjectListing.findByIdAndUpdate(intent.projectId, { 
                   $set: { 
-                    projectOwner: intent.userId,
-                    totalAmount: bonusAmount,
-                    contributorCount,
-                    amountPerContributor,
-                    status: 'funded',
-                    paymentIntentId: intent._id,
-                    orderId: orderId,
-                    fundedAt: new Date()
+                    'bonus.funded': true,
+                    'bonus.razorpayOrderId': orderId
                   } 
-                },
-                { upsert: true }
-              );
-              
-              await ProjectListing.findByIdAndUpdate(intent.projectId, { 
-                $set: { 
-                  'bonus.funded': true,
-                  'bonus.razorpayOrderId': orderId
-                } 
-              });
+                });
+              }
 
               logWebhookEvent('razorpay', 'bonus_funded', eventId, {
-                projectId: intent.projectId,
+                projectId: intent.projectId || 'new_project',
                 amount: bonusAmount,
-                contributorCount
+                contributorCount,
+                isNewProject
               });
               break;
 

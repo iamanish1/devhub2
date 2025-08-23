@@ -1192,7 +1192,8 @@ const ProjectListingPage = () => {
                            <button
                              type="button"
                              onClick={() => setShowBonusModal(true)}
-                             className="w-full bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 flex items-center justify-center"
+                             disabled={!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors}
+                             className="w-full bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                            >
                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -1200,7 +1201,10 @@ const ProjectListingPage = () => {
                              Fund Bonus Pool - ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
                            </button>
                            <p className="text-xs text-gray-400 mt-2 text-center">
-                             Fund your bonus pool to attract quality contributors
+                             {!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors 
+                               ? "Complete project details to enable funding"
+                               : "Fund your bonus pool to attract quality contributors"
+                             }
                            </p>
                          </div>
                        </div>

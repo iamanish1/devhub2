@@ -29,8 +29,8 @@ const BonusPoolPaymentModal = ({
   };
 
   const handleFundBonus = async () => {
-    if (!project?._id) {
-      setError('Project ID is required');
+    if (!project?.bonus_pool_amount || !project?.bonus_pool_contributors) {
+      setError('Bonus pool details are required');
       return;
     }
 
@@ -43,12 +43,23 @@ const BonusPoolPaymentModal = ({
         throw new Error('Authentication required');
       }
 
+      // For new projects (no _id), we'll create a temporary bonus pool
+      // For existing projects, use the project ID
+      const requestData = project._id 
+        ? {
+            projectId: project._id,
+            contributorsCount: contributorCount
+          }
+        : {
+            projectTitle: project.project_Title,
+            contributorsCount: contributorCount,
+            amountPerContributor: bonusAmount,
+            isNewProject: true
+          };
+
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/payments/bonus`,
-        {
-          projectId: project._id,
-          contributorsCount: contributorCount
-        },
+        requestData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -57,8 +68,8 @@ const BonusPoolPaymentModal = ({
         }
       );
 
-      if (response.data.success && response.data.paymentData) {
-        setPaymentData(response.data.paymentData);
+      if (response.data.success && response.data.data) {
+        setPaymentData(response.data.data);
         setShowPaymentModal(true);
       } else {
         throw new Error(response.data.message || 'Failed to create payment');
@@ -187,11 +198,11 @@ const BonusPoolPaymentModal = ({
               >
                 Cancel
               </button>
-              <button
-                onClick={handleFundBonus}
-                disabled={loading || !project?._id}
-                className="flex-1 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
+                             <button
+                 onClick={handleFundBonus}
+                 disabled={loading || !project?.bonus_pool_amount || !project?.bonus_pool_contributors}
+                 className="flex-1 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+               >
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

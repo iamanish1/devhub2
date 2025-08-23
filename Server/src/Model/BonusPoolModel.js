@@ -4,7 +4,7 @@ const BonusPoolSchema = new mongoose.Schema({
   projectId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProjectListing',
-    required: true
+    required: false // Allow null for new projects
   },
   projectOwner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -43,6 +43,12 @@ const BonusPoolSchema = new mongoose.Schema({
   remainingAmount: {
     type: Number,
     default: 0
+  },
+  // New project fields
+  projectTitle: String,
+  isNewProject: {
+    type: Boolean,
+    default: false
   },
   // Timestamps
   createdAt: {
