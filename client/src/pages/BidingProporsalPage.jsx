@@ -230,30 +230,30 @@ const BidingProporsalPage = () => {
   }, [_id]);
 
   // Fetch user's bid eligibility
-  useEffect(() => {
-    const fetchBidEligibility = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+  const fetchBidEligibility = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/bid/stats`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        
-        if (response.data.success) {
-          console.log("Bid eligibility data:", response.data.data);
-          setBidEligibility(response.data.data.eligibility);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/bid/stats`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      } catch (error) {
-        console.error("Error fetching bid eligibility:", error);
+      );
+      
+      if (response.data.success) {
+        console.log("Bid eligibility data:", response.data.data);
+        setBidEligibility(response.data.data.eligibility);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching bid eligibility:", error);
+    }
+  };
 
+  useEffect(() => {
     fetchBidEligibility();
   }, []);
 
@@ -419,6 +419,9 @@ Your Bid Details:
           console.log("Payment status check result:", checkResponse.data);
           
           if (checkResponse.data.bidStatus === 'paid') {
+            // Refresh bid eligibility data after successful payment
+            await fetchBidEligibility();
+            
             const successMessage = `Payment successful! Your bid has been submitted and activated.
             
 Your Bid Details:
@@ -438,6 +441,9 @@ Your bid is now visible to the project owner.`;
             });
           } else {
             // Payment successful but bid not yet activated
+            // Refresh bid eligibility data even if bid is pending
+            await fetchBidEligibility();
+            
             const pendingMessage = `Payment successful! Your bid is being processed.
             
 Your Bid Details:
@@ -809,8 +815,8 @@ Your bid will be visible to the project owner shortly.`;
                                 }
                               );
                               alert(`Free bids reset! ${JSON.stringify(response.data)}`);
-                              // Refresh eligibility
-                              window.location.reload();
+                              // Refresh eligibility data
+                              await fetchBidEligibility();
                             } catch (error) {
                               alert(`Error resetting free bids: ${error.response?.data?.message || error.message}`);
                             }
@@ -834,8 +840,8 @@ Your bid will be visible to the project owner shortly.`;
                                 }
                               );
                               alert(`Free bid count synced! ${JSON.stringify(response.data)}`);
-                              // Refresh eligibility
-                              window.location.reload();
+                              // Refresh eligibility data
+                              await fetchBidEligibility();
                             } catch (error) {
                               alert(`Error syncing free bids: ${error.response?.data?.message || error.message}`);
                             }
