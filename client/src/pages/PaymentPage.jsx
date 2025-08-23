@@ -5,6 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PaymentHistoryPage from './PaymentHistoryPage';
 import PaymentAnalytics from '../components/payment/PaymentAnalytics';
 import SubscriptionStatus from '../components/payment/SubscriptionStatus';
+import DataExplanationCard from '../components/payment/DataExplanationCard';
 import { formatCurrency } from '../utils/paymentUtils.jsx';
 import { PAYMENT_STATUS } from '../constants/paymentConstants';
 
@@ -128,6 +129,8 @@ const PaymentPage = () => {
 const OverviewTab = ({ stats, subscription, bonusPools }) => {
   return (
     <div className="space-y-6">
+      {/* Data Explanation Card */}
+      <DataExplanationCard type="overview" />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

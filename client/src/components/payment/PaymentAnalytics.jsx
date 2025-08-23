@@ -6,6 +6,7 @@ import {
   PAYMENT_TYPES,
 } from "../../constants/paymentConstants";
 import LoadingSpinner from "../LoadingSpinner";
+import DataExplanationCard from "./DataExplanationCard";
 
 const PaymentAnalytics = () => {
   const { paymentAnalytics, analyticsLoading, paymentHistory, refreshData } =
@@ -162,6 +163,9 @@ const PaymentAnalytics = () => {
 
   return (
     <div className="space-y-6">
+      {/* Data Explanation Card */}
+      <DataExplanationCard type="analytics" />
+      
       {/* Period Selector */}
       <div className="glass rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-4">
