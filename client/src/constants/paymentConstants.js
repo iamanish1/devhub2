@@ -17,7 +17,7 @@ export const PAYMENT_AMOUNTS = {
 
 // Payment Providers
 export const PAYMENT_PROVIDERS = {
-  CASHFREE: 'cashfree'
+  RAZORPAY: 'razorpay'
 };
 
 // Subscription Benefits

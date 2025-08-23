@@ -32,7 +32,7 @@ const PayoutSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'completed', 'failed'],
     default: 'pending'
   },
-  payoutId: String, // Cashfree payout id
+  payoutId: String, // Razorpay payout id
   bankDetails: {
     accountNumber: String,
     ifscCode: String,

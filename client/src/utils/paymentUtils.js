@@ -115,8 +115,8 @@ export const getPaymentTypeDisplayName = (type) => {
 // Get payment provider display name
 export const getPaymentProviderDisplayName = (provider) => {
   switch (provider) {
-    case 'cashfree':
-      return 'Cashfree';
+    case 'razorpay':
+      return 'Razorpay';
     default:
       return provider;
   }

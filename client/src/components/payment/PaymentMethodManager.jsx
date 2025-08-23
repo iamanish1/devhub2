@@ -14,7 +14,7 @@ const PaymentMethodManager = () => {
     {
       id: '1',
       type: 'card',
-      provider: 'cashfree',
+      provider: 'razorpay',
       last4: '4242',
       brand: 'Visa',
       expiryMonth: '12',
@@ -25,7 +25,7 @@ const PaymentMethodManager = () => {
     {
       id: '2',
       type: 'upi',
-      provider: 'cashfree',
+      provider: 'razorpay',
       upiId: 'john.doe@okicici',
       isDefault: false,
       name: 'John Doe'
@@ -268,15 +268,15 @@ const PaymentMethodManager = () => {
                   <div className="grid grid-cols-1 gap-3">
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, provider: 'cashfree' })}
+                      onClick={() => setFormData({ ...formData, provider: 'razorpay' })}
                       className={`p-4 rounded-lg border-2 transition-all ${
-                        formData.provider === 'cashfree'
+                        formData.provider === 'razorpay'
                           ? 'border-[#00A8E8] bg-[#00A8E8]/10'
                           : 'border-gray-600 hover:border-gray-500'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="text-white font-medium">Cashfree</div>
+                        <div className="text-white font-medium">Razorpay</div>
                         <div className="text-gray-400 text-sm">Recommended</div>
                       </div>
                     </button>
@@ -400,7 +400,7 @@ const PaymentMethodManager = () => {
 const AddPaymentMethodForm = ({ onSubmit, onCancel, isLoading }) => {
   const [formData, setFormData] = useState({
     type: 'card',
-    provider: 'cashfree',
+    provider: 'razorpay',
     cardNumber: '',
     expiryMonth: '',
     expiryYear: '',
@@ -474,7 +474,7 @@ const AddPaymentMethodForm = ({ onSubmit, onCancel, isLoading }) => {
           onChange={handleInputChange}
           className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none"
         >
-          <option value="cashfree">Cashfree</option>
+          <option value="razorpay">Razorpay</option>
         </select>
       </div>
 

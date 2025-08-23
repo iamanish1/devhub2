@@ -19,7 +19,7 @@ const PaymentModal = ({
   onSuccess 
 }) => {
   const { isProcessing, paymentError, startPayment, completePayment, handlePaymentError, clearPaymentError } = usePayment();
-  const [selectedProvider, setSelectedProvider] = useState('cashfree');
+  const [selectedProvider, setSelectedProvider] = useState('razorpay');
   const [paymentData, setPaymentData] = useState({});
 
   // Reset state when modal opens
@@ -207,15 +207,15 @@ const PaymentModal = ({
                   <div className="grid grid-cols-1 gap-3">
                     <button
                       type="button"
-                      onClick={() => setSelectedProvider('cashfree')}
+                      onClick={() => setSelectedProvider('razorpay')}
                       className={`p-4 rounded-lg border-2 transition-all ${
-                        selectedProvider === 'cashfree'
+                        selectedProvider === 'razorpay'
                           ? 'border-[#00A8E8] bg-[#00A8E8]/10'
                           : 'border-gray-600 hover:border-gray-500'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="text-white font-medium">Cashfree</div>
+                        <div className="text-white font-medium">Razorpay</div>
                         <div className="text-gray-400 text-sm">Recommended</div>
                       </div>
                     </button>
@@ -262,7 +262,7 @@ const PaymentModal = ({
               <div className="mt-4 text-center">
                 <p className="text-xs text-gray-500 flex items-center justify-center">
                   <LockIcon className="w-3 h-3 mr-1" />
-                  Secure payment powered by Cashfree
+                  Secure payment powered by Razorpay
                 </p>
               </div>
             </div>

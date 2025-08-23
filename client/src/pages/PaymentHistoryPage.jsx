@@ -261,7 +261,7 @@ const PaymentHistoryPage = () => {
                 className="w-full bg-[#1E1E1E] text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
               >
                 <option value="all">All Providers</option>
-                <option value={PAYMENT_PROVIDERS.CASHFREE}>Cashfree</option>
+                <option value={PAYMENT_PROVIDERS.RAZORPAY}>Razorpay</option>
               </select>
             </div>
 

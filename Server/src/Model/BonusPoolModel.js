@@ -33,8 +33,8 @@ const BonusPoolSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'PaymentIntent'
   },
-  orderId: String, // Cashfree order id
-  payoutId: String, // Cashfree payout id for distribution
+  orderId: String, // Razorpay order id
+  payoutId: String, // Razorpay payout id for distribution
   // Distribution tracking
   distributedAmount: {
     type: Number,

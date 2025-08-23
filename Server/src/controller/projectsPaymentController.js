@@ -3,7 +3,7 @@ import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
 import PaymentIntent from '../Model/PaymentIntentModel.js';
 import { createPayout } from '../services/payouts.js';
-import { createOrder as cfCreateOrder } from '../services/cashfree.js';
+import { createOrder as rpCreateOrder } from '../services/razorpay.js';
 import { logPaymentEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 import mongoose from 'mongoose';
@@ -47,7 +47,7 @@ export const selectContributors = async (req, res) => {
 
     // Create payment intent for escrow
     const escrowIntent = await PaymentIntent.create({
-      provider: 'cashfree',
+      provider: 'razorpay',
       purpose: 'escrow_lock',
       amount: totalEscrowAmount,
       userId: userId,
@@ -59,8 +59,8 @@ export const selectContributors = async (req, res) => {
       }
     });
 
-    // Create Cashfree order for escrow
-    const escrowOrder = await cfCreateOrder({
+    // Create Razorpay order for escrow
+    const escrowOrder = await rpCreateOrder({
       orderId: escrowIntent._id.toString(),
       amount: totalEscrowAmount,
       customer: { 
@@ -189,7 +189,7 @@ export const completeProject = async (req, res) => {
           userId: contributor.userId,
           projectId: projectId,
           amount: totalPayment,
-          provider: 'cashfree'
+          provider: 'razorpay'
         });
 
         // Update contributor payment status

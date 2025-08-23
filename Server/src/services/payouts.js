@@ -1,11 +1,11 @@
 import { logger } from '../utils/logger.js';
 
 // Create payout to user's bank account
-export const createPayout = async ({ userId, projectId, amount, provider = 'cashfree' }) => {
+export const createPayout = async ({ userId, projectId, amount, provider = 'razorpay' }) => {
   try {
     // Validate provider
-    if (provider !== 'cashfree') {
-      throw new Error('Only Cashfree payouts are supported');
+    if (provider !== 'razorpay') {
+      throw new Error('Only Razorpay payouts are supported');
     }
 
     // Calculate fee (₹15 for amounts up to ₹10k)
@@ -21,7 +21,7 @@ export const createPayout = async ({ userId, projectId, amount, provider = 'cash
       provider
     });
 
-    // Here you would integrate with Cashfree Payouts API
+    // Here you would integrate with Razorpay Payouts API
     // For now, we'll return a mock response
     const payoutId = `payout_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
@@ -41,11 +41,11 @@ export const createPayout = async ({ userId, projectId, amount, provider = 'cash
 };
 
 // Get payout status
-export const getPayoutStatus = async (payoutId, provider = 'cashfree') => {
+export const getPayoutStatus = async (payoutId, provider = 'razorpay') => {
   try {
     logger.info('Getting payout status', { payoutId, provider });
 
-    // Here you would call Cashfree Payouts API to get status
+    // Here you would call Razorpay Payouts API to get status
     // For now, we'll return a mock response
     return {
       payoutId,

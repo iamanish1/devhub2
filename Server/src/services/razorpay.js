@@ -16,7 +16,8 @@ const normalizeEnv = (env) => {
 
 const validateApiKey = (key, keyName) => {
   if (!key) {
-    throw new Error(`${keyName} is not set`);
+    logger.warn(`${keyName} is not set - Razorpay service will be disabled`);
+    return null;
   }
   
   const trimmedKey = key.trim();
@@ -25,11 +26,18 @@ const validateApiKey = (key, keyName) => {
   }
   
   if (trimmedKey.length < 10) {
-    throw new Error(`${keyName} appears to be invalid (too short)`);
+    logger.warn(`${keyName} appears to be invalid (too short) - Razorpay service will be disabled`);
+    return null;
   }
   
   return trimmedKey;
 };
+
+// Debug environment variables
+console.log('🔍 [Razorpay] Debug - Raw environment variables:');
+console.log('🔍 [Razorpay] process.env.RAZORPAY_KEY_ID:', process.env.RAZORPAY_KEY_ID);
+console.log('🔍 [Razorpay] process.env.RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET );
+console.log('🔍 [Razorpay] process.env.RAZORPAY_ENV:', process.env.RAZORPAY_ENV );
 
 // Initialize configuration
 const RAZORPAY_ENV = normalizeEnv(process.env.RAZORPAY_ENV);
@@ -37,13 +45,16 @@ const RAZORPAY_KEY_ID = validateApiKey(process.env.RAZORPAY_KEY_ID, 'RAZORPAY_KE
 const RAZORPAY_KEY_SECRET = validateApiKey(process.env.RAZORPAY_KEY_SECRET, 'RAZORPAY_KEY_SECRET');
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
 
+// Check if Razorpay is properly configured
+const isRazorpayConfigured = RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET;
+
 // Base URL configuration
 const BASE_URL = RAZORPAY_ENV === 'test' 
   ? 'https://api.razorpay.com/v1'
   : 'https://api.razorpay.com/v1';
 
-// Axios instance with proper configuration
-const razorpayApi = axios.create({
+// Axios instance with proper configuration (only if configured)
+const razorpayApi = isRazorpayConfigured ? axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // 30 seconds timeout
   headers: {
@@ -53,75 +64,79 @@ const razorpayApi = axios.create({
     username: RAZORPAY_KEY_ID,
     password: RAZORPAY_KEY_SECRET
   }
-});
+}) : null;
 
-// Request interceptor for logging and headers
-razorpayApi.interceptors.request.use((config) => {
-  // Add idempotency key for POST requests
-  if (config.method === 'post' && !config.headers['X-Razorpay-Idempotency']) {
-    config.headers['X-Razorpay-Idempotency'] = uuidv4();
-  }
-  
-  // Safe logging (hide sensitive data)
-  const safeConfig = {
-    method: config.method,
-    url: config.url,
-    baseURL: config.baseURL,
-    timeout: config.timeout,
-    headers: {
-      'X-Razorpay-Idempotency': config.headers['X-Razorpay-Idempotency'] ? 'SET' : 'NOT_SET',
-      'Content-Type': config.headers['Content-Type']
+// Request interceptor for logging and headers (only if configured)
+if (razorpayApi) {
+  razorpayApi.interceptors.request.use((config) => {
+    // Add idempotency key for POST requests
+    if (config.method === 'post' && !config.headers['X-Razorpay-Idempotency']) {
+      config.headers['X-Razorpay-Idempotency'] = uuidv4();
     }
-  };
-  
-  logger.debug('Razorpay API Request', safeConfig);
-  return config;
-});
-
-// Response interceptor for error handling
-razorpayApi.interceptors.response.use(
-  (response) => {
-    logger.debug('Razorpay API Response', {
-      status: response.status,
-      url: response.config.url,
-      method: response.config.method
-    });
-    return response;
-  },
-  (error) => {
-    const errorInfo = {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      url: error.config?.url,
-      method: error.config?.method,
-      message: error.message
+    
+    // Safe logging (hide sensitive data)
+    const safeConfig = {
+      method: config.method,
+      url: config.url,
+      baseURL: config.baseURL,
+      timeout: config.timeout,
+      headers: {
+        'X-Razorpay-Idempotency': config.headers['X-Razorpay-Idempotency'] ? 'SET' : 'NOT_SET',
+        'Content-Type': config.headers['Content-Type']
+      }
     };
     
-    // Enhanced 401 error diagnostics
-    if (error.response?.status === 401) {
-      errorInfo.diagnostic = {
-        environment: RAZORPAY_ENV,
-        baseUrl: BASE_URL,
-        keyIdPrefix: RAZORPAY_KEY_ID ? RAZORPAY_KEY_ID.substring(0, 8) : 'NOT_SET',
-        secretKeyLength: RAZORPAY_KEY_SECRET ? RAZORPAY_KEY_SECRET.length : 0
+    logger.debug('Razorpay API Request', safeConfig);
+    return config;
+  });
+}
+
+// Response interceptor for error handling (only if configured)
+if (razorpayApi) {
+  razorpayApi.interceptors.response.use(
+    (response) => {
+      logger.debug('Razorpay API Response', {
+        status: response.status,
+        url: response.config.url,
+        method: response.config.method
+      });
+      return response;
+    },
+    (error) => {
+      const errorInfo = {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        url: error.config?.url,
+        method: error.config?.method,
+        message: error.message
       };
       
-      logger.error('Razorpay 401 Unauthorized Error - Possible causes:', {
-        ...errorInfo,
-        suggestions: [
-          'Check if API keys are correct for the environment',
-          'Verify RAZORPAY_ENV matches your API key environment',
-          'Ensure no whitespace in API keys',
-          'Confirm you are using the correct API keys for test/live environment'
-        ]
-      });
-    } else {
-      logger.error('Razorpay API Error', errorInfo);
+      // Enhanced 401 error diagnostics
+      if (error.response?.status === 401) {
+        errorInfo.diagnostic = {
+          environment: RAZORPAY_ENV,
+          baseUrl: BASE_URL,
+          keyIdPrefix: RAZORPAY_KEY_ID ? RAZORPAY_KEY_ID.substring(0, 8) : 'NOT_SET',
+          secretKeyLength: RAZORPAY_KEY_SECRET ? RAZORPAY_KEY_SECRET.length : 0
+        };
+        
+        logger.error('Razorpay 401 Unauthorized Error - Possible causes:', {
+          ...errorInfo,
+          suggestions: [
+            'Check if API keys are correct for the environment',
+            'Verify RAZORPAY_ENV matches your API key environment',
+            'Ensure no whitespace in API keys',
+            'Confirm you are using the correct API keys for test/live environment'
+          ]
+        });
+      } else {
+        logger.error('Razorpay API Error', errorInfo);
+      }
+      
+      return Promise.reject(error);
     }
-    
-    return Promise.reject(error);
-  }
-);
+  );
+}
 
 // Diagnostic logging on module load
 console.log('🔍 [Razorpay] Configuration loaded:');
@@ -129,8 +144,13 @@ console.log('🔍 [Razorpay] Environment:', RAZORPAY_ENV);
 console.log('🔍 [Razorpay] Base URL:', BASE_URL);
 console.log('🔍 [Razorpay] Key ID:', RAZORPAY_KEY_ID ? `${RAZORPAY_KEY_ID.substring(0, 8)}...` : 'NOT_SET');
 console.log('🔍 [Razorpay] Secret Key:', RAZORPAY_KEY_SECRET ? `***${RAZORPAY_KEY_SECRET.length} chars***` : 'NOT_SET');
+console.log('🔍 [Razorpay] Service Status:', isRazorpayConfigured ? '✅ ENABLED' : '❌ DISABLED (missing configuration)');
 
 export const createOrder = async ({ orderId, amount, currency = 'INR', customer, notes, receipt = null }) => {
+  if (!isRazorpayConfigured) {
+    throw new Error('Razorpay service is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.');
+  }
+
   try {
     const requestData = {
       amount: Math.round(amount * 100), // Razorpay expects amount in paise
