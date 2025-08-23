@@ -250,11 +250,33 @@ const BidingProporsalPage = () => {
       }
     } catch (error) {
       console.error("Error fetching bid eligibility:", error);
+      // Don't show error to user for background sync
     }
   };
 
   useEffect(() => {
     fetchBidEligibility();
+  }, []);
+
+  // Auto-refresh bid eligibility data every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchBidEligibility();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Refresh data when page becomes visible (user switches back to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchBidEligibility();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   // Update bid validation when project data changes
@@ -515,53 +537,6 @@ Your bid will be visible to the project owner shortly.`;
     setError("Payment failed. Please try again.");
   };
 
-  // Test function to check authentication
-  const testAuthentication = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("No token found. Please log in.");
-        return;
-      }
-
-      console.log("Testing authentication with token:", token.substring(0, 20) + "...");
-      
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/bid/test-auth`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      console.log("Authentication test successful:", response.data);
-      alert(`Authentication successful! User: ${response.data.user.username}`);
-    } catch (error) {
-      console.error("Authentication test failed:", error);
-      alert(`Authentication failed: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  // Test function to manually trigger payment modal
-  const testPaymentModal = () => {
-    // Only show payment modal if payment is actually required
-    if (!requiresPayment()) {
-      alert("No payment required! You have free bids or subscription available.");
-      return;
-    }
-
-    const testPaymentData = {
-      order: {
-        order_token: "test_token",
-        order_id: "test_order_123"
-      },
-      amount: bidAmount + getBidFee() // Total amount (bid amount + ₹9 fee) - only for paid bids
-    };
-    setPaymentData(testPaymentData);
-    setShowPaymentModal(true);
-  };
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -775,8 +750,6 @@ Your bid will be visible to the project owner shortly.`;
                         <p><strong>Total Bids Placed:</strong> {bidEligibility?.bids?.totalBids || 0}</p>
                         <p><strong>Paid Bids:</strong> {bidEligibility?.bids?.acceptedBids || 0}</p>
                         <p><strong>Pending Bids:</strong> {bidEligibility?.bids?.pendingBids || 0}</p>
-                        <p><strong>Free Bids Used:</strong> {bidEligibility?.freeBids?.used || 0}</p>
-                        <p><strong>Free Bids Remaining (DB):</strong> {bidEligibility?.freeBids?.remaining || 0}</p>
                       </div>
                       
                       {/* Status Indicators */}
@@ -789,97 +762,6 @@ Your bid will be visible to the project owner shortly.`;
                             ⚠️ No Free Bids Remaining
                           </div>
                         )}
-                      </div>
-                      
-                      {/* Test Buttons */}
-                      <div className="mt-3 space-y-2">
-                        <button
-                          type="button"
-                          onClick={testAuthentication}
-                          className="w-full bg-blue-600 text-white py-1 px-2 rounded text-xs hover:bg-blue-700 transition-colors"
-                        >
-                          Test Authentication
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              const token = localStorage.getItem("token");
-                              const response = await axios.post(
-                                `${import.meta.env.VITE_API_URL}/webhooks/reset-free-bids`,
-                                {},
-                                {
-                                  headers: {
-                                    Authorization: `Bearer ${token}`,
-                                  },
-                                }
-                              );
-                              alert(`Free bids reset! ${JSON.stringify(response.data)}`);
-                              // Refresh eligibility data
-                              await fetchBidEligibility();
-                            } catch (error) {
-                              alert(`Error resetting free bids: ${error.response?.data?.message || error.message}`);
-                            }
-                          }}
-                          className="w-full bg-green-600 text-white py-1 px-2 rounded text-xs hover:bg-green-700 transition-colors"
-                        >
-                          Reset Free Bids (Test)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              const token = localStorage.getItem("token");
-                              const response = await axios.post(
-                                `${import.meta.env.VITE_API_URL}/webhooks/sync-free-bids`,
-                                {},
-                                {
-                                  headers: {
-                                    Authorization: `Bearer ${token}`,
-                                  },
-                                }
-                              );
-                              alert(`Free bid count synced! ${JSON.stringify(response.data)}`);
-                              // Refresh eligibility data
-                              await fetchBidEligibility();
-                            } catch (error) {
-                              alert(`Error syncing free bids: ${error.response?.data?.message || error.message}`);
-                            }
-                          }}
-                          className="w-full bg-orange-600 text-white py-1 px-2 rounded text-xs hover:bg-orange-700 transition-colors"
-                        >
-                          Sync Free Bid Count
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              const token = localStorage.getItem("token");
-                              const response = await axios.get(
-                                `${import.meta.env.VITE_API_URL}/webhooks/debug-user-bids`,
-                                {
-                                  headers: {
-                                    Authorization: `Bearer ${token}`,
-                                  },
-                                }
-                              );
-                              console.log('Debug info:', response.data);
-                              alert(`Debug info logged to console! Check browser console for details.`);
-                            } catch (error) {
-                              alert(`Error getting debug info: ${error.response?.data?.message || error.message}`);
-                            }
-                          }}
-                          className="w-full bg-red-600 text-white py-1 px-2 rounded text-xs hover:bg-red-700 transition-colors"
-                        >
-                          Debug User Bids
-                        </button>
-                        <button
-                          type="button"
-                          onClick={testPaymentModal}
-                          className="w-full bg-purple-600 text-white py-1 px-2 rounded text-xs hover:bg-purple-700 transition-colors"
-                        >
-                          Test Payment Modal
-                        </button>
                       </div>
                     </div>
                   </div>
