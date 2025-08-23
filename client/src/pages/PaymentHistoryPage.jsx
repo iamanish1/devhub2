@@ -145,7 +145,7 @@ const PaymentHistoryPage = () => {
       <NavBar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 mt-[5vmin]">
           <h1 className="text-4xl font-bold text-white mb-2">Payment History</h1>
           <p className="text-gray-300">Track all your payment transactions and activities</p>
         </div>
