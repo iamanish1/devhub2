@@ -25,7 +25,7 @@ import path from "path";
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = ['JWT_SECRET', 'MONGODB_URI'];
+const requiredEnvVars = ['JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingEnvVars.length > 0) {
@@ -98,25 +98,7 @@ app.use(cors(CorsOption)) ;
 const uploadsDir = process.env.UPLOADS_DIR || 'uploads';
 app.use('/uploads', express.static(path.join(process.cwd(), uploadsDir))); 
 
-
-
-// Import routes
-app.use("/api", userRoute) ; 
-app.use("/api/project", projectRoutes) ; 
-app.use("/api/bid", biddingRoutes) ;
-app.use("/api/admin", adminDashboardRoutes) ; 
-app.use("/api/project",chatRoutes);
-app.use("/api/notes", userNoteRoute ) ;
-app.use("/api", uploadRoutes) ;
-app.use("/api/saved-projects", savedProjectRoutes);
-app.use("/api/user-projects", userProjectsRoutes);
-
-// Payment routes
-app.use("/api/payments", paymentsRoutes);
-app.use("/webhooks", webhooksRoutes);
-app.use("/api/projects", projectsPaymentRoutes);
-
-// Health check endpoint
+// Health check endpoint (moved to top for faster response)
 app.get('/api/health', (req, res) => {
   try {
     const healthStatus = {
@@ -125,8 +107,12 @@ app.get('/api/health', (req, res) => {
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
       database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-      memory: process.memoryUsage(),
-      version: process.version
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+      },
+      version: process.version,
+      port: process.env.PORT || 5000
     };
     
     console.log("🏥 Health check requested:", healthStatus);
@@ -146,10 +132,27 @@ app.get('/', (req, res) => {
   res.status(200).json({ 
     message: 'DevHubs API Server is running',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
  
+
+// Import routes
+app.use("/api", userRoute) ; 
+app.use("/api/project", projectRoutes) ; 
+app.use("/api/bid", biddingRoutes) ;
+app.use("/api/admin", adminDashboardRoutes) ; 
+app.use("/api/project",chatRoutes);
+app.use("/api/notes", userNoteRoute ) ;
+app.use("/api", uploadRoutes) ;
+app.use("/api/saved-projects", savedProjectRoutes);
+app.use("/api/user-projects", userProjectsRoutes);
+
+// Payment routes
+app.use("/api/payments", paymentsRoutes);
+app.use("/webhooks", webhooksRoutes);
+app.use("/api/projects", projectsPaymentRoutes);
 
 // Initialize chat socket
 chatSocket(io);
@@ -175,15 +178,20 @@ const startServer = async () => {
     console.log("📋 Environment:", process.env.NODE_ENV || 'development');
     console.log("🔗 Port:", port);
     
-    // Connect to database
-    await connectDb();
-    
-    // Start the server
+    // Start the server first
     server.listen(port, () => {
       console.log(`✅ Server running on port ${port}`);
       console.log(`🏥 Health check available at: http://localhost:${port}/api/health`);
       console.log(`📊 Root endpoint: http://localhost:${port}/`);
     });
+    
+    // Then try to connect to database (non-blocking)
+    try {
+      await connectDb();
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError.message);
+      console.log('⚠️ Server is running without database connection');
+    }
     
   } catch (error) {
     console.error('❌ Failed to start server:', error);
