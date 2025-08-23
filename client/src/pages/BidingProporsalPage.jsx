@@ -846,6 +846,29 @@ Your bid will be visible to the project owner shortly.`;
                         </button>
                         <button
                           type="button"
+                          onClick={async () => {
+                            try {
+                              const token = localStorage.getItem("token");
+                              const response = await axios.get(
+                                `${import.meta.env.VITE_API_URL}/webhooks/debug-user-bids`,
+                                {
+                                  headers: {
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                }
+                              );
+                              console.log('Debug info:', response.data);
+                              alert(`Debug info logged to console! Check browser console for details.`);
+                            } catch (error) {
+                              alert(`Error getting debug info: ${error.response?.data?.message || error.message}`);
+                            }
+                          }}
+                          className="w-full bg-red-600 text-white py-1 px-2 rounded text-xs hover:bg-red-700 transition-colors"
+                        >
+                          Debug User Bids
+                        </button>
+                        <button
+                          type="button"
                           onClick={testPaymentModal}
                           className="w-full bg-purple-600 text-white py-1 px-2 rounded text-xs hover:bg-purple-700 transition-colors"
                         >

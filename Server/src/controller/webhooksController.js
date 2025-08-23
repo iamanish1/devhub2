@@ -147,13 +147,22 @@ export const razorpayWebhook = async (req, res) => {
 
                 // Update user's free bid statistics if fee was waived (free bid)
                 const feeAmount = intent.notes?.feeAmount || 0;
-                if (feeAmount === 0) {
+                const isFreeBid = intent.notes?.feeWaived || feeAmount === 0;
+                
+                console.log(`[Webhook] Free bid check - feeAmount: ${feeAmount}, feeWaived: ${intent.notes?.feeWaived}, isFreeBid: ${isFreeBid}`);
+                
+                if (isFreeBid) {
+                  console.log(`[Webhook] Processing free bid update for user ${intent.userId}`);
                   const User = await user.findById(intent.userId);
                   if (User) {
+                    console.log(`[Webhook] Found user: ${User.username}`);
                     // Initialize freeBids if not set
                     if (!User.freeBids) {
+                      console.log(`[Webhook] Initializing freeBids for user ${User.username}`);
                       User.freeBids = { remaining: 5, used: 0 };
                     }
+                    
+                    console.log(`[Webhook] Current freeBids: remaining=${User.freeBids.remaining}, used=${User.freeBids.used}`);
                     
                     if (User.freeBids.remaining > 0) {
                       console.log(`[Webhook] Updating free bid statistics - before: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
@@ -161,10 +170,15 @@ export const razorpayWebhook = async (req, res) => {
                       User.freeBids.used += 1;
                       console.log(`[Webhook] Updated free bid statistics - after: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
                       await User.save();
+                      console.log(`[Webhook] Free bid count updated successfully for user ${User.username}`);
                     } else {
                       console.log(`[Webhook] No free bids remaining for user ${User.username}`);
                     }
+                  } else {
+                    console.log(`[Webhook] User not found with ID: ${intent.userId}`);
                   }
+                } else {
+                  console.log(`[Webhook] Not a free bid - feeAmount: ${feeAmount}, skipping free bid update`);
                 }
 
                 // Update project statistics
@@ -666,6 +680,89 @@ export const syncFreeBidCount = async (req, res) => {
     console.error('[Sync FreeBids] Error:', error);
     res.status(500).json({ 
       message: 'Error syncing free bid count',
+      error: error.message 
+    });
+  }
+};
+
+// Debug endpoint to check user's bid status and free bid count
+export const debugUserBids = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    console.log(`[Debug] Checking bids for user: ${userId}`);
+    
+    // Get user details
+    const User = await user.findById(userId);
+    if (!User) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Get all bids for this user
+    const allBids = await Bidding.find({ user_id: userId }).sort({ createdAt: -1 });
+    
+    // Count different types of bids
+    const paidFreeBids = await Bidding.countDocuments({
+      user_id: userId,
+      payment_status: 'paid',
+      is_free_bid: true
+    });
+    
+    const paidPaidBids = await Bidding.countDocuments({
+      user_id: userId,
+      payment_status: 'paid',
+      is_free_bid: false
+    });
+    
+    const pendingBids = await Bidding.countDocuments({
+      user_id: userId,
+      payment_status: 'pending'
+    });
+    
+    // Get recent bids with details
+    const recentBids = allBids.slice(0, 5).map(bid => ({
+      id: bid._id,
+      projectId: bid.project_id,
+      amount: bid.bid_amount,
+      fee: bid.bid_fee,
+      total: bid.total_amount,
+      isFreeBid: bid.is_free_bid,
+      paymentStatus: bid.payment_status,
+      bidStatus: bid.bid_status,
+      createdAt: bid.createdAt
+    }));
+    
+    const debugInfo = {
+      user: {
+        id: User._id,
+        username: User.username,
+        email: User.email,
+        freeBids: User.freeBids || { remaining: 5, used: 0 }
+      },
+      bidCounts: {
+        total: allBids.length,
+        paidFreeBids,
+        paidPaidBids,
+        pendingBids
+      },
+      expectedFreeBids: {
+        used: paidFreeBids,
+        remaining: Math.max(0, 5 - paidFreeBids)
+      },
+      recentBids
+    };
+    
+    console.log(`[Debug] Debug info for user ${User.username}:`, debugInfo);
+    
+    res.status(200).json({
+      message: 'Debug info retrieved successfully',
+      data: debugInfo
+    });
+    
+  } catch (error) {
+    console.error('[Debug] Error:', error);
+    res.status(500).json({ 
+      message: 'Error getting debug info',
       error: error.message 
     });
   }
