@@ -1150,23 +1150,23 @@ const ProjectListingPage = () => {
               {/* Step 4: Bonus Pool */}
               {currentStep === 4 && (
                 <div className="animate-slide-in-right space-y-8">
-                                     <div className="text-center mb-8">
-                     <h2 className="text-3xl font-bold text-white mb-2">Bonus Pool (Required)</h2>
-                     <p className="text-gray-300">Fund rewards for contributors to list your project</p>
-                     <div className="mt-4 p-4 bg-[#2A2A2A] rounded-lg border border-gray-600">
-                       <p className="text-gray-300 text-sm">
-                          <div className="flex items-start gap-2">
-                            <svg className="w-5 h-5 text-[#00A8E8] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                            </svg>
-                            <span><strong>What is a Bonus Pool?</strong><br/>
-                            A bonus pool is a reward fund that contributors can earn by adding to their bidding money. 
-                            This incentivizes quality contributions and helps you attract the best developers.<br/><br/>
-                            <strong className="text-[#00A8E8]">⚠️ Bonus pool funding is mandatory to list your project.</strong></span>
-                          </div>
-                        </p>
-                     </div>
-                   </div>
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-white mb-2">Bonus Pool (Required)</h2>
+                    <p className="text-gray-300">Fund rewards for contributors to list your project</p>
+                    <div className="mt-4 p-4 bg-[#2A2A2A] rounded-lg border border-gray-600">
+                      <div className="flex items-start gap-2">
+                        <svg className="w-5 h-5 text-[#00A8E8] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        <span className="text-gray-300 text-sm">
+                          <strong>What is a Bonus Pool?</strong><br/>
+                          A bonus pool is a reward fund that contributors can earn by adding to their bidding money. 
+                          This incentivizes quality contributions and helps you attract the best developers.<br/><br/>
+                          <strong className="text-[#00A8E8]">⚠️ Bonus pool funding is mandatory to list your project.</strong>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="space-y-6">
                     {/* Bonus Pool Amount */}
@@ -1196,184 +1196,185 @@ const ProjectListingPage = () => {
                       )}
                     </div>
 
-                                         {/* Number of Contributors */}
-                     <div className="group">
-                       <label className="block text-sm font-semibold text-gray-300 mb-3 group-hover:text-blue-400 transition-colors">
-                         Number of Contributors *
-                       </label>
-                       <div className="relative">
-                         <input
-                           type="number"
-                           name="bonus_pool_contributors"
-                           value={formData.bonus_pool_contributors}
-                           onChange={handleChange}
-                           onKeyDown={handleKeyDown}
-                           min="1"
-                           className={`w-full bg-[#2A2A2A] border rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
-                             validationErrors.bonus_pool_contributors 
-                               ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" 
-                               : "border-gray-600 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8]"
-                           }`}
-                           placeholder="Enter the number of contributors..."
-                         />
-                         <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-                       </div>
-                       {validationErrors.bonus_pool_contributors && (
-                         <p className="text-red-400 text-sm mt-1">{validationErrors.bonus_pool_contributors}</p>
-                       )}
-                     </div>
+                    {/* Number of Contributors */}
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-300 mb-3 group-hover:text-blue-400 transition-colors">
+                        Number of Contributors *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="bonus_pool_contributors"
+                          value={formData.bonus_pool_contributors}
+                          onChange={handleChange}
+                          onKeyDown={handleKeyDown}
+                          min="1"
+                          className={`w-full bg-[#2A2A2A] border rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
+                            validationErrors.bonus_pool_contributors 
+                              ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" 
+                              : "border-gray-600 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8]"
+                          }`}
+                          placeholder="Enter the number of contributors..."
+                        />
+                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </div>
+                      {validationErrors.bonus_pool_contributors && (
+                        <p className="text-red-400 text-sm mt-1">{validationErrors.bonus_pool_contributors}</p>
+                      )}
+                    </div>
 
-                     {/* Bonus Pool Funding Requirement Error */}
-                     {validationErrors.bonusPoolFunded && (
-                       <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-4">
-                         <div className="flex items-center text-red-400">
-                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                           </svg>
-                           {validationErrors.bonusPoolFunded}
-                         </div>
-                       </div>
-                     )}
+                    {/* Bonus Pool Funding Requirement Error */}
+                    {validationErrors.bonusPoolFunded && (
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-4">
+                        <div className="flex items-center text-red-400">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {validationErrors.bonusPoolFunded}
+                        </div>
+                      </div>
+                    )}
 
-                     {/* Total Bonus Pool Calculation */}
-                     <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
-                       <div className="flex items-center justify-between mb-3">
-                         <h4 className="text-white font-semibold">Bonus Pool Summary</h4>
-                         <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30">
-                           Required
-                         </span>
-                       </div>
-                       <div className="space-y-2">
-                         <div className="flex justify-between items-center">
-                           <span className="text-gray-300">Per Contributor:</span>
-                           <span className="text-white font-medium">₹{formData.bonus_pool_amount || 0}</span>
-                         </div>
-                         <div className="flex justify-between items-center">
-                           <span className="text-gray-300">Number of Contributors:</span>
-                           <span className="text-white font-medium">{formData.bonus_pool_contributors || 0}</span>
-                         </div>
-                         <div className="border-t border-gray-600 pt-2">
-                           <div className="flex justify-between items-center">
-                             <span className="text-white font-semibold">Total Bonus Pool:</span>
-                             <span className="gradient-text font-bold text-lg">
-                               ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
-                             </span>
-                           </div>
-                         </div>
-                         
-                         {/* Fund Bonus Pool Button */}
-                         <div className="mt-4 pt-4 border-t border-gray-600">
-                           {paymentVerificationLoading ? (
-                             <div className="text-center">
-                               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
-                                 <div className="flex items-center justify-center text-blue-400">
-                                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400 mr-2"></div>
-                                   <span className="font-semibold">Verifying Payment...</span>
-                                 </div>
-                                 <p className="text-xs text-blue-300 mt-1">
-                                   Please wait while we verify your payment with our servers
-                                 </p>
-                               </div>
-                             </div>
-                           ) : bonusPoolFunded ? (
-                             <div className="text-center">
-                               <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
-                                 <div className="flex items-center justify-center text-green-400">
-                                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                   </svg>
-                                   <span className="font-semibold">Bonus Pool Funded Successfully!</span>
-                                 </div>
-                                 <p className="text-xs text-green-300 mt-1">
-                                   Your project is ready to be listed with a funded bonus pool
-                                 </p>
-                               </div>
-                               <div className="flex gap-2">
-                                 <button
-                                   type="button"
-                                   onClick={() => setShowBonusModal(true)}
-                                   className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
-                                 >
-                                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                 </svg>
-                                 View Details
-                               </button>
-                               <button
-                                 type="button"
-                                 onClick={handlePaymentRetry}
-                                 className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center"
-                               >
-                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                 </svg>
-                                 Retry
-                               </button>
-                             </div>
-                                                      ) : (
-                             <>
-                               {bonusPoolStatus?.funded === false && (
-                                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3">
-                                   <div className="flex items-center text-red-400 mb-2">
-                                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                     </svg>
-                                     Payment verification failed
-                                   </div>
-                                   <p className="text-xs text-red-300 mb-3">
-                                     Your payment was not verified. Please try again or contact support if the issue persists.
-                                   </p>
-                                   <div className="flex gap-2">
-                                     <button
-                                       type="button"
-                                       onClick={handlePaymentRetry}
-                                       className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center"
-                                     >
-                                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                       </svg>
-                                       Retry
-                                     </button>
-                                     <button
-                                       type="button"
-                                       onClick={() => setShowBonusModal(true)}
-                                       className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
-                                     >
-                                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                       </svg>
-                                       View Details
-                                     </button>
-                                   </div>
-                                 </div>
-                               )}
-                               <button
-                                 type="button"
-                                 onClick={() => setShowBonusModal(true)}
-                                 disabled={!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors}
-                                 className="w-full bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                               >
-                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                                 </svg>
-                                 Fund Bonus Pool - ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
-                               </button>
-                               <p className="text-xs text-gray-400 mt-2 text-center">
-                                 {!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors 
-                                   ? "Complete project details to enable funding"
-                                   : "Fund your bonus pool to attract quality contributors"
-                                 }
-                               </p>
-                               <p className="text-xs text-red-400 mt-1 text-center font-medium">
-                                 ⚠️ Bonus pool funding is mandatory to list your project
-                               </p>
-                             </>
-                           )}
-                         </div>
-                       </div>
-                     </div>
+                    {/* Total Bonus Pool Calculation */}
+                    <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-white font-semibold">Bonus Pool Summary</h4>
+                        <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30">
+                          Required
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-300">Per Contributor:</span>
+                          <span className="text-white font-medium">₹{formData.bonus_pool_amount || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-300">Number of Contributors:</span>
+                          <span className="text-white font-medium">{formData.bonus_pool_contributors || 0}</span>
+                        </div>
+                        <div className="border-t border-gray-600 pt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-white font-semibold">Total Bonus Pool:</span>
+                            <span className="gradient-text font-bold text-lg">
+                              ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Fund Bonus Pool Button */}
+                        <div className="mt-4 pt-4 border-t border-gray-600">
+                          {paymentVerificationLoading ? (
+                            <div className="text-center">
+                              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                                <div className="flex items-center justify-center text-blue-400">
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400 mr-2"></div>
+                                  <span className="font-semibold">Verifying Payment...</span>
+                                </div>
+                                <p className="text-xs text-blue-300 mt-1">
+                                  Please wait while we verify your payment with our servers
+                                </p>
+                              </div>
+                            </div>
+                          ) : bonusPoolFunded ? (
+                            <div className="text-center">
+                              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
+                                <div className="flex items-center justify-center text-green-400">
+                                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  <span className="font-semibold">Bonus Pool Funded Successfully!</span>
+                                </div>
+                                <p className="text-xs text-green-300 mt-1">
+                                  Your project is ready to be listed with a funded bonus pool
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowBonusModal(true)}
+                                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  View Details
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handlePaymentRetry}
+                                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center"
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  </svg>
+                                  Retry
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {bonusPoolStatus?.funded === false && (
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3">
+                                  <div className="flex items-center text-red-400 mb-2">
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Payment verification failed
+                                  </div>
+                                  <p className="text-xs text-red-300 mb-3">
+                                    Your payment was not verified. Please try again or contact support if the issue persists.
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={handlePaymentRetry}
+                                      className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center"
+                                    >
+                                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                      </svg>
+                                      Retry
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowBonusModal(true)}
+                                      className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
+                                    >
+                                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                      </svg>
+                                      View Details
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setShowBonusModal(true)}
+                                disabled={!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors}
+                                className="w-full bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                </svg>
+                                Fund Bonus Pool - ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
+                              </button>
+                              <p className="text-xs text-gray-400 mt-2 text-center">
+                                {!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors 
+                                  ? "Complete project details to enable funding"
+                                  : "Fund your bonus pool to attract quality contributors"
+                                }
+                              </p>
+                              <p className="text-xs text-red-400 mt-1 text-center font-medium">
+                                ⚠️ Bonus pool funding is mandatory to list your project
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1498,96 +1499,96 @@ const ProjectListingPage = () => {
                 <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center animate-pulse">
                   {error}
                 </div>
-                             )}
-             </form>
-           </div>
-           
-                       {/* Platform Features Section */}
-            <div className="mt-16">
-              <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold text-white mb-4">Built for Modern Development</h2>
-                <p className="text-gray-300 max-w-2xl mx-auto">
-                  Our platform is designed with the latest technologies and security standards to ensure your projects succeed
+              )}
+            </form>
+          </div>
+          
+          {/* Platform Features Section */}
+          <div className="mt-16">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold text-white mb-4">Built for Modern Development</h2>
+              <p className="text-gray-300 max-w-2xl mx-auto">
+                Our platform is designed with the latest technologies and security standards to ensure your projects succeed
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Feature 1 */}
+              <div className="bg-gradient-to-br from-[#1a1a1a] to-[#232323] p-6 rounded-xl border border-gray-700">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] rounded-full flex items-center justify-center text-white mr-4">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold">Secure Infrastructure</h4>
+                    <p className="text-sm text-gray-400">Built with modern security</p>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                  Our platform is built on a secure, scalable infrastructure using the latest cloud technologies and security protocols to protect your data and projects.
                 </p>
-              </div>
-             
-                           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                 {/* Feature 1 */}
-                 <div className="bg-gradient-to-br from-[#1a1a1a] to-[#232323] p-6 rounded-xl border border-gray-700">
-                   <div className="flex items-center mb-4">
-                     <div className="w-12 h-12 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] rounded-full flex items-center justify-center text-white mr-4">
-                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                       </svg>
-                     </div>
-                     <div>
-                       <h4 className="text-white font-semibold">Secure Infrastructure</h4>
-                       <p className="text-sm text-gray-400">Built with modern security</p>
-                     </div>
-                   </div>
-                  <p className="text-gray-300 text-sm mb-4">
-                    Our platform is built on a secure, scalable infrastructure using the latest cloud technologies and security protocols to protect your data and projects.
-                  </p>
-                  <div className="flex items-center text-blue-400 text-sm">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Production Ready
-                  </div>
-                </div>
-                
-                                 {/* Feature 2 */}
-                 <div className="bg-gradient-to-br from-[#1a1a1a] to-[#232323] p-6 rounded-xl border border-gray-700">
-                   <div className="flex items-center mb-4">
-                     <div className="w-12 h-12 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] rounded-full flex items-center justify-center text-white mr-4">
-                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                       </svg>
-                     </div>
-                     <div>
-                       <h4 className="text-white font-semibold">Real-time Collaboration</h4>
-                       <p className="text-sm text-gray-400">Instant team coordination</p>
-                     </div>
-                   </div>
-                  <p className="text-gray-300 text-sm mb-4">
-                    Connect with developers and teams in real-time. Our platform facilitates seamless communication and project management for successful outcomes.
-                  </p>
-                  <div className="flex items-center text-green-400 text-sm">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Live Platform
-                  </div>
-                </div>
-                
-                                 {/* Feature 3 */}
-                 <div className="bg-gradient-to-br from-[#1a1a1a] to-[#232323] p-6 rounded-xl border border-gray-700">
-                   <div className="flex items-center mb-4">
-                     <div className="w-12 h-12 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] rounded-full flex items-center justify-center text-white mr-4">
-                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                       </svg>
-                     </div>
-                     <div>
-                       <h4 className="text-white font-semibold">Legal Protection</h4>
-                       <p className="text-sm text-gray-400">Built-in safeguards</p>
-                     </div>
-                   </div>
-                  <p className="text-gray-300 text-sm mb-4">
-                    Comprehensive legal framework with built-in NDAs, IP protection, and confidentiality agreements to safeguard your innovative ideas and projects.
-                  </p>
-                  <div className="flex items-center text-purple-400 text-sm">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    Legally Compliant
-                  </div>
+                <div className="flex items-center text-blue-400 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Production Ready
                 </div>
               </div>
-           </div>
-           
-                       {/* Platform Launch CTA */}
-            <div className="mt-16 text-center">
+              
+              {/* Feature 2 */}
+              <div className="bg-gradient-to-br from-[#1a1a1a] to-[#232323] p-6 rounded-xl border border-gray-700">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] rounded-full flex items-center justify-center text-white mr-4">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold">Real-time Collaboration</h4>
+                    <p className="text-sm text-gray-400">Instant team coordination</p>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                  Connect with developers and teams in real-time. Our platform facilitates seamless communication and project management for successful outcomes.
+                </p>
+                <div className="flex items-center text-green-400 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Live Platform
+                </div>
+              </div>
+              
+              {/* Feature 3 */}
+              <div className="bg-gradient-to-br from-[#1a1a1a] to-[#232323] p-6 rounded-xl border border-gray-700">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] rounded-full flex items-center justify-center text-white mr-4">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold">Legal Protection</h4>
+                    <p className="text-sm text-gray-400">Built-in safeguards</p>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm mb-4">
+                  Comprehensive legal framework with built-in NDAs, IP protection, and confidentiality agreements to safeguard your innovative ideas and projects.
+                </p>
+                <div className="flex items-center text-purple-400 text-sm">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Legally Compliant
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Platform Launch CTA */}
+          <div className="mt-16 text-center">
               <div className="bg-gradient-to-r from-[#0062E6]/20 to-[#00A8E8]/20 p-8 rounded-xl border border-gray-700">
                 <h3 className="text-2xl font-bold text-white mb-4">Be Among the First to Launch Your Project</h3>
                 <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
@@ -1615,56 +1616,56 @@ const ProjectListingPage = () => {
                 </div>
               </div>
             </div>
-         </div>
-       </main>
+        </div>
+      </main>
 
-       {/* Bonus Pool Payment Modal */}
-       <BonusPoolPaymentModal
-         isOpen={showBonusModal}
-         onClose={() => setShowBonusModal(false)}
-         project={{
-           _id: editingProject?._id || params.id,
-           project_Title: formData.project_Title,
-           bonus_pool_amount: formData.bonus_pool_amount,
-           bonus_pool_contributors: formData.bonus_pool_contributors
-         }}
-         onSuccess={async (result) => {
-           console.log('Payment completed, verifying with backend:', result);
-           
-           // Extract payment intent ID from the result
-           const intentId = result?.intentId || result?.razorpay_payment_id || paymentIntentId;
-           
-           if (intentId) {
-             // Verify payment status with backend
-             const isPaymentVerified = await verifyPaymentStatus(intentId);
-             
-             if (isPaymentVerified) {
-               console.log('Payment verified successfully');
-               setBonusPoolStatus({ funded: true });
-               setBonusPoolFunded(true);
-               setShowBonusModal(false);
-             } else {
-               console.error('Payment verification failed');
-               setError('Payment verification failed. Please try again or contact support.');
-               setBonusPoolStatus({ funded: false });
-               setBonusPoolFunded(false);
-             }
-           } else {
-             console.error('No payment intent ID found');
-             setError('Payment verification failed. Please try again or contact support.');
-             setBonusPoolStatus({ funded: false });
-             setBonusPoolFunded(false);
-           }
-         }}
-         onError={(error) => {
-           console.error('Bonus pool funding failed:', error);
-           setError('Payment failed. Please try again.');
-           setBonusPoolStatus({ funded: false });
-           setBonusPoolFunded(false);
-         }}
-       />
-     </div>
-   );
- };
+      {/* Bonus Pool Payment Modal */}
+      <BonusPoolPaymentModal
+        isOpen={showBonusModal}
+        onClose={() => setShowBonusModal(false)}
+        project={{
+          _id: editingProject?._id || params.id,
+          project_Title: formData.project_Title,
+          bonus_pool_amount: formData.bonus_pool_amount,
+          bonus_pool_contributors: formData.bonus_pool_contributors
+        }}
+        onSuccess={async (result) => {
+          console.log('Payment completed, verifying with backend:', result);
+          
+          // Extract payment intent ID from the result
+          const intentId = result?.intentId || result?.razorpay_payment_id || paymentIntentId;
+          
+          if (intentId) {
+            // Verify payment status with backend
+            const isPaymentVerified = await verifyPaymentStatus(intentId);
+            
+            if (isPaymentVerified) {
+              console.log('Payment verified successfully');
+              setBonusPoolStatus({ funded: true });
+              setBonusPoolFunded(true);
+              setShowBonusModal(false);
+            } else {
+              console.error('Payment verification failed');
+              setError('Payment verification failed. Please try again or contact support.');
+              setBonusPoolStatus({ funded: false });
+              setBonusPoolFunded(false);
+            }
+          } else {
+            console.error('No payment intent ID found');
+            setError('Payment verification failed. Please try again or contact support.');
+            setBonusPoolStatus({ funded: false });
+            setBonusPoolFunded(false);
+          }
+        }}
+        onError={(error) => {
+          console.error('Bonus pool funding failed:', error);
+          setError('Payment failed. Please try again.');
+          setBonusPoolStatus({ funded: false });
+          setBonusPoolFunded(false);
+        }}
+      />
+    </div>
+  );
+};
 
 export default ProjectListingPage;
