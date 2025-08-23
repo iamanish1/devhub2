@@ -179,6 +179,4 @@ const DataExplanationCard = ({ type }) => {
   );
 };
 
-export default DataExplanationCard;
-
-export default DataExplanationCard;
+  export default DataExplanationCard;
