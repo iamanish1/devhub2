@@ -52,6 +52,7 @@ const ProjectListingPage = () => {
   // Bonus pool funding states
   const [showBonusModal, setShowBonusModal] = useState(false);
   const [bonusPoolStatus, setBonusPoolStatus] = useState(null);
+  const [bonusPoolFunded, setBonusPoolFunded] = useState(false);
   
   // Payment context
   const { hasActiveSubscription } = usePayment();
@@ -172,6 +173,9 @@ const ProjectListingPage = () => {
         }
         if (!formData.bonus_pool_contributors || formData.bonus_pool_contributors < 1) {
           errors.bonus_pool_contributors = "Number of contributors must be at least 1";
+        }
+        if (!bonusPoolFunded) {
+          errors.bonusPoolFunded = "Bonus pool must be funded before listing the project";
         }
         break;
         
@@ -358,8 +362,8 @@ const ProjectListingPage = () => {
     },
     {
       id: 4,
-      title: "Bonus Pool",
-      subtitle: "Set up rewards for contributors",
+      title: "Bonus Pool (Required)",
+      subtitle: "Fund rewards for contributors",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
@@ -616,6 +620,13 @@ const ProjectListingPage = () => {
                       }`}>
                         {step.subtitle}
                       </p>
+                      {step.id === 4 && (
+                        <div className="mt-1">
+                          <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30">
+                            Required
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {index < steps.length - 1 && (
@@ -638,6 +649,11 @@ const ProjectListingPage = () => {
                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                    </svg>
                    <span className="text-white font-medium">Secure Project Submission</span>
+                   {currentStep === 4 && (
+                     <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30 ml-2">
+                       Bonus Pool Required
+                     </span>
+                   )}
                  </div>
                  <div className="flex items-center space-x-2">
                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -1095,8 +1111,8 @@ const ProjectListingPage = () => {
               {currentStep === 4 && (
                 <div className="animate-slide-in-right space-y-8">
                                      <div className="text-center mb-8">
-                     <h2 className="text-3xl font-bold text-white mb-2">Bonus Pool</h2>
-                     <p className="text-gray-300">Set up rewards for contributors</p>
+                     <h2 className="text-3xl font-bold text-white mb-2">Bonus Pool (Required)</h2>
+                     <p className="text-gray-300">Fund rewards for contributors to list your project</p>
                      <div className="mt-4 p-4 bg-[#2A2A2A] rounded-lg border border-gray-600">
                        <p className="text-gray-300 text-sm">
                           <div className="flex items-start gap-2">
@@ -1105,7 +1121,8 @@ const ProjectListingPage = () => {
                             </svg>
                             <span><strong>What is a Bonus Pool?</strong><br/>
                             A bonus pool is a reward fund that contributors can earn by adding to their bidding money. 
-                            This incentivizes quality contributions and helps you attract the best developers.</span>
+                            This incentivizes quality contributions and helps you attract the best developers.<br/><br/>
+                            <strong className="text-[#00A8E8]">⚠️ Bonus pool funding is mandatory to list your project.</strong></span>
                           </div>
                         </p>
                      </div>
@@ -1166,9 +1183,26 @@ const ProjectListingPage = () => {
                        )}
                      </div>
 
+                     {/* Bonus Pool Funding Requirement Error */}
+                     {validationErrors.bonusPoolFunded && (
+                       <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-4">
+                         <div className="flex items-center text-red-400">
+                           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                           </svg>
+                           {validationErrors.bonusPoolFunded}
+                         </div>
+                       </div>
+                     )}
+
                      {/* Total Bonus Pool Calculation */}
                      <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600">
-                       <h4 className="text-white font-semibold mb-3">Bonus Pool Summary</h4>
+                       <div className="flex items-center justify-between mb-3">
+                         <h4 className="text-white font-semibold">Bonus Pool Summary</h4>
+                         <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30">
+                           Required
+                         </span>
+                       </div>
                        <div className="space-y-2">
                          <div className="flex justify-between items-center">
                            <span className="text-gray-300">Per Contributor:</span>
@@ -1189,23 +1223,55 @@ const ProjectListingPage = () => {
                          
                          {/* Fund Bonus Pool Button */}
                          <div className="mt-4 pt-4 border-t border-gray-600">
-                           <button
-                             type="button"
-                             onClick={() => setShowBonusModal(true)}
-                             disabled={!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors}
-                             className="w-full bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                           >
-                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                             </svg>
-                             Fund Bonus Pool - ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
-                           </button>
-                           <p className="text-xs text-gray-400 mt-2 text-center">
+                           {bonusPoolFunded ? (
+                             <div className="text-center">
+                               <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
+                                 <div className="flex items-center justify-center text-green-400">
+                                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                   </svg>
+                                   <span className="font-semibold">Bonus Pool Funded Successfully!</span>
+                                 </div>
+                                 <p className="text-xs text-green-300 mt-1">
+                                   Your project is ready to be listed with a funded bonus pool
+                                 </p>
+                               </div>
+                               <button
+                                 type="button"
+                                 onClick={() => setShowBonusModal(true)}
+                                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
+                               >
+                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                 </svg>
+                                 View Payment Details
+                               </button>
+                             </div>
+                           ) : (
+                             <>
+                               <button
+                                 type="button"
+                                 onClick={() => setShowBonusModal(true)}
+                                 disabled={!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors}
+                                 className="w-full bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#0090c9] hover:to-[#0052cc] transition-all duration-300 shadow-lg hover:shadow-[#00A8E8]/30 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                               >
+                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                 </svg>
+                                 Fund Bonus Pool - ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
+                               </button>
+                                                           <p className="text-xs text-gray-400 mt-2 text-center">
                              {!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors 
                                ? "Complete project details to enable funding"
                                : "Fund your bonus pool to attract quality contributors"
                              }
                            </p>
+                           <p className="text-xs text-red-400 mt-1 text-center font-medium">
+                             ⚠️ Bonus pool funding is mandatory to list your project
+                           </p>
+                             </>
+                           )}
                          </div>
                        </div>
                      </div>
@@ -1266,9 +1332,13 @@ const ProjectListingPage = () => {
                 ) : (
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !bonusPoolFunded}
                     onClick={() => setSubmitButtonClicked(true)}
-                    className="submit-button px-6 py-2 bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white rounded-lg hover:from-[#00A8E8] hover:to-[#0062E6] transition-all shadow-lg shadow-blue-500/20 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`submit-button px-6 py-2 rounded-lg transition-all shadow-lg flex items-center ${
+                      bonusPoolFunded 
+                        ? "bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white hover:from-[#00A8E8] hover:to-[#0062E6] shadow-blue-500/20" 
+                        : "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {loading ? (
                       <>
@@ -1278,7 +1348,7 @@ const ProjectListingPage = () => {
                         </svg>
                         <span>Submitting...</span>
                       </>
-                    ) : (
+                    ) : bonusPoolFunded ? (
                       <>
                         <span>Submit Project</span>
                         <svg
@@ -1293,6 +1363,24 @@ const ProjectListingPage = () => {
                             strokeLinejoin="round"
                             strokeWidth="2"
                             d="M5 13l4 4L19 7"
+                          ></path>
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        <span>Fund Bonus Pool First</span>
+                        <svg
+                          className="w-4 h-4 ml-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
                           ></path>
                         </svg>
                       </>
@@ -1439,6 +1527,7 @@ const ProjectListingPage = () => {
          onSuccess={(result) => {
            console.log('Bonus pool funded successfully:', result);
            setBonusPoolStatus({ funded: true });
+           setBonusPoolFunded(true);
            setShowBonusModal(false);
          }}
          onError={(error) => {
