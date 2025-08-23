@@ -766,6 +766,23 @@ Your bid will be visible to the project owner shortly.`;
                         <p><strong>Fee Amount:</strong> ₹{bidEligibility?.feeAmount || 0}</p>
                         <p><strong>Free Bids Remaining:</strong> {bidEligibility?.remaining || 0}</p>
                         <p><strong>Can Bid:</strong> {bidEligibility?.canBid ? 'Yes' : 'No'}</p>
+                        <p><strong>Total Bids Placed:</strong> {bidEligibility?.bids?.totalBids || 0}</p>
+                        <p><strong>Paid Bids:</strong> {bidEligibility?.bids?.acceptedBids || 0}</p>
+                        <p><strong>Pending Bids:</strong> {bidEligibility?.bids?.pendingBids || 0}</p>
+                        <p><strong>Free Bids Used:</strong> {bidEligibility?.freeBids?.used || 0}</p>
+                        <p><strong>Free Bids Remaining (DB):</strong> {bidEligibility?.freeBids?.remaining || 0}</p>
+                      </div>
+                      
+                      {/* Status Indicators */}
+                      <div className="mt-2 space-y-1">
+                        <div className={`text-xs px-2 py-1 rounded ${bidEligibility?.reason === 'free_bid' ? 'bg-green-900/50 text-green-300' : bidEligibility?.reason === 'subscription' ? 'bg-blue-900/50 text-blue-300' : 'bg-yellow-900/50 text-yellow-300'}`}>
+                          {bidEligibility?.reason === 'free_bid' ? '🎉 Using Free Bid' : bidEligibility?.reason === 'subscription' ? '🎉 Using Subscription' : '💰 Paid Bid Required'}
+                        </div>
+                        {bidEligibility?.freeBids?.remaining === 0 && (
+                          <div className="text-xs px-2 py-1 rounded bg-red-900/50 text-red-300">
+                            ⚠️ No Free Bids Remaining
+                          </div>
+                        )}
                       </div>
                       
                       {/* Test Buttons */}
@@ -801,6 +818,31 @@ Your bid will be visible to the project owner shortly.`;
                           className="w-full bg-green-600 text-white py-1 px-2 rounded text-xs hover:bg-green-700 transition-colors"
                         >
                           Reset Free Bids (Test)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const token = localStorage.getItem("token");
+                              const response = await axios.post(
+                                `${import.meta.env.VITE_API_URL}/webhooks/sync-free-bids`,
+                                {},
+                                {
+                                  headers: {
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                }
+                              );
+                              alert(`Free bid count synced! ${JSON.stringify(response.data)}`);
+                              // Refresh eligibility
+                              window.location.reload();
+                            } catch (error) {
+                              alert(`Error syncing free bids: ${error.response?.data?.message || error.message}`);
+                            }
+                          }}
+                          className="w-full bg-orange-600 text-white py-1 px-2 rounded text-xs hover:bg-orange-700 transition-colors"
+                        >
+                          Sync Free Bid Count
                         </button>
                         <button
                           type="button"

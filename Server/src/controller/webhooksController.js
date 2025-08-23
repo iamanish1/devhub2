@@ -149,12 +149,21 @@ export const razorpayWebhook = async (req, res) => {
                 const feeAmount = intent.notes?.feeAmount || 0;
                 if (feeAmount === 0) {
                   const User = await user.findById(intent.userId);
-                  if (User && User.freeBids?.remaining > 0) {
-                    console.log(`[Webhook] Updating free bid statistics - before: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
-                    User.freeBids.remaining -= 1;
-                    User.freeBids.used += 1;
-                    console.log(`[Webhook] Updated free bid statistics - after: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
-                    await User.save();
+                  if (User) {
+                    // Initialize freeBids if not set
+                    if (!User.freeBids) {
+                      User.freeBids = { remaining: 5, used: 0 };
+                    }
+                    
+                    if (User.freeBids.remaining > 0) {
+                      console.log(`[Webhook] Updating free bid statistics - before: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
+                      User.freeBids.remaining -= 1;
+                      User.freeBids.used += 1;
+                      console.log(`[Webhook] Updated free bid statistics - after: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
+                      await User.save();
+                    } else {
+                      console.log(`[Webhook] No free bids remaining for user ${User.username}`);
+                    }
                   }
                 }
 
@@ -574,6 +583,89 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
     console.error('[Payment Check] Error:', error);
     res.status(500).json({ 
       message: 'Error checking payment status',
+      error: error.message 
+    });
+  }
+};
+
+// Utility function to reset freeBids for testing (REMOVE IN PRODUCTION)
+export const resetFreeBids = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    const User = await user.findById(userId);
+    if (!User) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Reset freeBids to 5 remaining, 0 used
+    User.freeBids = { remaining: 5, used: 0 };
+    await User.save();
+
+    console.log(`[Reset FreeBids] Reset freeBids for user ${User.username} - remaining: 5, used: 0`);
+
+    res.status(200).json({
+      message: 'Free bids reset successfully',
+      freeBids: User.freeBids
+    });
+
+  } catch (error) {
+    console.error('[Reset FreeBids] Error:', error);
+    res.status(500).json({ 
+      message: 'Error resetting free bids',
+      error: error.message 
+    });
+  }
+};
+
+// Utility function to sync free bid count with actual paid bids
+export const syncFreeBidCount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    const User = await user.findById(userId);
+    if (!User) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Count actual paid bids for this user
+    const paidBidsCount = await Bidding.countDocuments({
+      user_id: userId,
+      payment_status: 'paid',
+      is_free_bid: true
+    });
+
+    // Initialize freeBids if not set
+    if (!User.freeBids) {
+      User.freeBids = { remaining: 5, used: 0 };
+    }
+
+    // Update free bid count based on actual paid bids
+    const originalRemaining = User.freeBids.remaining;
+    const originalUsed = User.freeBids.used;
+    
+    User.freeBids.used = paidBidsCount;
+    User.freeBids.remaining = Math.max(0, 5 - paidBidsCount);
+    
+    await User.save();
+
+    console.log(`[Sync FreeBids] Synced free bid count for user ${User.username}`);
+    console.log(`[Sync FreeBids] Before: remaining: ${originalRemaining}, used: ${originalUsed}`);
+    console.log(`[Sync FreeBids] After: remaining: ${User.freeBids.remaining}, used: ${User.freeBids.used}`);
+    console.log(`[Sync FreeBids] Actual paid free bids: ${paidBidsCount}`);
+
+    res.status(200).json({
+      message: 'Free bid count synced successfully',
+      freeBids: User.freeBids,
+      actualPaidBids: paidBidsCount,
+      before: { remaining: originalRemaining, used: originalUsed },
+      after: { remaining: User.freeBids.remaining, used: User.freeBids.used }
+    });
+
+  } catch (error) {
+    console.error('[Sync FreeBids] Error:', error);
+    res.status(500).json({ 
+      message: 'Error syncing free bid count',
       error: error.message 
     });
   }

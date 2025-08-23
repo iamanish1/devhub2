@@ -1,5 +1,5 @@
 import express from 'express';
-import { razorpayWebhook, manualPaymentUpdate, checkPaymentAndUpdateBid } from '../controller/webhooksController.js';
+import { razorpayWebhook, manualPaymentUpdate, checkPaymentAndUpdateBid, resetFreeBids, syncFreeBidCount } from '../controller/webhooksController.js';
 import { checkRazorpayHealth, getRazorpayConfig } from '../services/razorpay.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 
@@ -36,6 +36,12 @@ webhooksRoutes.post('/manual-update/:orderId', manualPaymentUpdate);
 
 // Check payment status and update bid (fallback for failed webhooks)
 webhooksRoutes.get('/check-payment/:orderId', authMiddleware, checkPaymentAndUpdateBid);
+
+// Reset free bids for testing (REMOVE IN PRODUCTION)
+webhooksRoutes.post('/reset-free-bids', authMiddleware, resetFreeBids);
+
+// Sync free bid count with actual paid bids (REMOVE IN PRODUCTION)
+webhooksRoutes.post('/sync-free-bids', authMiddleware, syncFreeBidCount);
 
 // Test webhook endpoint for debugging
 webhooksRoutes.post('/test', (req, res) => {
