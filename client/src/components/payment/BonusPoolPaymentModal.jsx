@@ -84,7 +84,12 @@ const BonusPoolPaymentModal = ({
 
   const handlePaymentSuccess = (result) => {
     setShowPaymentModal(false);
-    onSuccess?.(result);
+    // Pass both the Razorpay result and the payment intent ID
+    const paymentResult = {
+      ...result,
+      intentId: paymentData?.intentId
+    };
+    onSuccess?.(paymentResult);
     onClose();
   };
 

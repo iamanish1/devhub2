@@ -53,6 +53,8 @@ const ProjectListingPage = () => {
   const [showBonusModal, setShowBonusModal] = useState(false);
   const [bonusPoolStatus, setBonusPoolStatus] = useState(null);
   const [bonusPoolFunded, setBonusPoolFunded] = useState(false);
+  const [paymentIntentId, setPaymentIntentId] = useState(null);
+  const [paymentVerificationLoading, setPaymentVerificationLoading] = useState(false);
   
   // Payment context
   const { hasActiveSubscription } = usePayment();
@@ -108,6 +110,44 @@ const ProjectListingPage = () => {
         [name]: null
       }));
     }
+  };
+
+  // Verify payment status with backend
+  const verifyPaymentStatus = async (intentId) => {
+    if (!intentId) return false;
+    
+    setPaymentVerificationLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/payments/status/${intentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success && response.data.data.status === 'paid') {
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Payment verification failed:', error);
+      return false;
+    } finally {
+      setPaymentVerificationLoading(false);
+    }
+  };
+
+  // Handle payment retry
+  const handlePaymentRetry = () => {
+    setBonusPoolStatus(null);
+    setBonusPoolFunded(false);
+    setPaymentIntentId(null);
+    setError(null);
+    setShowBonusModal(true);
   };
 
   // Prevent form submission on Enter key press
@@ -1223,7 +1263,19 @@ const ProjectListingPage = () => {
                          
                          {/* Fund Bonus Pool Button */}
                          <div className="mt-4 pt-4 border-t border-gray-600">
-                           {bonusPoolFunded ? (
+                           {paymentVerificationLoading ? (
+                             <div className="text-center">
+                               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                                 <div className="flex items-center justify-center text-blue-400">
+                                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400 mr-2"></div>
+                                   <span className="font-semibold">Verifying Payment...</span>
+                                 </div>
+                                 <p className="text-xs text-blue-300 mt-1">
+                                   Please wait while we verify your payment with our servers
+                                 </p>
+                               </div>
+                             </div>
+                           ) : bonusPoolFunded ? (
                              <div className="text-center">
                                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
                                  <div className="flex items-center justify-center text-green-400">
@@ -1236,20 +1288,67 @@ const ProjectListingPage = () => {
                                    Your project is ready to be listed with a funded bonus pool
                                  </p>
                                </div>
+                               <div className="flex gap-2">
+                                 <button
+                                   type="button"
+                                   onClick={() => setShowBonusModal(true)}
+                                   className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
+                                 >
+                                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                 </svg>
+                                 View Details
+                               </button>
                                <button
                                  type="button"
-                                 onClick={() => setShowBonusModal(true)}
-                                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
+                                 onClick={handlePaymentRetry}
+                                 className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center"
                                >
                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                  </svg>
-                                 View Payment Details
+                                 Retry
                                </button>
                              </div>
-                           ) : (
+                                                      ) : (
                              <>
+                               {bonusPoolStatus?.funded === false && (
+                                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-3">
+                                   <div className="flex items-center text-red-400 mb-2">
+                                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                     </svg>
+                                     Payment verification failed
+                                   </div>
+                                   <p className="text-xs text-red-300 mb-3">
+                                     Your payment was not verified. Please try again or contact support if the issue persists.
+                                   </p>
+                                   <div className="flex gap-2">
+                                     <button
+                                       type="button"
+                                       onClick={handlePaymentRetry}
+                                       className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center"
+                                     >
+                                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                       </svg>
+                                       Retry
+                                     </button>
+                                     <button
+                                       type="button"
+                                       onClick={() => setShowBonusModal(true)}
+                                       className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 flex items-center justify-center"
+                                     >
+                                       <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                       </svg>
+                                       View Details
+                                     </button>
+                                   </div>
+                                 </div>
+                               )}
                                <button
                                  type="button"
                                  onClick={() => setShowBonusModal(true)}
@@ -1261,15 +1360,15 @@ const ProjectListingPage = () => {
                                  </svg>
                                  Fund Bonus Pool - ₹{(parseInt(formData.bonus_pool_amount) || 0) * (parseInt(formData.bonus_pool_contributors) || 0)}
                                </button>
-                                                           <p className="text-xs text-gray-400 mt-2 text-center">
-                             {!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors 
-                               ? "Complete project details to enable funding"
-                               : "Fund your bonus pool to attract quality contributors"
-                             }
-                           </p>
-                           <p className="text-xs text-red-400 mt-1 text-center font-medium">
-                             ⚠️ Bonus pool funding is mandatory to list your project
-                           </p>
+                               <p className="text-xs text-gray-400 mt-2 text-center">
+                                 {!formData.project_Title || !formData.bonus_pool_amount || !formData.bonus_pool_contributors 
+                                   ? "Complete project details to enable funding"
+                                   : "Fund your bonus pool to attract quality contributors"
+                                 }
+                               </p>
+                               <p className="text-xs text-red-400 mt-1 text-center font-medium">
+                                 ⚠️ Bonus pool funding is mandatory to list your project
+                               </p>
                              </>
                            )}
                          </div>
@@ -1332,7 +1431,7 @@ const ProjectListingPage = () => {
                 ) : (
                   <button
                     type="submit"
-                    disabled={loading || !bonusPoolFunded}
+                    disabled={loading || !bonusPoolFunded || paymentVerificationLoading}
                     onClick={() => setSubmitButtonClicked(true)}
                     className={`submit-button px-6 py-2 rounded-lg transition-all shadow-lg flex items-center ${
                       bonusPoolFunded 
@@ -1347,6 +1446,11 @@ const ProjectListingPage = () => {
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         <span>Submitting...</span>
+                      </>
+                    ) : paymentVerificationLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <span>Verifying Payment...</span>
                       </>
                     ) : bonusPoolFunded ? (
                       <>
@@ -1524,14 +1628,39 @@ const ProjectListingPage = () => {
            bonus_pool_amount: formData.bonus_pool_amount,
            bonus_pool_contributors: formData.bonus_pool_contributors
          }}
-         onSuccess={(result) => {
-           console.log('Bonus pool funded successfully:', result);
-           setBonusPoolStatus({ funded: true });
-           setBonusPoolFunded(true);
-           setShowBonusModal(false);
+         onSuccess={async (result) => {
+           console.log('Payment completed, verifying with backend:', result);
+           
+           // Extract payment intent ID from the result
+           const intentId = result?.intentId || result?.razorpay_payment_id || paymentIntentId;
+           
+           if (intentId) {
+             // Verify payment status with backend
+             const isPaymentVerified = await verifyPaymentStatus(intentId);
+             
+             if (isPaymentVerified) {
+               console.log('Payment verified successfully');
+               setBonusPoolStatus({ funded: true });
+               setBonusPoolFunded(true);
+               setShowBonusModal(false);
+             } else {
+               console.error('Payment verification failed');
+               setError('Payment verification failed. Please try again or contact support.');
+               setBonusPoolStatus({ funded: false });
+               setBonusPoolFunded(false);
+             }
+           } else {
+             console.error('No payment intent ID found');
+             setError('Payment verification failed. Please try again or contact support.');
+             setBonusPoolStatus({ funded: false });
+             setBonusPoolFunded(false);
+           }
          }}
          onError={(error) => {
            console.error('Bonus pool funding failed:', error);
+           setError('Payment failed. Please try again.');
+           setBonusPoolStatus({ funded: false });
+           setBonusPoolFunded(false);
          }}
        />
      </div>
