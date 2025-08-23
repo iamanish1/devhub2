@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { usePayment } from "../../context/PaymentContext";
-import {
-  formatCurrency,
-  formatPaymentAmount,
-} from "../../utils/paymentUtils.jsx";
+import { formatCurrency } from "../../utils/paymentUtils.jsx";
 import {
   PAYMENT_ANALYTICS_PERIODS,
   PAYMENT_TYPES,
@@ -165,190 +162,24 @@ const PaymentAnalytics = () => {
 
   return (
     <div className="space-y-6">
-      {/* Data Methodology & Trust Section */}
-      <div className="glass rounded-xl p-6 border border-gray-700 bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A]">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#00A8E8]/20 rounded-lg">
-              <svg
-                className="w-6 h-6 text-[#00A8E8]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-white">
-                Payment Analytics
-              </h2>
-              <p className="text-gray-400 text-sm">
-                Real-time insights from your payment activities
-              </p>
-            </div>
+      {/* Period Selector */}
+      <div className="glass rounded-xl p-6 border border-gray-700">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-white">Payment Analytics</h2>
+            <p className="text-gray-400 text-sm">Real-time insights from your payment activities</p>
           </div>
-
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="bg-[#1E1E1E] text-white px-3 py-2 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
           >
             <option value={PAYMENT_ANALYTICS_PERIODS.WEEK}>Last 7 Days</option>
-            <option value={PAYMENT_ANALYTICS_PERIODS.MONTH}>
-              Last 30 Days
-            </option>
-            <option value={PAYMENT_ANALYTICS_PERIODS.QUARTER}>
-              Last 90 Days
-            </option>
+            <option value={PAYMENT_ANALYTICS_PERIODS.MONTH}>Last 30 Days</option>
+            <option value={PAYMENT_ANALYTICS_PERIODS.QUARTER}>Last 90 Days</option>
             <option value={PAYMENT_ANALYTICS_PERIODS.YEAR}>Last Year</option>
           </select>
-        </div>
-
-        {/* Data Methodology Info */}
-        <div className="bg-[#2A2A2A] rounded-lg p-4 border border-gray-600 mb-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg flex-shrink-0">
-              <svg
-                className="w-5 h-5 text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-white font-semibold mb-2">
-                Data Methodology & Trust
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full" />
-                    <span className="text-gray-300">
-                      Total Amount: Only successful payments
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                    <span className="text-gray-300">
-                      Real-time data from secure transactions
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full" />
-                    <span className="text-gray-300">
-                      Filtered by selected time period
-                    </span>
-                  </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full" />
-                    <span className="text-gray-300">
-                      Bank-grade security & encryption
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-cyan-400 rounded-full" />
-                    <span className="text-gray-300">
-                      PCI DSS compliant payment processing
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-orange-400 rounded-full" />
-                    <span className="text-gray-300">
-                      Audit trail for all transactions
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Trust Indicators */}
-        <div className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-3 py-1">
-            <svg
-              className="w-4 h-4 text-green-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span className="text-green-400 text-xs font-medium">Secure</span>
-          </div>
-          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-full px-3 py-1">
-            <svg
-              className="w-4 h-4 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            <span className="text-blue-400 text-xs font-medium">Real-time</span>
-          </div>
-          <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-3 py-1">
-            <svg
-              className="w-4 h-4 text-purple-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <span className="text-purple-400 text-xs font-medium">
-              Transparent
-            </span>
-          </div>
-          <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-full px-3 py-1">
-            <svg
-              className="w-4 h-4 text-orange-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-            <span className="text-orange-400 text-xs font-medium">
-              Encrypted
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Summary Cards */}
@@ -604,57 +435,6 @@ const PaymentAnalytics = () => {
         </div>
       )}
 
-      {/* Data Consistency Notice */}
-      <div className="glass rounded-xl p-6 border border-gray-700 bg-gradient-to-r from-blue-500/5 to-green-500/5">
-        <div className="flex items-start gap-3">
-          <div className="p-2 bg-blue-500/20 rounded-lg flex-shrink-0">
-            <svg
-              className="w-5 h-5 text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-white font-semibold mb-2">
-              Data Consistency Across Platform
-            </h3>
-            <p className="text-gray-300 text-sm mb-3">
-              The total amounts shown in Overview, Payment History, and
-              Analytics sections are consistent because they all reflect only
-              successful payments. This ensures accurate financial reporting and
-              builds trust in our payment processing system.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full" />
-                <span className="text-gray-300">
-                  Overview: Successful payments only
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-400 rounded-full" />
-                <span className="text-gray-300">
-                  History: All transactions with status
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-400 rounded-full" />
-                <span className="text-gray-300">
-                  Analytics: Filtered by time period
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
