@@ -129,9 +129,6 @@ const PaymentPage = () => {
 const OverviewTab = ({ stats, subscription, bonusPools }) => {
   return (
     <div className="space-y-6">
-      {/* Data Explanation Card */}
-      <DataExplanationCard type="overview" />
-
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="glass rounded-xl p-6 border border-gray-700 hover:border-[#00A8E8]/50 transition-colors">
@@ -236,11 +233,15 @@ const OverviewTab = ({ stats, subscription, bonusPools }) => {
             ))}
           </div>
         </div>
-      )}
+             )}
 
+       {/* Data Methodology Section */}
+       <div className="mt-12">
+         <DataExplanationCard type="overview" />
+       </div>
 
-    </div>
-  );
-};
+     </div>
+   );
+ };
 
 export default PaymentPage; 

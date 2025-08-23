@@ -163,9 +163,6 @@ const PaymentAnalytics = () => {
 
   return (
     <div className="space-y-6">
-      {/* Data Explanation Card */}
-      <DataExplanationCard type="analytics" />
-      
       {/* Period Selector */}
       <div className="glass rounded-xl p-6 border border-gray-700">
         <div className="flex items-center justify-between mb-4">
@@ -436,11 +433,16 @@ const PaymentAnalytics = () => {
               );
             })}
           </div>
-        </div>
-      )}
+                 </div>
+       )}
 
-    </div>
-  );
-};
+       {/* Data Methodology Section */}
+       <div className="mt-12">
+         <DataExplanationCard type="analytics" />
+       </div>
+
+     </div>
+   );
+ };
 
 export default PaymentAnalytics;
