@@ -10,7 +10,7 @@ let firebaseInitialized = false;
 
 if (!admin.apps.length) {
   try {
-    // First try to use environment variables
+    // First try to use environment variables (preferred for production)
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
       const serviceAccount = {
         type: "service_account",
@@ -31,18 +31,30 @@ if (!admin.apps.length) {
       firebaseInitialized = true;
       console.log("✅ Firebase Admin SDK initialized with environment variables");
     } 
-    // If environment variables are not set, try to load from firebase.json file
+    // If environment variables are not set, try to load from firebase.json file (development only)
     else {
-      const firebaseConfigPath = path.join(process.cwd(), 'src', 'config', 'firebase.json');
-      if (fs.existsSync(firebaseConfigPath)) {
-        const serviceAccount = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf8'));
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-        });
-        firebaseInitialized = true;
-        console.log("✅ Firebase Admin SDK initialized with firebase.json file");
-      } else {
-        console.log("⚠️ Firebase environment variables not set and firebase.json not found. Firebase Admin SDK not initialized.");
+      try {
+        const firebaseConfigPath = path.join(process.cwd(), 'src', 'config', 'firebase.json');
+        if (fs.existsSync(firebaseConfigPath)) {
+          const serviceAccount = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf8'));
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+          });
+          firebaseInitialized = true;
+          console.log("✅ Firebase Admin SDK initialized with firebase.json file");
+        } else {
+          console.log("⚠️ Firebase environment variables not set and firebase.json not found. Firebase Admin SDK not initialized.");
+          console.log("💡 To fix this, set the following environment variables:");
+          console.log("   - FIREBASE_PROJECT_ID");
+          console.log("   - FIREBASE_PRIVATE_KEY");
+          console.log("   - FIREBASE_CLIENT_EMAIL");
+          console.log("   - FIREBASE_CLIENT_ID (optional)");
+          console.log("   - FIREBASE_PRIVATE_KEY_ID (optional)");
+          firebaseInitialized = false;
+        }
+      } catch (fileError) {
+        console.log("⚠️ Error reading firebase.json file:", fileError.message);
+        console.log("💡 Please ensure firebase.json exists in src/config/ or use environment variables");
         firebaseInitialized = false;
       }
     }
