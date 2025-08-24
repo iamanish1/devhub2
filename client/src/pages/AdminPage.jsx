@@ -102,6 +102,14 @@ const AdminPage = () => {
   const [selectedProjectForSelection, setSelectedProjectForSelection] = useState(null);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
 
+  // Enhanced Applicants State for Selection Integration
+  const [applicantsByProject, setApplicantsByProject] = useState({});
+  const [selectionConfigs, setSelectionConfigs] = useState({});
+  const [showSelectionConfigModal, setShowSelectionConfigModal] = useState(false);
+  const [selectedProjectForConfig, setSelectedProjectForConfig] = useState(null);
+  const [rankedBidders, setRankedBidders] = useState({});
+  const [selectionInProgress, setSelectionInProgress] = useState({});
+
   // Escrow Wallet System State
   const [escrowWallets, setEscrowWallets] = useState([]);
   const [escrowLoading, setEscrowLoading] = useState(false);
@@ -119,23 +127,50 @@ const AdminPage = () => {
     setAdminChat((prev) => [...prev, msg]);
   };
   const handleAdminNotesChange = (val) => setAdminNotes(val);
-  // Fetch applicants when "applicants" view is active
+  // Enhanced applicants fetch with project grouping and selection data
   useEffect(() => {
     if (view === "applicants") {
       setApplicantsLoading(true);
-      axios
-        .get(`${import.meta.env.VITE_API_URL}/api/admin/applicant`, {
+      Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/applicant`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        })
-        .then((res) => {
-          setApplicants(res.data.applicants || []);
-          console.log("Applicants fetched:", res.data.applicants);
+        }),
+        projectSelectionApi.getProjectOwnerSelections()
+      ])
+        .then(([applicantsRes, selectionsRes]) => {
+          const applicants = applicantsRes.data.applicants || [];
+          const selections = selectionsRes.selections || [];
+          
+          // Group applicants by project
+          const groupedApplicants = {};
+          const configs = {};
+          
+          applicants.forEach(applicant => {
+            const projectId = applicant.project_id?._id || applicant.project_id;
+            if (!groupedApplicants[projectId]) {
+              groupedApplicants[projectId] = [];
+            }
+            groupedApplicants[projectId].push(applicant);
+          });
+
+          // Create selection configs for each project
+          selections.forEach(selection => {
+            configs[selection.projectId] = selection;
+          });
+
+          setApplicantsByProject(groupedApplicants);
+          setSelectionConfigs(configs);
+          setApplicants(applicants);
+          setProjectSelections(selections);
           setApplicantsError(null);
         })
-        .catch(() => setApplicantsError("Failed to fetch applicants"))
+        .catch((error) => {
+          console.error("Error fetching applicants and selections:", error);
+          setApplicantsError("Failed to fetch applicants and selection data");
+        })
         .finally(() => setApplicantsLoading(false));
     }
   }, [view]);
@@ -315,14 +350,18 @@ const AdminPage = () => {
     }
   };
 
-  // Project Selection Handlers
+  // Enhanced Project Selection Handlers
   const handleCreateSelection = async (projectId, selectionData) => {
     try {
       await projectSelectionApi.createSelection(projectId, selectionData);
       notificationService.success("Project selection created successfully");
-      // Refresh selections
+      // Refresh data
       const data = await projectSelectionApi.getProjectOwnerSelections();
       setProjectSelections(data.selections || []);
+      setSelectionConfigs(prev => ({
+        ...prev,
+        [projectId]: selectionData
+      }));
     } catch (error) {
       notificationService.error("Failed to create project selection");
     }
@@ -330,13 +369,90 @@ const AdminPage = () => {
 
   const handleExecuteSelection = async (projectId) => {
     try {
+      setSelectionInProgress(prev => ({ ...prev, [projectId]: true }));
       await projectSelectionApi.executeAutomaticSelection(projectId);
       notificationService.success("Automatic selection executed successfully");
-      // Refresh selections
-      const data = await projectSelectionApi.getProjectOwnerSelections();
-      setProjectSelections(data.selections || []);
+      
+      // Refresh data
+      const [applicantsRes, selectionsRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/applicant`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+        projectSelectionApi.getProjectOwnerSelections()
+      ]);
+      
+      const applicants = applicantsRes.data.applicants || [];
+      const selections = selectionsRes.selections || [];
+      
+      // Update grouped applicants
+      const groupedApplicants = {};
+      applicants.forEach(applicant => {
+        const projectId = applicant.project_id?._id || applicant.project_id;
+        if (!groupedApplicants[projectId]) {
+          groupedApplicants[projectId] = [];
+        }
+        groupedApplicants[projectId].push(applicant);
+      });
+      
+      setApplicantsByProject(groupedApplicants);
+      setProjectSelections(selections);
+      setApplicants(applicants);
     } catch (error) {
       notificationService.error("Failed to execute selection");
+    } finally {
+      setSelectionInProgress(prev => ({ ...prev, [projectId]: false }));
+    }
+  };
+
+  const handleGetRankedBidders = async (projectId) => {
+    try {
+      const data = await projectSelectionApi.getRankedBidders(projectId);
+      setRankedBidders(prev => ({
+        ...prev,
+        [projectId]: data.rankedBidders
+      }));
+    } catch (error) {
+      notificationService.error("Failed to get ranked bidders");
+    }
+  };
+
+  const handleManualSelection = async (projectId, selectedUserIds) => {
+    try {
+      await projectSelectionApi.manualSelection(projectId, selectedUserIds, "manual_selection");
+      notificationService.success("Manual selection completed successfully");
+      
+      // Refresh data
+      const [applicantsRes, selectionsRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/applicant`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+        projectSelectionApi.getProjectOwnerSelections()
+      ]);
+      
+      const applicants = applicantsRes.data.applicants || [];
+      const selections = selectionsRes.selections || [];
+      
+      // Update grouped applicants
+      const groupedApplicants = {};
+      applicants.forEach(applicant => {
+        const projectId = applicant.project_id?._id || applicant.project_id;
+        if (!groupedApplicants[projectId]) {
+          groupedApplicants[projectId] = [];
+        }
+        groupedApplicants[projectId].push(applicant);
+      });
+      
+      setApplicantsByProject(groupedApplicants);
+      setProjectSelections(selections);
+      setApplicants(applicants);
+    } catch (error) {
+      notificationService.error("Failed to complete manual selection");
     }
   };
 
@@ -899,98 +1015,281 @@ const AdminPage = () => {
 
         {view === "applicants" && (
           <section>
-            <h1 className="text-3xl md:text-4xl font-bold mb-6 md:mb-8 text-blue-400">
-              Applicants
-            </h1>
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2 text-blue-400">
+                Project Applicants & Selection
+              </h1>
+              <p className="text-gray-300 text-lg">
+                Review applicants and select contributors using manual or automatic selection
+              </p>
+            </div>
+
+            {/* Selection Mode Toggle */}
+            <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10 mb-6">
+              <h2 className="text-xl font-bold mb-4 text-blue-400">Selection Options</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#181b23] rounded-xl p-4 border border-blue-500/10">
+                  <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                    <FaUserCheck className="text-green-400" />
+                    Manual Selection
+                  </h3>
+                  <p className="text-gray-300 text-sm mb-3">
+                    Review each applicant individually and select based on your judgment
+                  </p>
+                  <ul className="text-gray-400 text-xs space-y-1">
+                    <li>• Review detailed profiles and proposals</li>
+                    <li>• Compare skills and experience</li>
+                    <li>• Make informed decisions</li>
+                  </ul>
+                </div>
+                <div className="bg-[#181b23] rounded-xl p-4 border border-blue-500/10">
+                  <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                    <FaCog className="text-blue-400" />
+                    Automatic Selection
+                  </h3>
+                  <p className="text-gray-300 text-sm mb-3">
+                    Use AI algorithm to rank and select the best contributors automatically
+                  </p>
+                  <ul className="text-gray-400 text-xs space-y-1">
+                    <li>• Priority-based scoring algorithm</li>
+                    <li>• Skill matching and bid amount priority</li>
+                    <li>• Experience and availability scoring</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
             {applicantsLoading ? (
-              <div className="text-blue-300 text-lg">Loading applicants...</div>
+              <div className="text-blue-300 text-lg">Loading applicants and selection data...</div>
             ) : applicantsError ? (
               <div className="text-red-400 text-lg">{applicantsError}</div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {applicants.length === 0 ? (
-                  <div className="col-span-full text-center text-gray-400 py-8 bg-[#232a34] rounded-xl shadow">
-                    No applicants found.
+              <div className="space-y-6">
+                {Object.keys(applicantsByProject).length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 bg-[#232a34] rounded-xl">
+                    <FaUsers className="text-4xl mx-auto mb-4" />
+                    <p>No applicants found.</p>
+                    <p className="text-sm">Applicants will appear here when they bid on your projects.</p>
                   </div>
                 ) : (
-                  applicants.map((app) => (
-                    <div
-                      key={app._id}
-                      className="bg-[#232a34] rounded-2xl shadow-lg border border-blue-500/10 p-6 flex flex-col gap-3 transition hover:scale-[1.02] hover:border-blue-400"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <div className="text-xs font-bold text-blue-300 uppercase tracking-wider">
-                            User ID
+                  Object.entries(applicantsByProject).map(([projectId, projectApplicants]) => {
+                    const project = projectApplicants[0]?.project_id;
+                    const selectionConfig = selectionConfigs[projectId];
+                    const isSelectionInProgress = selectionInProgress[projectId];
+                    const projectRankedBidders = rankedBidders[projectId];
+                    
+                    return (
+                      <div key={projectId} className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                        {/* Project Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="text-xl font-bold text-white">
+                              {project?.project_Title || "Untitled Project"}
+                            </h3>
+                            <p className="text-gray-300 text-sm">
+                              {projectApplicants.length} applicants • 
+                              {selectionConfig ? ` Selection: ${selectionConfig.status}` : " No selection config"}
+                            </p>
                           </div>
-                          <div className="text-base font-semibold text-white break-all">
-                            {app.user_id || "N/A"}
+                          <div className="flex gap-2">
+                            {!selectionConfig && (
+                              <button
+                                onClick={() => {
+                                  setSelectedProjectForConfig(projectId);
+                                  setShowSelectionConfigModal(true);
+                                }}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                              >
+                                <FaCog />
+                                Configure Selection
+                              </button>
+                            )}
+                            {selectionConfig && selectionConfig.status === 'pending' && (
+                              <button
+                                onClick={() => handleGetRankedBidders(projectId)}
+                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                              >
+                                <FaChartLine />
+                                View Rankings
+                              </button>
+                            )}
+                            {selectionConfig && selectionConfig.status === 'pending' && (
+                              <button
+                                onClick={() => handleExecuteSelection(projectId)}
+                                disabled={isSelectionInProgress}
+                                className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-500 text-white px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                              >
+                                {isSelectionInProgress ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    Processing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaUserCheck />
+                                    Execute Selection
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            statusColors[app.bid_status] ||
-                            "bg-gray-700 text-gray-300"
-                          }`}
-                        >
-                          {app.bid_status || "Applied"}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-blue-300">
-                        <span className="font-semibold">Project:</span>
-                        {app.project_id?.project_Title || "N/A"}
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-yellow-200">
-                        <span className="font-semibold">Bid:</span>₹
-                        {app.bid_amount}
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-gray-200">
-                        <span className="font-semibold">Bid Desc:</span>
-                        {app.bid_description || "N/A"}
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-blue-200">
-                        <span className="font-semibold">Year Exp:</span>
-                        {app.year_of_experience || "N/A"}
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-xs text-blue-200">
-                        <span className="font-semibold">Hours/Week:</span>
-                        {app.hours_avilable_per_week || "N/A"}
-                      </div>
-                      <div className="flex flex-wrap gap-1 text-xs text-blue-200">
-                        <span className="font-semibold">Skills:</span>
-                        {app.skills?.length
-                          ? app.skills.map((skill, idx) => (
-                              <span
-                                key={idx}
-                                className="bg-blue-900/40 text-blue-200 px-2 py-1 rounded"
+
+                        {/* Selection Configuration Display */}
+                        {selectionConfig && (
+                          <div className="bg-[#181b23] rounded-xl p-4 mb-4 border border-blue-500/10">
+                            <h4 className="text-lg font-semibold text-blue-400 mb-2">Selection Configuration</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-400">Mode:</span>
+                                <span className="text-white ml-2 capitalize">{selectionConfig.selectionMode}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Required:</span>
+                                <span className="text-white ml-2">{selectionConfig.requiredContributors} contributors</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Status:</span>
+                                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-bold ${
+                                  selectionConfig.status === 'completed' ? 'bg-green-900/40 text-green-400' :
+                                  selectionConfig.status === 'in_progress' ? 'bg-blue-900/40 text-blue-400' :
+                                  'bg-yellow-900/40 text-yellow-400'
+                                }`}>
+                                  {selectionConfig.status?.toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400">Selected:</span>
+                                <span className="text-white ml-2">{selectionConfig.selectedUsers?.length || 0} users</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Ranked Bidders Display */}
+                        {projectRankedBidders && (
+                          <div className="bg-[#181b23] rounded-xl p-4 mb-4 border border-green-500/10">
+                            <h4 className="text-lg font-semibold text-green-400 mb-2">AI Ranking Results</h4>
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                              {projectRankedBidders.slice(0, 5).map((bidder, index) => (
+                                <div key={bidder.userId} className="flex items-center justify-between bg-[#232a34] rounded-lg p-2">
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-yellow-400 font-bold">#{index + 1}</span>
+                                    <span className="text-white font-medium">{bidder.username}</span>
+                                    <span className="text-blue-300">₹{bidder.bidAmount}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-green-400 font-bold">{Math.round(bidder.scores.totalScore)}</span>
+                                    <span className="text-gray-400 text-xs">points</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                onClick={() => {
+                                  const topUserIds = projectRankedBidders
+                                    .slice(0, selectionConfig?.requiredContributors || 3)
+                                    .map(bidder => bidder.userId);
+                                  handleManualSelection(projectId, topUserIds);
+                                }}
+                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition text-xs"
                               >
-                                {skill}
-                              </span>
-                            ))
-                          : "N/A"}
+                                Select Top Ranked
+                              </button>
+                              <button
+                                onClick={() => setRankedBidders(prev => ({ ...prev, [projectId]: null }))}
+                                className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-lg transition text-xs"
+                              >
+                                Hide Rankings
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Applicants Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {projectApplicants.map((app) => (
+                            <div
+                              key={app._id}
+                              className="bg-[#181b23] rounded-xl p-4 border border-blue-500/10 hover:border-blue-400 transition"
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div>
+                                  <div className="text-sm font-bold text-blue-300 uppercase tracking-wider">
+                                    {app.user_id || "User ID"}
+                                  </div>
+                                  <div className="text-base font-semibold text-white break-all">
+                                    {app.user_id || "N/A"}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                    statusColors[app.bid_status] ||
+                                    "bg-gray-700 text-gray-300"
+                                  }`}
+                                >
+                                  {app.bid_status || "Applied"}
+                                </span>
+                              </div>
+                              
+                              <div className="space-y-2 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Bid Amount:</span>
+                                  <span className="text-yellow-200 font-semibold">₹{app.bid_amount}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Experience:</span>
+                                  <span className="text-blue-200">{app.year_of_experience || "N/A"} yrs</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Hours/Week:</span>
+                                  <span className="text-blue-200">{app.hours_avilable_per_week || "N/A"}</span>
+                                </div>
+                              </div>
+
+                              <div className="mt-3">
+                                <div className="text-xs text-gray-400 mb-1">Skills:</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {app.skills?.length ? 
+                                    app.skills.slice(0, 3).map((skill, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="bg-blue-900/40 text-blue-200 px-2 py-1 rounded text-xs"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))
+                                    : "N/A"
+                                  }
+                                  {app.skills?.length > 3 && (
+                                    <span className="text-gray-400 text-xs">+{app.skills.length - 3} more</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="mt-3 flex gap-2">
+                                <button
+                                  className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-lg transition flex items-center gap-1 text-xs"
+                                  onClick={() => handleApplicantStatus(app._id, "Accepted")}
+                                  disabled={app.bid_status === "Accepted"}
+                                >
+                                  <FaUserCheck /> Accept
+                                </button>
+                                <button
+                                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg transition flex items-center gap-1 text-xs"
+                                  onClick={() => handleApplicantStatus(app._id, "Rejected")}
+                                  disabled={app.bid_status === "Rejected"}
+                                >
+                                  <FaUserTimes /> Reject
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs"
-                          onClick={() =>
-                            handleApplicantStatus(app._id, "Accepted")
-                          }
-                          disabled={app.bid_status === "Accepted"}
-                        >
-                          <FaUserCheck /> Accept
-                        </button>
-                        <button
-                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs"
-                          onClick={() =>
-                            handleApplicantStatus(app._id, "Rejected")
-                          }
-                          disabled={app.bid_status === "Rejected"}
-                        >
-                          <FaUserTimes /> Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}
@@ -1431,6 +1730,160 @@ const AdminPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowSelectionModal(false)}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Selection Configuration Modal */}
+        {showSelectionConfigModal && selectedProjectForConfig && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-md border border-blue-500/20 shadow-2xl">
+              <h2 className="text-2xl font-bold mb-6 text-blue-400 text-center">
+                Configure Project Selection
+              </h2>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const selectionData = {
+                  selectionMode: formData.get('selectionMode'),
+                  requiredContributors: parseInt(formData.get('requiredContributors')),
+                  maxBidsToConsider: parseInt(formData.get('maxBidsToConsider')),
+                  criteriaWeights: {
+                    skillMatch: parseFloat(formData.get('skillMatch')),
+                    bidAmount: parseFloat(formData.get('bidAmount')),
+                    experience: parseFloat(formData.get('experience')),
+                    availability: parseFloat(formData.get('availability'))
+                  }
+                };
+                handleCreateSelection(selectedProjectForConfig, selectionData);
+                setShowSelectionConfigModal(false);
+                setSelectedProjectForConfig(null);
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Selection Mode
+                    </label>
+                    <select
+                      name="selectionMode"
+                      required
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="automatic">Automatic (AI Algorithm)</option>
+                      <option value="manual">Manual (Owner Choice)</option>
+                      <option value="hybrid">Hybrid (AI + Manual)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Required Contributors
+                    </label>
+                    <input
+                      type="number"
+                      name="requiredContributors"
+                      required
+                      min="1"
+                      max="50"
+                      defaultValue="3"
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Max Bids to Consider
+                    </label>
+                    <input
+                      type="number"
+                      name="maxBidsToConsider"
+                      required
+                      min="1"
+                      max="200"
+                      defaultValue="50"
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Skill Match Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="skillMatch"
+                        required
+                        min="0"
+                        max="100"
+                        step="5"
+                        defaultValue="40"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Bid Amount Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="bidAmount"
+                        required
+                        min="0"
+                        max="100"
+                        step="5"
+                        defaultValue="30"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Experience Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="experience"
+                        required
+                        min="0"
+                        max="100"
+                        step="5"
+                        defaultValue="20"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Availability Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="availability"
+                        required
+                        min="0"
+                        max="100"
+                        step="5"
+                        defaultValue="10"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-4 mt-6">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Create Selection
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSelectionConfigModal(false);
+                      setSelectedProjectForConfig(null);
+                    }}
                     className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
                   >
                     Cancel
