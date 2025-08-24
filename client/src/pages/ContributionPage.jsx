@@ -22,6 +22,16 @@ import {
   User
 } from 'lucide-react';
 
+// Firebase imports for workspace access
+import { db } from "../Config/firebase";
+import { 
+  doc, 
+  getDoc, 
+  collection,
+  query,
+  where 
+} from "firebase/firestore";
+
 const ContributionPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -36,7 +46,6 @@ const ContributionPage = () => {
   
   // Task management
   const [tasks, setTasks] = useState([]);
-  const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [taskForm, setTaskForm] = useState({
     title: '',
@@ -74,6 +83,9 @@ const ContributionPage = () => {
       setLoading(true);
       setError(null);
       
+      // First check Firebase workspace access
+      await checkWorkspaceAccess();
+      
       const data = await projectTaskApi.getWorkspace(projectId);
       setWorkspace(data.workspace);
       setUserAccess(data.userAccess);
@@ -104,6 +116,44 @@ const ContributionPage = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Check Firebase workspace access
+  const checkWorkspaceAccess = async () => {
+    try {
+      if (!user?._id) {
+        throw new Error('User not authenticated');
+      }
+
+      const workspaceAccessRef = doc(db, 'workspace_access', `${projectId}_${user._id}`);
+      const accessDoc = await getDoc(workspaceAccessRef);
+      
+      if (accessDoc.exists()) {
+        const accessData = accessDoc.data();
+        
+        if (accessData.status === 'active' && accessData.accessLevel === 'contributor') {
+          console.log('✅ User has workspace access');
+          return true;
+        } else {
+          throw new Error('Access denied: User does not have active contributor access');
+        }
+      } else {
+        // Check if user is project owner
+        const projectOwnerQuery = query(
+          collection(db, 'project_owners'),
+          where('projectId', '==', projectId),
+          where('userId', '==', user._id)
+        );
+        
+        const ownerSnapshot = await getDoc(projectOwnerQuery);
+        if (!ownerSnapshot.exists()) {
+          throw new Error('Access denied: User is not a selected contributor or project owner');
+        }
+      }
+    } catch (error) {
+      console.error('Workspace access check failed:', error);
+      throw new Error('Access denied: ' + error.message);
     }
   };
 
@@ -341,7 +391,7 @@ const ContributionPage = () => {
                           
                           <div className="flex items-center space-x-2">
                             <button
-                              onClick={() => setSelectedTask(task)}
+                              onClick={() => console.log('Task selected:', task)}
                               className="p-2 text-gray-400 hover:text-gray-600"
                             >
                               <Eye className="w-4 h-4" />

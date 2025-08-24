@@ -23,6 +23,21 @@ import { Link } from "react-router-dom";
 import { projectSelectionApi } from "../services/projectSelectionApi";
 import { escrowWalletApi } from "../services/escrowWalletApi";
 import { notificationService } from "../services/notificationService";
+import { projectTaskApi } from "../services/projectTaskApi";
+
+// Firebase imports for real-time updates
+import { db } from "../Config/firebase";
+import { 
+  collection, 
+  doc, 
+  onSnapshot, 
+  updateDoc, 
+  setDoc, 
+  query, 
+  where,
+  orderBy,
+  serverTimestamp 
+} from "firebase/firestore";
 
 // Chart.js imports
 import { Doughnut } from "react-chartjs-2";
@@ -104,6 +119,10 @@ const AdminPage = () => {
   const [selectedProjectForConfig, setSelectedProjectForConfig] = useState(null);
   const [rankedBidders, setRankedBidders] = useState({});
   const [selectionInProgress, setSelectionInProgress] = useState({});
+  
+  // Firebase real-time updates state
+  const [realTimeUpdates, setRealTimeUpdates] = useState({});
+  const [workspaceAccess, setWorkspaceAccess] = useState({});
 
   // Escrow Wallet System State
   const [escrowWallets, setEscrowWallets] = useState([]);
@@ -160,6 +179,9 @@ const AdminPage = () => {
           setSelectionConfigs(configs);
           setApplicants(applicants);
           setApplicantsError(null);
+          
+          // Set up Firebase real-time listeners for each project
+          setupFirebaseListeners(groupedApplicants);
         })
         .catch((error) => {
           console.error("Error fetching applicants and selections:", error);
@@ -168,6 +190,63 @@ const AdminPage = () => {
         .finally(() => setApplicantsLoading(false));
     }
   }, [view]);
+
+  // Firebase real-time listeners setup
+  const setupFirebaseListeners = (groupedApplicants) => {
+    Object.keys(groupedApplicants).forEach(projectId => {
+      // Listen for applicant status changes
+      const applicantStatusRef = collection(db, 'applicant_status');
+      const applicantQuery = query(
+        applicantStatusRef,
+        where('projectId', '==', projectId),
+        orderBy('updatedAt', 'desc')
+      );
+      
+      const unsubscribe = onSnapshot(applicantQuery, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          const data = change.doc.data();
+          if (change.type === 'modified' || change.type === 'added') {
+            setRealTimeUpdates(prev => ({
+              ...prev,
+              [projectId]: {
+                ...prev[projectId],
+                [data.userId]: data
+              }
+            }));
+          }
+        });
+      });
+
+      // Listen for selection status changes
+      const selectionStatusRef = collection(db, 'selection_status');
+      const selectionQuery = query(
+        selectionStatusRef,
+        where('projectId', '==', projectId),
+        orderBy('updatedAt', 'desc')
+      );
+      
+      const selectionUnsubscribe = onSnapshot(selectionQuery, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          const data = change.doc.data();
+          if (change.type === 'modified' || change.type === 'added') {
+            setSelectionConfigs(prev => ({
+              ...prev,
+              [projectId]: {
+                ...prev[projectId],
+                ...data
+              }
+            }));
+          }
+        });
+      });
+
+      // Store unsubscribe functions for cleanup
+      return () => {
+        unsubscribe();
+        selectionUnsubscribe();
+      };
+    });
+  };
 
 
 
@@ -303,6 +382,7 @@ const AdminPage = () => {
 
   const handleApplicantStatus = async (id, status) => {
     try {
+      // Update backend
       await axios.put(
         `${import.meta.env.VITE_API_URL}/api/admin/applicant/${id}`,
         { status },
@@ -313,14 +393,72 @@ const AdminPage = () => {
           },
         }
       );
-      // Refresh applicants after update
+
+      // Update Firebase for real-time updates
+      const applicant = applicants.find(app => app._id === id);
+      if (applicant) {
+        const projectId = applicant.project_id?._id || applicant.project_id;
+        const userId = applicant.user_id;
+        
+        // Update Firebase document
+        const applicantStatusRef = doc(db, 'applicant_status', `${projectId}_${userId}`);
+        await setDoc(applicantStatusRef, {
+          projectId,
+          userId,
+          status,
+          updatedAt: serverTimestamp(),
+          applicantId: id
+        }, { merge: true });
+
+        // If status is "Accepted", create workspace access
+        if (status === "Accepted") {
+          await createWorkspaceAccess(projectId, userId);
+        }
+      }
+
+      // Update local state
       setApplicants((prev) =>
         prev.map((app) =>
           app._id === id ? { ...app, bid_status: status } : app
         )
       );
+
+      notificationService.success(`Applicant ${status.toLowerCase()} successfully`);
     } catch (error) {
-      alert("Failed to update applicant status");
+      console.error("Error updating applicant status:", error);
+      notificationService.error("Failed to update applicant status");
+    }
+  };
+
+  // Create workspace access for selected contributors
+  const createWorkspaceAccess = async (projectId, userId) => {
+    try {
+      // Create workspace access in Firebase
+      const workspaceAccessRef = doc(db, 'workspace_access', `${projectId}_${userId}`);
+      await setDoc(workspaceAccessRef, {
+        projectId,
+        userId,
+        accessLevel: 'contributor',
+        grantedAt: serverTimestamp(),
+        status: 'active'
+      }, { merge: true });
+
+      // Update local workspace access state
+      setWorkspaceAccess(prev => ({
+        ...prev,
+        [projectId]: {
+          ...prev[projectId],
+          [userId]: {
+            accessLevel: 'contributor',
+            grantedAt: new Date(),
+            status: 'active'
+          }
+        }
+      }));
+
+      console.log(`✅ Workspace access granted for user ${userId} on project ${projectId}`);
+    } catch (error) {
+      console.error("Error creating workspace access:", error);
     }
   };
 
@@ -343,8 +481,32 @@ const AdminPage = () => {
   const handleExecuteSelection = async (projectId) => {
     try {
       setSelectionInProgress(prev => ({ ...prev, [projectId]: true }));
-      await projectSelectionApi.executeAutomaticSelection(projectId);
-      notificationService.success("Automatic selection executed successfully");
+      
+      // Execute automatic selection
+      const result = await projectSelectionApi.executeAutomaticSelection(projectId);
+      
+      if (result.success) {
+        // Update Firebase for real-time updates
+        const selectionStatusRef = doc(db, 'selection_status', projectId);
+        await setDoc(selectionStatusRef, {
+          projectId,
+          status: 'completed',
+          selectedUsers: result.selectedUsers,
+          completedAt: serverTimestamp(),
+          totalBidders: result.totalBidders
+        }, { merge: true });
+
+        // Create workspace access for selected users
+        if (result.selectedUsers && result.selectedUsers.length > 0) {
+          for (const selectedUser of result.selectedUsers) {
+            await createWorkspaceAccess(projectId, selectedUser.userId);
+          }
+        }
+
+        notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected.`);
+      } else {
+        notificationService.error(result.message || "Automatic selection failed");
+      }
       
       // Refresh data
       const [applicantsRes, selectionsRes] = await Promise.all([
@@ -373,7 +535,8 @@ const AdminPage = () => {
       setApplicantsByProject(groupedApplicants);
       setApplicants(applicants);
     } catch (error) {
-      notificationService.error("Failed to execute selection");
+      console.error("Error executing automatic selection:", error);
+      notificationService.error("Failed to execute selection: " + (error.message || "Unknown error"));
     } finally {
       setSelectionInProgress(prev => ({ ...prev, [projectId]: false }));
     }
@@ -393,8 +556,28 @@ const AdminPage = () => {
 
   const handleManualSelection = async (projectId, selectedUserIds) => {
     try {
-      await projectSelectionApi.manualSelection(projectId, selectedUserIds, "manual_selection");
-      notificationService.success("Manual selection completed successfully");
+      const result = await projectSelectionApi.manualSelection(projectId, selectedUserIds, "manual_selection");
+      
+      if (result.success) {
+        // Update Firebase for real-time updates
+        const selectionStatusRef = doc(db, 'selection_status', projectId);
+        await setDoc(selectionStatusRef, {
+          projectId,
+          status: 'completed',
+          selectedUsers: result.selectedUsers,
+          completedAt: serverTimestamp(),
+          totalBidders: selectedUserIds.length
+        }, { merge: true });
+
+        // Create workspace access for selected users
+        for (const userId of selectedUserIds) {
+          await createWorkspaceAccess(projectId, userId);
+        }
+
+        notificationService.success(`Manual selection completed! ${selectedUserIds.length} contributors selected.`);
+      } else {
+        notificationService.error(result.message || "Manual selection failed");
+      }
       
       // Refresh data
       const [applicantsRes, selectionsRes] = await Promise.all([
@@ -423,7 +606,8 @@ const AdminPage = () => {
       setApplicantsByProject(groupedApplicants);
       setApplicants(applicants);
     } catch (error) {
-      notificationService.error("Failed to complete manual selection");
+      console.error("Error completing manual selection:", error);
+      notificationService.error("Failed to complete manual selection: " + (error.message || "Unknown error"));
     }
   };
 

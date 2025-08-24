@@ -199,45 +199,57 @@ export const executeAutomaticSelection = async (req, res) => {
       selection.selectedUsers = result.selectedUsers;
       selection.status = 'completed';
       selection.selectionCompletedAt = new Date();
-             selection.totalBidsConsidered = result.totalBidders;
-       await selection.save();
+      selection.totalBidsConsidered = result.totalBidders;
+      await selection.save();
 
-       // Send notifications to selected users
-       for (const selectedUser of result.selectedUsers) {
-         try {
-           await notificationService.sendUserSelectionNotification(
-             selectedUser.userId,
-             projectId,
-             selectedUser.bidAmount || 0,
-             selectedUser.bonusAmount || 0
-           );
-         } catch (notificationError) {
-           logger.error(`[ProjectSelection] Notification failed for user ${selectedUser.userId}: ${notificationError.message}`);
-         }
-       }
+      // Update bid statuses for selected users
+      for (const selectedUser of result.selectedUsers) {
+        try {
+          await Bidding.findByIdAndUpdate(selectedUser.bidId, {
+            bid_status: 'Accepted'
+          });
+        } catch (bidUpdateError) {
+          logger.error(`[ProjectSelection] Failed to update bid status for ${selectedUser.bidId}: ${bidUpdateError.message}`);
+        }
+      }
 
-       // Send notification to project owner
-       try {
-         await notificationService.sendSelectionStartedNotification(
-           req.user._id,
-           projectId,
-           {
-             requiredContributors: selection.requiredContributors,
-             totalBids: result.totalBidders,
-             selectionMode: selection.selectionMode
-           }
-         );
-       } catch (notificationError) {
-         logger.error(`[ProjectSelection] Notification failed for project owner: ${notificationError.message}`);
-       }
+      // Send notifications to selected users
+      for (const selectedUser of result.selectedUsers) {
+        try {
+          await notificationService.sendUserSelectionNotification(
+            selectedUser.userId,
+            projectId,
+            selectedUser.bidAmount || 0,
+            selectedUser.bonusAmount || 0
+          );
+        } catch (notificationError) {
+          logger.error(`[ProjectSelection] Notification failed for user ${selectedUser.userId}: ${notificationError.message}`);
+        }
+      }
 
-       logger.info(`[ProjectSelection] Automatic selection completed for project: ${projectId}. Selected: ${result.selectedUsers.length} users`);
+      // Send notification to project owner
+      try {
+        await notificationService.sendSelectionStartedNotification(
+          req.user._id,
+          projectId,
+          {
+            requiredContributors: selection.requiredContributors,
+            totalBids: result.totalBidders,
+            selectionMode: selection.selectionMode
+          }
+        );
+      } catch (notificationError) {
+        logger.error(`[ProjectSelection] Notification failed for project owner: ${notificationError.message}`);
+      }
 
-       res.status(200).json({
-         message: result.message,
-         selection,
-         result
-       });
+      logger.info(`[ProjectSelection] Automatic selection completed for project: ${projectId}. Selected: ${result.selectedUsers.length} users`);
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        selection,
+        result
+      });
     } else {
       // Update status to failed
       selection.status = 'failed';
@@ -249,6 +261,7 @@ export const executeAutomaticSelection = async (req, res) => {
       await selection.save();
 
       res.status(400).json({
+        success: false,
         message: result.message,
         selection
       });
@@ -337,11 +350,24 @@ export const manualSelection = async (req, res) => {
 
     await selection.save();
 
+    // Update bid statuses for selected users
+    for (const selectedUser of selectedUsers) {
+      try {
+        await Bidding.findByIdAndUpdate(selectedUser.bidId, {
+          bid_status: 'Accepted'
+        });
+      } catch (bidUpdateError) {
+        logger.error(`[ProjectSelection] Failed to update bid status for ${selectedUser.bidId}: ${bidUpdateError.message}`);
+      }
+    }
+
     logger.info(`[ProjectSelection] Manual selection completed for project: ${projectId}. Selected: ${selectedUsers.length} users`);
 
     res.status(200).json({
+      success: true,
       message: `Successfully selected ${selectedUsers.length} users`,
-      selection
+      selection,
+      selectedUsers
     });
 
   } catch (error) {
@@ -482,14 +508,32 @@ export const getProjectOwnerSelections = async (req, res) => {
   try {
     console.log('🔍 [ProjectSelection] Getting selections for user:', req.user._id);
     
-    // For now, return a simple response to test if the route works
-    console.log('✅ [ProjectSelection] Route is working - returning test data');
+    // Get all projects owned by this user
+    const userProjects = await ProjectListing.find({ user: req.user._id }).select('_id project_Title');
+    
+    if (userProjects.length === 0) {
+      return res.status(200).json({
+        message: 'No projects found for this user',
+        selections: [],
+        total: 0
+      });
+    }
+
+    // Get all selections for these projects
+    const projectIds = userProjects.map(project => project._id);
+    const selections = await ProjectSelection.find({ 
+      projectId: { $in: projectIds } 
+    })
+    .populate('projectId', 'project_Title Project_Description')
+    .populate('selectedUsers.userId', 'username email')
+    .sort({ createdAt: -1 });
+
+    console.log(`✅ [ProjectSelection] Found ${selections.length} selections for user ${req.user._id}`);
 
     res.status(200).json({
       message: 'Selections retrieved successfully',
-      selections: [],
-      total: 0,
-      test: true
+      selections: selections,
+      total: selections.length
     });
 
   } catch (error) {
