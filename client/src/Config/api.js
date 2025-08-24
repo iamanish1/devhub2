@@ -41,6 +41,40 @@ export const API_ENDPOINTS = {
   
   // User projects
   USER_PROJECTS_BASE: `${API_BASE_URL}/api/user-projects`,
+
+  // Project Selection System endpoints
+  PROJECT_SELECTION_BASE: `${API_BASE_URL}/api/project-selection`,
+  CREATE_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}`,
+  GET_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}`,
+  EXECUTE_AUTOMATIC_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/execute`,
+  MANUAL_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/manual`,
+  GET_RANKED_BIDDERS: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/bidders`,
+  UPDATE_SELECTION_CONFIG: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/config`,
+  GET_PROJECT_OWNER_SELECTIONS: `${API_BASE_URL}/api/project-selection/owner/selections`,
+  CANCEL_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/cancel`,
+
+  // Escrow Wallet System endpoints
+  ESCROW_BASE: `${API_BASE_URL}/api/escrow`,
+  CREATE_ESCROW: (projectId) => `${API_BASE_URL}/api/escrow/create/${projectId}`,
+  GET_ESCROW: (projectId) => `${API_BASE_URL}/api/escrow/${projectId}`,
+  LOCK_USER_FUNDS: (projectId, userId, bidId) => `${API_BASE_URL}/api/escrow/${projectId}/lock/${userId}/${bidId}`,
+  RELEASE_USER_FUNDS: (projectId, userId, bidId) => `${API_BASE_URL}/api/escrow/${projectId}/release/${userId}/${bidId}`,
+  REFUND_USER_FUNDS: (projectId, userId, bidId) => `${API_BASE_URL}/api/escrow/${projectId}/refund/${userId}/${bidId}`,
+  COMPLETE_PROJECT: (projectId) => `${API_BASE_URL}/api/escrow/${projectId}/complete`,
+  GET_PROJECT_OWNER_ESCROWS: `${API_BASE_URL}/api/escrow/owner/escrows`,
+  GET_ESCROW_STATS: `${API_BASE_URL}/api/escrow/owner/stats`,
+
+  // Project Task System endpoints
+  PROJECT_TASKS_BASE: `${API_BASE_URL}/api/project-tasks`,
+  CREATE_WORKSPACE: (projectId) => `${API_BASE_URL}/api/project-tasks/workspace/${projectId}`,
+  GET_WORKSPACE: (projectId) => `${API_BASE_URL}/api/project-tasks/workspace/${projectId}`,
+  CREATE_TASK: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks`,
+  UPDATE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}`,
+  COMPLETE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/complete`,
+  ADD_TASK_COMMENT: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/comments`,
+  UPLOAD_TASK_FILE: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/files`,
+  GET_USER_TASKS: `${API_BASE_URL}/api/project-tasks/user/tasks`,
+  GET_PROJECT_STATISTICS: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/statistics`,
 };
 
 // File URLs

@@ -23,6 +23,12 @@ import Contact from "../pages/ContactPage";
 import PaymentPage from "../pages/PaymentPage";
 import PaymentHistoryPage from "../pages/PaymentHistoryPage";
 import WithdrawalPage from "../pages/WithdrawalPage";
+// Project Selection System
+import ProjectSelectionManager from "../components/ProjectSelectionManager";
+// Escrow Wallet System
+import EscrowWalletManager from "../components/EscrowWalletManager";
+// Enhanced Contribution System
+import EnhancedContributionPage from "../pages/EnhancedContributionPage";
 
 const AppRoutes = () => {
   return (
@@ -51,6 +57,15 @@ const AppRoutes = () => {
         <Route path="/admin/" element={<AdminPage/>}/>
         <Route path="/editproject/:id" element={<ProjectListingPage />} />
         <Route path = "/contributionPage/:_id" element={<ContributionPage/>}/>
+        
+        {/* Project Selection System Routes */}
+        <Route path="/project-selection/:projectId" element={<ProjectSelectionManager />} />
+        
+        {/* Escrow Wallet System Routes */}
+        <Route path="/escrow-wallet/:projectId" element={<EscrowWalletManager />} />
+        
+        {/* Enhanced Contribution System Routes */}
+        <Route path="/enhanced-contribution/:projectId" element={<EnhancedContributionPage />} />
         
         {/* Payment Routes */}
         <Route path="/payments" element={<PaymentPage />} />

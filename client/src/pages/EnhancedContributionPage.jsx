@@ -22,7 +22,7 @@ import {
   User
 } from 'lucide-react';
 
-const ContributionPage = () => {
+const EnhancedContributionPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -658,4 +658,4 @@ const ContributionPage = () => {
   );
 };
 
-export default ContributionPage;
+export default EnhancedContributionPage;

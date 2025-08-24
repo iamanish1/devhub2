@@ -19,6 +19,9 @@ import userProjectsRoutes from "./Routes/UserProjectsRoutes.js";
 import paymentsRoutes from "./Routes/paymentsRoutes.js";
 import webhooksRoutes from "./Routes/webhooksRoutes.js";
 import projectsPaymentRoutes from "./Routes/projectsPaymentRoutes.js";
+import projectSelectionRoutes from "./Routes/ProjectSelectionRoutes.js";
+import escrowWalletRoutes from "./Routes/EscrowWalletRoutes.js";
+import projectTaskRoutes from "./Routes/ProjectTaskRoutes.js";
 import path from "path";
 
 
@@ -156,6 +159,16 @@ app.use("/api/user-projects", userProjectsRoutes);
 app.use("/api/payments", paymentsRoutes);
 app.use("/webhooks", webhooksRoutes);
 app.use("/api/projects", projectsPaymentRoutes);
+
+// Project selection routes
+app.use("/api/project-selection", projectSelectionRoutes);
+console.log("✅ Project Selection routes registered at /api/project-selection");
+
+// Escrow wallet routes
+app.use("/api/escrow", escrowWalletRoutes);
+
+// Project task routes
+app.use("/api/project-tasks", projectTaskRoutes);
 
 // Initialize chat socket
 chatSocket(io);

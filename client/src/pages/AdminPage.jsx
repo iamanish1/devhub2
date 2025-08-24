@@ -11,9 +11,18 @@ import {
   FaTrash,
   FaUserCheck,
   FaUserTimes,
+  FaWallet,
+  FaCog,
+  FaChartLine,
+  FaMoneyBillWave,
+  FaUserCog,
+  FaShieldAlt,
 } from "react-icons/fa";
 import Navbar from "../components/NavBar";
 import { Link } from "react-router-dom";
+import { projectSelectionApi } from "../services/projectSelectionApi";
+import { escrowWalletApi } from "../services/escrowWalletApi";
+import { notificationService } from "../services/notificationService";
 
 // Chart.js imports
 import { Doughnut } from "react-chartjs-2";
@@ -86,6 +95,21 @@ const AdminPage = () => {
     email: "jane.doe@devhubs.com",
   };
 
+  // Project Selection System State
+  const [projectSelections, setProjectSelections] = useState([]);
+  const [selectionsLoading, setSelectionsLoading] = useState(false);
+  const [selectionsError, setSelectionsError] = useState(null);
+  const [selectedProjectForSelection, setSelectedProjectForSelection] = useState(null);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+
+  // Escrow Wallet System State
+  const [escrowWallets, setEscrowWallets] = useState([]);
+  const [escrowLoading, setEscrowLoading] = useState(false);
+  const [escrowError, setEscrowError] = useState(null);
+  const [selectedProjectForEscrow, setSelectedProjectForEscrow] = useState(null);
+  const [showEscrowModal, setShowEscrowModal] = useState(false);
+  const [escrowStats, setEscrowStats] = useState(null);
+
   const handleAdminTaskStatusChange = (id, newStatus) => {
     setAdminTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
@@ -113,6 +137,49 @@ const AdminPage = () => {
         })
         .catch(() => setApplicantsError("Failed to fetch applicants"))
         .finally(() => setApplicantsLoading(false));
+    }
+  }, [view]);
+
+  // Fetch project selections when "selection" view is active
+  useEffect(() => {
+    if (view === "selection") {
+      setSelectionsLoading(true);
+      setSelectionsError(null);
+      
+      console.log("🔍 Fetching project selections...");
+      
+      projectSelectionApi.getProjectOwnerSelections()
+        .then((data) => {
+          console.log("✅ Project selections fetched:", data);
+          setProjectSelections(data.selections || []);
+          setSelectionsError(null);
+        })
+        .catch((error) => {
+          console.error("❌ Error fetching selections:", error);
+          setSelectionsError(`Failed to fetch project selections: ${error.message || error}`);
+        })
+        .finally(() => setSelectionsLoading(false));
+    }
+  }, [view]);
+
+  // Fetch escrow wallets when "escrow" view is active
+  useEffect(() => {
+    if (view === "escrow") {
+      setEscrowLoading(true);
+      Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ])
+        .then(([escrowData, statsData]) => {
+          setEscrowWallets(escrowData.escrowWallets || []);
+          setEscrowStats(statsData.statistics);
+          setEscrowError(null);
+        })
+        .catch((error) => {
+          setEscrowError("Failed to fetch escrow data");
+          console.error("Error fetching escrow data:", error);
+        })
+        .finally(() => setEscrowLoading(false));
     }
   }, [view]);
 
@@ -248,6 +315,64 @@ const AdminPage = () => {
     }
   };
 
+  // Project Selection Handlers
+  const handleCreateSelection = async (projectId, selectionData) => {
+    try {
+      await projectSelectionApi.createSelection(projectId, selectionData);
+      notificationService.success("Project selection created successfully");
+      // Refresh selections
+      const data = await projectSelectionApi.getProjectOwnerSelections();
+      setProjectSelections(data.selections || []);
+    } catch (error) {
+      notificationService.error("Failed to create project selection");
+    }
+  };
+
+  const handleExecuteSelection = async (projectId) => {
+    try {
+      await projectSelectionApi.executeAutomaticSelection(projectId);
+      notificationService.success("Automatic selection executed successfully");
+      // Refresh selections
+      const data = await projectSelectionApi.getProjectOwnerSelections();
+      setProjectSelections(data.selections || []);
+    } catch (error) {
+      notificationService.error("Failed to execute selection");
+    }
+  };
+
+  // Escrow Wallet Handlers
+  const handleCreateEscrow = async (projectId, bonusPoolAmount) => {
+    try {
+      await escrowWalletApi.createEscrowWallet(projectId, bonusPoolAmount);
+      notificationService.success("Escrow wallet created successfully");
+      // Refresh escrow data
+      const [escrowData, statsData] = await Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ]);
+      setEscrowWallets(escrowData.escrowWallets || []);
+      setEscrowStats(statsData.statistics);
+    } catch (error) {
+      notificationService.error("Failed to create escrow wallet");
+    }
+  };
+
+  const handleCompleteProject = async (projectId) => {
+    try {
+      await escrowWalletApi.completeProject(projectId, "Project completed via admin panel", 8);
+      notificationService.success("Project completed and funds released");
+      // Refresh escrow data
+      const [escrowData, statsData] = await Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ]);
+      setEscrowWallets(escrowData.escrowWallets || []);
+      setEscrowStats(statsData.statistics);
+    } catch (error) {
+      notificationService.error("Failed to complete project");
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e]">
       <Navbar />
@@ -297,6 +422,30 @@ const AdminPage = () => {
             onClick={() => setView("contribution")}
           >
             Project Management 
+          </button>
+
+          <button
+            className={`text-left px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+              view === "selection"
+                ? "bg-blue-500 text-white shadow"
+                : "hover:bg-blue-500/10 hover:text-blue-400"
+            }`}
+            onClick={() => setView("selection")}
+          >
+            <FaUserCog className="inline mr-2" />
+            Project Selection
+          </button>
+
+          <button
+            className={`text-left px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
+              view === "escrow"
+                ? "bg-blue-500 text-white shadow"
+                : "hover:bg-blue-500/10 hover:text-blue-400"
+            }`}
+            onClick={() => setView("escrow")}
+          >
+            <FaWallet className="inline mr-2" />
+            Escrow Management
           </button>
         </nav>
       </aside>
@@ -403,9 +552,48 @@ const AdminPage = () => {
 
         {view === "projects" && (
           <section>
-            <h1 className="text-4xl font-bold mb-8 text-blue-400">
-              My Projects
-            </h1>
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2 text-blue-400">
+                My Projects
+              </h1>
+              <p className="text-gray-300 text-lg">
+                Manage your projects and access selection & escrow systems
+              </p>
+            </div>
+
+            {/* Quick Actions for Projects */}
+            <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10 mb-6">
+              <h2 className="text-xl font-bold mb-4 text-blue-400">Quick Actions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <button
+                  onClick={() => setView("selection")}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                >
+                  <FaUserCog />
+                  Project Selection
+                </button>
+                <button
+                  onClick={() => setView("escrow")}
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                >
+                  <FaWallet />
+                  Escrow Management
+                </button>
+                <Link to="/listproject" className="block">
+                  <button className="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2">
+                    <FaProjectDiagram />
+                    Create New Project
+                  </button>
+                </Link>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                >
+                  <FaChartLine />
+                  Refresh Data
+                </button>
+              </div>
+            </div>
             {projectsLoading ? (
               <div className="text-blue-300 text-lg">Loading projects...</div>
             ) : projectsError ? (
@@ -449,21 +637,30 @@ const AdminPage = () => {
                             ? proj.bids.length
                             : proj.Project_Number_Of_Bids || 0}
                         </td>
-                        <td className="p-4 flex gap-2">
+                        <td className="p-4 flex gap-2 flex-wrap">
                           <button
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1"
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs"
                             onClick={() => setSelectedProject(proj)}
                           >
                             <FaUsers /> View
                           </button>
                           <Link to={`/editproject/${proj._id}`}>
-                            <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1">
+                            <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs">
                               <FaEdit /> Edit
                             </button>
                           </Link>
-
+                          <Link to={`/project-selection/${proj._id}`}>
+                            <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs">
+                              <FaUserCog /> Selection
+                            </button>
+                          </Link>
+                          <Link to={`/escrow-wallet/${proj._id}`}>
+                            <button className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs">
+                              <FaWallet /> Escrow
+                            </button>
+                          </Link>
                           <button
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1"
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-1 text-xs"
                             onClick={() => handleDelteProject(proj._id)}
                           >
                             <FaTrash /> Delete
@@ -813,6 +1010,498 @@ const AdminPage = () => {
               onNotesChange={handleAdminNotesChange}
             />
           </section>
+        )}
+
+        {/* Project Selection System Section */}
+        {view === "selection" && (
+          <section>
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2 text-blue-400">
+                Project Selection Management
+              </h1>
+              <p className="text-gray-300 text-lg">
+                Configure and manage user selection for your projects
+              </p>
+            </div>
+
+            {selectionsLoading ? (
+              <div className="text-blue-300 text-lg">Loading project selections...</div>
+            ) : selectionsError ? (
+              <div className="text-red-400 text-lg">{selectionsError}</div>
+            ) : (
+              <div className="space-y-6">
+                {/* Quick Actions */}
+                <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                  <h2 className="text-2xl font-bold mb-4 text-blue-400">Quick Actions</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button
+                      onClick={() => setShowSelectionModal(true)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      <FaUserCog />
+                      Create New Selection
+                    </button>
+                    <Link to="/project-selection/new" className="block">
+                      <button className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2">
+                        <FaCog />
+                        Advanced Configuration
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      <FaChartLine />
+                      Refresh Data
+                    </button>
+                  </div>
+                </div>
+
+                {/* Project Selections List */}
+                <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                  <h2 className="text-2xl font-bold mb-4 text-blue-400">Active Selections</h2>
+                  {projectSelections.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <FaUserCog className="text-4xl mx-auto mb-4" />
+                      <p>No project selections found.</p>
+                      <p className="text-sm">Create a new selection to get started.</p>
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setShowSelectionModal(true)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+                        >
+                          Create Your First Selection
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {projectSelections.map((selection) => (
+                        <div
+                          key={selection._id}
+                          className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10 hover:border-blue-400 transition"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-white">
+                              {selection.projectId?.project_Title || "Untitled Project"}
+                            </h3>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                              selection.status === 'completed' ? 'bg-green-900/40 text-green-400' :
+                              selection.status === 'in_progress' ? 'bg-blue-900/40 text-blue-400' :
+                              'bg-yellow-900/40 text-yellow-400'
+                            }`}>
+                              {selection.status?.toUpperCase() || 'PENDING'}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm text-gray-300">
+                            <div>
+                              <span className="font-semibold">Mode:</span> {selection.selectionMode}
+                            </div>
+                            <div>
+                              <span className="font-semibold">Required:</span> {selection.requiredContributors} contributors
+                            </div>
+                            <div>
+                              <span className="font-semibold">Considered:</span> {selection.totalBidsConsidered || 0} bids
+                            </div>
+                            <div>
+                              <span className="font-semibold">Selected:</span> {selection.selectedUsers?.length || 0} users
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 mt-4">
+                            <Link to={`/project-selection/${selection.projectId}`}>
+                              <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition text-xs">
+                                Manage
+                              </button>
+                            </Link>
+                            {selection.status === 'pending' && (
+                              <button
+                                onClick={() => handleExecuteSelection(selection.projectId)}
+                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition text-xs"
+                              >
+                                Execute
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Escrow Management System Section */}
+        {view === "escrow" && (
+          <section>
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2 text-blue-400">
+                Escrow Wallet Management
+              </h1>
+              <p className="text-gray-300 text-lg">
+                Manage project funds, payments, and escrow wallets
+              </p>
+            </div>
+
+            {escrowLoading ? (
+              <div className="text-blue-300 text-lg">Loading escrow data...</div>
+            ) : escrowError ? (
+              <div className="text-red-400 text-lg">{escrowError}</div>
+            ) : (
+              <div className="space-y-6">
+                {/* Escrow Statistics */}
+                {escrowStats && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="bg-gradient-to-br from-blue-900/60 to-blue-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                      <FaWallet className="text-3xl text-blue-400 mx-auto mb-3" />
+                      <div className="text-2xl font-bold text-blue-400">
+                        {escrowStats.totalWallets || 0}
+                      </div>
+                      <div className="text-gray-300">Total Wallets</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-900/60 to-green-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                      <FaMoneyBillWave className="text-3xl text-green-400 mx-auto mb-3" />
+                      <div className="text-2xl font-bold text-green-400">
+                        ₹{escrowStats.totalLockedFunds || 0}
+                      </div>
+                      <div className="text-gray-300">Locked Funds</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-900/60 to-purple-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                      <FaShieldAlt className="text-3xl text-purple-400 mx-auto mb-3" />
+                      <div className="text-2xl font-bold text-purple-400">
+                        ₹{escrowStats.totalBonusPool || 0}
+                      </div>
+                      <div className="text-gray-300">Bonus Pool</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-yellow-900/60 to-yellow-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                      <FaCheckCircle className="text-3xl text-yellow-400 mx-auto mb-3" />
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {escrowStats.completedProjects || 0}
+                      </div>
+                      <div className="text-gray-300">Completed</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quick Actions */}
+                <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                  <h2 className="text-2xl font-bold mb-4 text-blue-400">Quick Actions</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button
+                      onClick={() => setShowEscrowModal(true)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      <FaWallet />
+                      Create Escrow Wallet
+                    </button>
+                    <Link to="/escrow-wallet/new" className="block">
+                      <button className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2">
+                        <FaShieldAlt />
+                        Advanced Management
+                      </button>
+                    </Link>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      <FaChartLine />
+                      Refresh Data
+                    </button>
+                  </div>
+                </div>
+
+                {/* Escrow Wallets List */}
+                <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                  <h2 className="text-2xl font-bold mb-4 text-blue-400">Active Escrow Wallets</h2>
+                  {escrowWallets.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <FaWallet className="text-4xl mx-auto mb-4" />
+                      <p>No escrow wallets found.</p>
+                      <p className="text-sm">Create a new escrow wallet to get started.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {escrowWallets.map((wallet) => (
+                        <div
+                          key={wallet._id}
+                          className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10 hover:border-blue-400 transition"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-white">
+                              {wallet.projectId?.project_Title || "Untitled Project"}
+                            </h3>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                              wallet.status === 'completed' ? 'bg-green-900/40 text-green-400' :
+                              wallet.status === 'active' ? 'bg-blue-900/40 text-blue-400' :
+                              'bg-yellow-900/40 text-yellow-400'
+                            }`}>
+                              {wallet.status?.toUpperCase() || 'ACTIVE'}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm text-gray-300">
+                            <div>
+                              <span className="font-semibold">Bonus Pool:</span> ₹{wallet.totalBonusPool}
+                            </div>
+                            <div>
+                              <span className="font-semibold">Locked Funds:</span> ₹{wallet.totalEscrowAmount || 0}
+                            </div>
+                            <div>
+                              <span className="font-semibold">Contributors:</span> {wallet.bonusPoolDistribution?.totalContributors || 0}
+                            </div>
+                            <div>
+                              <span className="font-semibold">Per Contributor:</span> ₹{wallet.bonusPoolDistribution?.amountPerContributor || 0}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 mt-4">
+                            <Link to={`/escrow-wallet/${wallet.projectId}`}>
+                              <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition text-xs">
+                                Manage
+                              </button>
+                            </Link>
+                            {wallet.status === 'active' && (
+                              <button
+                                onClick={() => handleCompleteProject(wallet.projectId)}
+                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition text-xs"
+                              >
+                                Complete
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Create Selection Modal */}
+        {showSelectionModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-md border border-blue-500/20 shadow-2xl">
+              <h2 className="text-2xl font-bold mb-6 text-blue-400 text-center">
+                Create Project Selection
+              </h2>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const projectId = formData.get('projectId');
+                const selectionData = {
+                  requiredContributors: parseInt(formData.get('requiredContributors')),
+                  desiredBids: parseInt(formData.get('desiredBids')),
+                  selectionMode: formData.get('selectionMode'),
+                  selectionCriteria: {
+                    skillWeight: parseFloat(formData.get('skillWeight')),
+                    bidWeight: parseFloat(formData.get('bidWeight')),
+                    experienceWeight: parseFloat(formData.get('experienceWeight')),
+                    availabilityWeight: parseFloat(formData.get('availabilityWeight'))
+                  }
+                };
+                handleCreateSelection(projectId, selectionData);
+                setShowSelectionModal(false);
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Project ID
+                    </label>
+                    <input
+                      type="text"
+                      name="projectId"
+                      required
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      placeholder="Enter project ID"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Required Contributors
+                    </label>
+                    <input
+                      type="number"
+                      name="requiredContributors"
+                      required
+                      min="1"
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Desired Bids
+                    </label>
+                    <input
+                      type="number"
+                      name="desiredBids"
+                      required
+                      min="1"
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Selection Mode
+                    </label>
+                    <select
+                      name="selectionMode"
+                      required
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="automatic">Automatic</option>
+                      <option value="manual">Manual</option>
+                      <option value="hybrid">Hybrid</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Skill Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="skillWeight"
+                        required
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        defaultValue="0.3"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Bid Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="bidWeight"
+                        required
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        defaultValue="0.3"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Experience Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="experienceWeight"
+                        required
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        defaultValue="0.2"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Availability Weight
+                      </label>
+                      <input
+                        type="number"
+                        name="availabilityWeight"
+                        required
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        defaultValue="0.2"
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-4 mt-6">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Create Selection
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSelectionModal(false)}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Create Escrow Modal */}
+        {showEscrowModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-md border border-blue-500/20 shadow-2xl">
+              <h2 className="text-2xl font-bold mb-6 text-blue-400 text-center">
+                Create Escrow Wallet
+              </h2>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const projectId = formData.get('projectId');
+                const bonusPoolAmount = parseFloat(formData.get('bonusPoolAmount'));
+                handleCreateEscrow(projectId, bonusPoolAmount);
+                setShowEscrowModal(false);
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Project ID
+                    </label>
+                    <input
+                      type="text"
+                      name="projectId"
+                      required
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      placeholder="Enter project ID"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Bonus Pool Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      name="bonusPoolAmount"
+                      required
+                      min="0"
+                      step="0.01"
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      placeholder="Enter bonus pool amount"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-4 mt-6">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Create Escrow
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowEscrowModal(false)}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
       </main>
     </div>

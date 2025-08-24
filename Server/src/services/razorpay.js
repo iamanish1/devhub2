@@ -416,6 +416,64 @@ export const checkRazorpayHealth = async () => {
   }
 };
 
+// Create payout to user account
+export const createPayout = async (payoutData) => {
+  if (!isRazorpayConfigured) {
+    throw new Error('Razorpay service is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.');
+  }
+
+  try {
+    const requestData = {
+      account_number: payoutData.account_number,
+      fund_account_id: payoutData.fund_account_id,
+      amount: payoutData.amount, // Already in paise
+      currency: payoutData.currency || 'INR',
+      mode: payoutData.mode || 'IMPS',
+      purpose: payoutData.purpose || 'payout',
+      queue_if_low_balance: payoutData.queue_if_low_balance !== false,
+      reference_id: payoutData.reference_id,
+      narration: payoutData.narration || 'DevHubs Project Payment'
+    };
+    
+    logger.info('Creating Razorpay payout', {
+      referenceId: payoutData.reference_id,
+      amount: payoutData.amount,
+      currency: payoutData.currency,
+      mode: payoutData.mode,
+      environment: RAZORPAY_ENV
+    });
+    
+    const { data } = await razorpayApi.post('/payouts', requestData);
+    
+    logger.info('Razorpay payout created successfully', {
+      payoutId: data.id,
+      amount: data.amount,
+      status: data.status,
+      referenceId: data.reference_id
+    });
+    
+    return {
+      id: data.id,
+      amount: data.amount,
+      currency: data.currency,
+      status: data.status,
+      mode: data.mode,
+      purpose: data.purpose,
+      reference_id: data.reference_id,
+      narration: data.narration,
+      created_at: data.created_at
+    };
+  } catch (error) {
+    logger.error('Failed to create Razorpay payout', {
+      referenceId: payoutData.reference_id,
+      amount: payoutData.amount,
+      error: error.response?.data || error.message,
+      status: error.response?.status
+    });
+    throw error;
+  }
+};
+
 // Configuration getter for debugging
 export const getRazorpayConfig = () => ({
   environment: RAZORPAY_ENV,
