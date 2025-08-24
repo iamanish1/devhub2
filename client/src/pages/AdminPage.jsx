@@ -194,12 +194,11 @@ const AdminPage = () => {
   // Firebase real-time listeners setup
   const setupFirebaseListeners = (groupedApplicants) => {
     Object.keys(groupedApplicants).forEach(projectId => {
-      // Listen for applicant status changes
+      // Listen for applicant status changes (simplified query without orderBy)
       const applicantStatusRef = collection(db, 'applicant_status');
       const applicantQuery = query(
         applicantStatusRef,
-        where('projectId', '==', projectId),
-        orderBy('updatedAt', 'desc')
+        where('projectId', '==', projectId)
       );
       
       const unsubscribe = onSnapshot(applicantQuery, (snapshot) => {
@@ -217,12 +216,11 @@ const AdminPage = () => {
         });
       });
 
-      // Listen for selection status changes
+      // Listen for selection status changes (simplified query without orderBy)
       const selectionStatusRef = collection(db, 'selection_status');
       const selectionQuery = query(
         selectionStatusRef,
-        where('projectId', '==', projectId),
-        orderBy('updatedAt', 'desc')
+        where('projectId', '==', projectId)
       );
       
       const selectionUnsubscribe = onSnapshot(selectionQuery, (snapshot) => {
