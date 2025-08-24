@@ -550,10 +550,10 @@ const ContributionPage = () => {
   // Get status badge
   const getStatusBadge = (status) => {
     const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      in_progress: { color: 'bg-blue-100 text-blue-800', icon: Clock },
-      completed: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      cancelled: { color: 'bg-red-100 text-red-800', icon: AlertCircle }
+      pending: { color: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30', icon: Clock },
+      in_progress: { color: 'bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30', icon: Clock },
+      completed: { color: 'bg-green-500/20 text-green-400 border border-green-500/30', icon: CheckCircle },
+      cancelled: { color: 'bg-red-500/20 text-red-400 border border-red-500/30', icon: AlertCircle }
     };
     
     const config = statusConfig[status] || statusConfig.pending;
@@ -570,10 +570,10 @@ const ContributionPage = () => {
   // Get priority badge
   const getPriorityBadge = (priority) => {
     const priorityConfig = {
-      low: { color: 'bg-gray-100 text-gray-800' },
-      medium: { color: 'bg-blue-100 text-blue-800' },
-      high: { color: 'bg-orange-100 text-orange-800' },
-      urgent: { color: 'bg-red-100 text-red-800' }
+      low: { color: 'bg-gray-500/20 text-gray-400 border border-gray-500/30' },
+      medium: { color: 'bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30' },
+      high: { color: 'bg-orange-500/20 text-orange-400 border border-orange-500/30' },
+      urgent: { color: 'bg-red-500/20 text-red-400 border border-red-500/30' }
     };
     
     const config = priorityConfig[priority] || priorityConfig.medium;
@@ -957,14 +957,14 @@ const ContributionPage = () => {
 
             {/* Tasks Tab */}
             {activeTab === 'tasks' && (
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-6 border-b border-gray-200">
+              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20">
+                <div className="p-6 border-b border-gray-700">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-gray-900">Project Tasks</h2>
+                    <h2 className="text-xl font-semibold text-white">Project Tasks</h2>
                     {(userAccess?.isProjectOwner || userAccess?.userRole === 'admin') && (
                       <button
                         onClick={() => setShowTaskModal(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                        className="px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] flex items-center transition-colors"
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         New Task
@@ -975,18 +975,18 @@ const ContributionPage = () => {
                   {/* Tasks List */}
                   <div className="space-y-4">
                     {tasks.map(task => (
-                      <div key={task._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div key={task._id} className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="font-medium text-gray-900">{task.title}</h3>
+                              <h3 className="font-medium text-white">{task.title}</h3>
                               {getStatusBadge(task.status)}
                               {getPriorityBadge(task.priority)}
                             </div>
                             
-                            <p className="text-sm text-gray-600 mb-3">{task.description}</p>
+                            <p className="text-sm text-gray-400 mb-3">{task.description}</p>
                             
-                            <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <div className="flex items-center space-x-4 text-sm text-gray-400">
                               {task.assignedTo && (
                                 <span className="flex items-center">
                                   <User className="w-4 h-4 mr-1" />
@@ -1006,7 +1006,7 @@ const ContributionPage = () => {
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => console.log('Task selected:', task)}
-                              className="p-2 text-gray-400 hover:text-gray-600"
+                              className="p-2 text-gray-400 hover:text-white transition-colors"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
@@ -1015,7 +1015,7 @@ const ContributionPage = () => {
                               <button
                                 onClick={() => handleCompleteTask(task._id)}
                                 disabled={task.status === 'completed'}
-                                className="p-2 text-green-400 hover:text-green-600 disabled:opacity-50"
+                                className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
                               >
                                 <CheckCircle className="w-4 h-4" />
                               </button>
@@ -1027,8 +1027,8 @@ const ContributionPage = () => {
                     
                     {tasks.length === 0 && (
                       <div className="text-center py-8">
-                        <CheckSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">No tasks found.</p>
+                        <CheckSquare className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                        <p className="text-gray-400">No tasks found.</p>
                       </div>
                     )}
                   </div>
@@ -1244,10 +1244,10 @@ const ContributionPage = () => {
 
             {/* Resources Tab */}
             {activeTab === 'resources' && (
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Project Resources</h2>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center">
+                  <h2 className="text-xl font-semibold text-white">Project Resources</h2>
+                  <button className="px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] flex items-center transition-colors">
                     <Upload className="w-4 h-4 mr-2" />
                     Upload File
                   </button>
@@ -1256,22 +1256,22 @@ const ContributionPage = () => {
                 {resources && resources.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {resources.map(resource => (
-                      <div key={resource._id} className="border border-gray-200 rounded-lg p-4">
+                      <div key={resource._id} className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
                         <div className="flex items-center space-x-3 mb-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <FolderOpen className="w-5 h-5 text-blue-600" />
+                          <div className="w-10 h-10 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
+                            <FolderOpen className="w-5 h-5 text-blue-400" />
                           </div>
                           <div className="flex-1">
-                            <h3 className="font-medium text-gray-900">{resource.title}</h3>
-                            <p className="text-sm text-gray-600">{resource.type}</p>
+                            <h3 className="font-medium text-white">{resource.title}</h3>
+                            <p className="text-sm text-gray-400">{resource.type}</p>
                           </div>
                         </div>
                         
-                        <p className="text-sm text-gray-600 mb-3">{resource.description}</p>
+                        <p className="text-sm text-gray-400 mb-3">{resource.description}</p>
                         
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <button className="p-1 text-gray-400 hover:text-gray-600">
+                            <button className="p-1 text-gray-400 hover:text-blue-400 transition-colors">
                               <Download className="w-4 h-4" />
                             </button>
                           </div>
@@ -1285,8 +1285,8 @@ const ContributionPage = () => {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <FolderOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No resources uploaded yet.</p>
+                    <FolderOpen className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-400">No resources uploaded yet.</p>
                   </div>
                 )}
               </div>
@@ -1294,55 +1294,55 @@ const ContributionPage = () => {
 
             {/* Progress Tab */}
             {activeTab === 'progress' && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Project Progress</h2>
+              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                <h2 className="text-xl font-semibold text-white mb-6">Project Progress</h2>
                 
                 {statistics ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="bg-[#1A1A1A] border border-[#00A8E8]/20 rounded-lg p-4">
                       <div className="flex items-center">
-                        <CheckSquare className="w-8 h-8 text-blue-600 mr-3" />
+                        <CheckSquare className="w-8 h-8 text-[#00A8E8] mr-3" />
                         <div>
-                          <p className="text-sm font-medium text-blue-600">Total Tasks</p>
-                          <p className="text-2xl font-bold text-blue-900">{statistics.totalTasks}</p>
+                          <p className="text-sm font-medium text-[#00A8E8]">Total Tasks</p>
+                          <p className="text-2xl font-bold text-white">{statistics.totalTasks}</p>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="bg-green-50 rounded-lg p-4">
+                    <div className="bg-[#1A1A1A] border border-green-500/20 rounded-lg p-4">
                       <div className="flex items-center">
-                        <CheckCircle className="w-8 h-8 text-green-600 mr-3" />
+                        <CheckCircle className="w-8 h-8 text-green-400 mr-3" />
                         <div>
-                          <p className="text-sm font-medium text-green-600">Completed</p>
-                          <p className="text-2xl font-bold text-green-900">{statistics.completedTasks}</p>
+                          <p className="text-sm font-medium text-green-400">Completed</p>
+                          <p className="text-2xl font-bold text-white">{statistics.completedTasks}</p>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="bg-yellow-50 rounded-lg p-4">
+                    <div className="bg-[#1A1A1A] border border-yellow-500/20 rounded-lg p-4">
                       <div className="flex items-center">
-                        <Clock className="w-8 h-8 text-yellow-600 mr-3" />
+                        <Clock className="w-8 h-8 text-yellow-400 mr-3" />
                         <div>
-                          <p className="text-sm font-medium text-yellow-600">In Progress</p>
-                          <p className="text-2xl font-bold text-yellow-900">{statistics.inProgressTasks}</p>
+                          <p className="text-sm font-medium text-yellow-400">In Progress</p>
+                          <p className="text-2xl font-bold text-white">{statistics.inProgressTasks}</p>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="bg-purple-50 rounded-lg p-4">
+                    <div className="bg-[#1A1A1A] border border-purple-500/20 rounded-lg p-4">
                       <div className="flex items-center">
-                        <Users className="w-8 h-8 text-purple-600 mr-3" />
+                        <Users className="w-8 h-8 text-purple-400 mr-3" />
                         <div>
-                          <p className="text-sm font-medium text-purple-600">Team Members</p>
-                          <p className="text-2xl font-bold text-purple-900">{workspace?.teamMembers?.length || 0}</p>
+                          <p className="text-sm font-medium text-purple-400">Team Members</p>
+                          <p className="text-2xl font-bold text-white">{workspace?.teamMembers?.length || 0}</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No progress data available.</p>
+                    <BarChart3 className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-400">No progress data available.</p>
                   </div>
                 )}
               </div>
