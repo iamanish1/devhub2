@@ -7,12 +7,30 @@ const getAuthToken = () => localStorage.getItem('token');
 // Create axios instance with auth header
 const createAuthInstance = () => {
   const token = getAuthToken();
-  return axios.create({
+  console.log('🔍 Auth token:', token ? `${token.substring(0, 20)}...` : 'No token');
+  
+  const instance = axios.create({
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     }
   });
+  
+  // Add request interceptor for debugging
+  instance.interceptors.request.use(
+    (config) => {
+      console.log('🔍 Making request to:', config.url);
+      console.log('🔍 Request method:', config.method);
+      console.log('🔍 Request headers:', config.headers);
+      return config;
+    },
+    (error) => {
+      console.error('❌ Request error:', error);
+      return Promise.reject(error);
+    }
+  );
+  
+  return instance;
 };
 
 /**
@@ -54,12 +72,19 @@ export const projectTaskApi = {
    */
   createTask: async (projectId, taskData) => {
     try {
+      console.log('🔍 Creating task for project:', projectId);
+      console.log('🔍 Task data:', taskData);
+      console.log('🔍 API endpoint:', API_ENDPOINTS.CREATE_TASK(projectId));
+      
       const response = await createAuthInstance().post(
         API_ENDPOINTS.CREATE_TASK(projectId),
         taskData
       );
+      console.log('✅ Task created successfully:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ Error creating task:', error);
+      console.error('❌ Error response:', error.response);
       throw error.response?.data || error.message;
     }
   },
@@ -158,6 +183,20 @@ export const projectTaskApi = {
     try {
       const response = await createAuthInstance().get(
         API_ENDPOINTS.GET_PROJECT_STATISTICS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Delete a task
+   */
+  deleteTask: async (projectId, taskId) => {
+    try {
+      const response = await createAuthInstance().delete(
+        API_ENDPOINTS.DELETE_TASK(projectId, taskId)
       );
       return response.data;
     } catch (error) {

@@ -1,6 +1,11 @@
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// Debug API configuration
+console.log('🔍 API Configuration:');
+console.log('🔍 VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('🔍 API_BASE_URL:', API_BASE_URL);
+
 // Socket server URL
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER || 'http://localhost:8000';
 
@@ -70,6 +75,7 @@ export const API_ENDPOINTS = {
   GET_WORKSPACE: (projectId) => `${API_BASE_URL}/api/project-tasks/workspace/${projectId}`,
   CREATE_TASK: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks`,
   UPDATE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}`,
+  DELETE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}`,
   COMPLETE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/complete`,
   ADD_TASK_COMMENT: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/comments`,
   UPLOAD_TASK_FILE: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/files`,

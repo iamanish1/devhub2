@@ -105,6 +105,9 @@ export const createTask = async (req, res) => {
     const { title, description, priority = 'medium', dueDate, assignedTo, estimatedHours } = req.body;
 
     logger.info(`[ProjectTask] Creating task for project ${projectId}`);
+    logger.info(`[ProjectTask] Request body:`, req.body);
+    logger.info(`[ProjectTask] User ID: ${userId}`);
+    logger.info(`[ProjectTask] Project ID: ${projectId}`);
 
     // Check if user has access
     const project = await ProjectListing.findById(projectId);
@@ -214,6 +217,57 @@ export const updateTask = async (req, res) => {
 
   } catch (error) {
     logger.error(`[ProjectTask] Error updating task: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Delete a task
+ */
+export const deleteTask = async (req, res) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[ProjectTask] Deleting task ${taskId} for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Delete task from database
+    const deletedTask = await ProjectTask.findByIdAndDelete(taskId);
+
+    if (!deletedTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Delete from Firebase
+    const taskRef = doc(db, 'project_tasks', taskId);
+    await setDoc(taskRef, {
+      deleted: true,
+      deletedAt: serverTimestamp(),
+      deletedBy: userId.toString()
+    }, { merge: true });
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Task deleted successfully'
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error deleting task: ${error.message}`, error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

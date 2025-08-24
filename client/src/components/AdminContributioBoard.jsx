@@ -671,80 +671,74 @@ const AdminContributionBoard = ({
   // Add/Edit Task
   const handleTaskFormSubmit = async (e) => {
     e.preventDefault();
-    if (!taskForm.title.trim()) return;
+    if (!taskForm.title.trim() || !selectedProjectId) return;
 
-    if (editTask) {
-      // Edit logic: call update API
-      try {
-        const res = await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/admin/editprojecttask/${
-            editTask.id || editTask._id
-          }`,
-          {
-            task_title: taskForm.title,
-            task_description: taskForm.desc,
-            task_status: editTask.task_status,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        console.log("Updated Task:", res.data);
+    try {
+      const taskData = {
+        title: taskForm.title,
+        description: taskForm.desc,
+        priority: taskForm.priority || 'medium',
+        dueDate: taskForm.dueDate || null,
+        assignedTo: taskForm.assignedTo || user._id,
+        estimatedHours: taskForm.estimatedHours || 0,
+        status: 'pending'
+      };
+
+      if (editTask) {
+        // Update existing task using new API
+        const result = await projectTaskApi.updateTask(selectedProjectId, editTask.id, taskData);
+        console.log("Updated Task:", result);
+        
         setTasks((prev) =>
           prev.map((t) =>
             t.id === (editTask.id || editTask._id)
               ? {
                   ...t,
-                  task_title: taskForm.title,
-                  task_description: taskForm.desc,
+                  title: taskForm.title,
+                  description: taskForm.desc,
                 }
               : t
           )
         );
+        
         if (onTaskEdit)
           onTaskEdit(editTask.id || editTask._id, {
             ...taskForm,
             projectId: selectedProjectId,
           });
-      } catch (err) {
-        console.error("Error updating task:", err);
-        alert("Failed to update task.");
-        return;
+          
+        notificationService.success('Task updated successfully');
+      } else {
+        // Create new task using new API
+        const result = await projectTaskApi.createTask(selectedProjectId, taskData);
+        console.log("Created Task:", result);
+        
+        // Add the new task to the local state
+        const newTask = {
+          id: result.task._id,
+          title: result.task.title,
+          description: result.task.description,
+          status: result.task.status,
+          priority: result.task.priority,
+          assignedTo: result.task.assignedTo,
+          createdBy: result.task.createdBy,
+          createdAt: result.task.createdAt
+        };
+        
+        setTasks((prev) => [newTask, ...prev]);
+        if (onTaskAdd) onTaskAdd(newTask);
+        
+        notificationService.success('Task created successfully');
       }
-    } else {
-      // Create new task via API call
-      try {
-        const res = await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/admin/projecttask`,
-          {
-            task_title: taskForm.title,
-            task_description: taskForm.desc,
-            projectId: selectedProjectId,
-            task_status: "todo",
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        console.log("Created Task:", res.data);
-        setTasks((prev) => [res.data, ...prev]);
-        if (onTaskAdd) onTaskAdd(res.data);
-      } catch (err) {
-        console.error("Error creating task:", err);
-        alert("Failed to create task.");
-        return;
-      }
+    } catch (error) {
+      console.error("Error handling task:", error);
+      notificationService.error('Failed to save task');
+      return;
     }
 
     setShowTaskModal(false);
     setEditTask(null);
-    setTaskForm({ title: "", desc: "" });
+    setTaskForm({ title: "", desc: "", priority: "medium", dueDate: "", assignedTo: "", estimatedHours: 0 });
   };
 
   // Dummy AI Task Add
@@ -763,37 +757,37 @@ const AdminContributionBoard = ({
 
   // Delete Task
   const handleTaskDelete = async (id) => {
-    if (!id) return;
+    if (!id || !selectedProjectId) return;
     try {
-      const res = await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/admin/deleteprojecttask/${id}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      console.log("Deleted Task:", res.data);
+      await projectTaskApi.deleteTask(selectedProjectId, id);
+      console.log("Deleted Task:", id);
       setTasks((prev) => prev.filter((t) => t.id !== id && t._id !== id));
       if (onTaskDelete) onTaskDelete(id);
       setEditTask(null);
-      setTaskForm({ title: "", desc: "" });
-    } catch (err) {
-      console.error("Error deleting task:", err);
-      alert("Failed to delete task.");
+      setTaskForm({ title: "", desc: "", priority: "medium", dueDate: "", assignedTo: "", estimatedHours: 0 });
+      notificationService.success('Task deleted successfully');
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      notificationService.error('Failed to delete task');
     }
   };
 
   // Open modal for edit/add
   const openEditModal = (task) => {
     setEditTask(task);
-    setTaskForm({ title: task.task_title, desc: task.task_description });
+    setTaskForm({ 
+      title: task.task_title || task.title, 
+      desc: task.task_description || task.description,
+      priority: task.priority || 'medium',
+      dueDate: task.dueDate || '',
+      assignedTo: task.assignedTo || '',
+      estimatedHours: task.estimatedHours || 0
+    });
     setShowTaskModal(true);
   };
   const openAddModal = () => {
     setEditTask(null);
-    setTaskForm({ title: "", desc: "" });
+    setTaskForm({ title: "", desc: "", priority: "medium", dueDate: "", assignedTo: "", estimatedHours: 0 });
     setShowTaskModal(true);
   };
 

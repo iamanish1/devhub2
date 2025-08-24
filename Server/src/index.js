@@ -100,6 +100,12 @@ const CorsOption = {
   ]);
 app.use(cors(CorsOption)) ;
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.path} - ${new Date().toISOString()}`);
+  next();
+});
+
 // Serve uploaded files statically
 const uploadsDir = process.env.UPLOADS_DIR || 'uploads';
 app.use('/uploads', express.static(path.join(process.cwd(), uploadsDir))); 
@@ -146,10 +152,8 @@ app.get('/', (req, res) => {
 
 // Import routes
 app.use("/api", userRoute) ; 
-app.use("/api/project", projectRoutes) ; 
 app.use("/api/bid", biddingRoutes) ;
 app.use("/api/admin", adminDashboardRoutes) ; 
-app.use("/api/project",chatRoutes);
 app.use("/api/notes", userNoteRoute ) ;
 app.use("/api", uploadRoutes) ;
 app.use("/api/saved-projects", savedProjectRoutes);
@@ -167,8 +171,13 @@ console.log("✅ Project Selection routes registered at /api/project-selection")
 // Escrow wallet routes
 app.use("/api/escrow", escrowWalletRoutes);
 
-// Project task routes
+// Project task routes (must come before general project routes to avoid conflicts)
 app.use("/api/project-tasks", projectTaskRoutes);
+console.log("✅ Project Task routes registered at /api/project-tasks");
+
+// Project routes (must come after project-tasks to avoid conflicts)
+app.use("/api/project", projectRoutes) ; 
+app.use("/api/project",chatRoutes);
 
 // Initialize chat socket
 chatSocket(io);
