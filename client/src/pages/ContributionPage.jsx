@@ -707,7 +707,7 @@ const ContributionPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#121212]">
       <Navbar />
       
       {/* Header */}
@@ -752,7 +752,7 @@ const ContributionPage = () => {
         <div className="flex space-x-6">
           {/* Sidebar */}
           <div className="w-64">
-            <div className="bg-white rounded-lg shadow p-4">
+            <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-4">
               <nav className="space-y-2">
                 {tabs.map(tab => {
                   const Icon = tab.icon;
@@ -762,8 +762,8 @@ const ContributionPage = () => {
                       onClick={() => setActiveTab(tab.id)}
                       className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         activeTab === tab.id
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          ? 'bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30'
+                          : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
                       }`}
                     >
                       <Icon className="w-4 h-4 mr-3" />
@@ -779,10 +779,10 @@ const ContributionPage = () => {
           <div className="flex-1">
             {/* Error Display */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mb-6 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
                 <div className="flex items-center">
                   <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
-                  <span className="text-red-800">{error}</span>
+                  <span className="text-red-300">{error}</span>
                 </div>
               </div>
             )}
@@ -791,56 +791,56 @@ const ContributionPage = () => {
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 {/* Project Overview Card */}
-                <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Project Overview</h2>
+                    <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">Project Overview</h2>
                     <div className="flex items-center space-x-2">
-                      <Shield className="w-5 h-5 text-green-500" />
-                      <span className="text-sm font-medium text-green-600">Active</span>
+                      <Shield className="w-5 h-5 text-green-400" />
+                      <span className="text-sm font-medium text-green-400 bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30">Active</span>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
+                    <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] border border-[#00A8E8]/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-blue-600">Project Title</p>
-                          <p className="text-lg font-semibold text-blue-900">
+                          <p className="text-sm font-medium text-[#00A8E8]">Project Title</p>
+                          <p className="text-lg font-semibold text-white">
                             {projectOverview?.project_Title || 'Loading...'}
                           </p>
                         </div>
-                        <Target className="w-8 h-8 text-blue-500" />
+                        <Target className="w-8 h-8 text-[#00A8E8]" />
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4">
+                    <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] border border-purple-500/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-purple-600">Tech Stack</p>
-                          <p className="text-lg font-semibold text-purple-900">
+                          <p className="text-sm font-medium text-purple-400">Tech Stack</p>
+                          <p className="text-lg font-semibold text-white">
                             {projectOverview?.Project_tech_stack || 'Loading...'}
                           </p>
                         </div>
-                        <Zap className="w-8 h-8 text-purple-500" />
+                        <Zap className="w-8 h-8 text-purple-400" />
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4">
+                    <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] border border-green-500/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-green-600">Contributors</p>
-                          <p className="text-lg font-semibold text-green-900">
+                          <p className="text-sm font-medium text-green-400">Contributors</p>
+                          <p className="text-lg font-semibold text-white">
                             {projectOverview?.Project_Contributor || 0} Required
                           </p>
                         </div>
-                        <Users2 className="w-8 h-8 text-green-500" />
+                        <Users2 className="w-8 h-8 text-green-400" />
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Project Description</h3>
-                    <p className="text-gray-700 leading-relaxed">
+                  <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-300 mb-3">Project Description</h3>
+                    <p className="text-gray-400 leading-relaxed">
                       {projectOverview?.Project_Description || 'Loading project description...'}
                     </p>
                   </div>
@@ -849,33 +849,33 @@ const ContributionPage = () => {
                 {/* Financial Overview */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Escrow Wallet Status */}
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-semibold text-gray-900">Escrow Wallet</h3>
-                      <Wallet className="w-6 h-6 text-blue-500" />
+                      <h3 className="text-xl font-semibold text-white">Escrow Wallet</h3>
+                      <Wallet className="w-6 h-6 text-[#00A8E8]" />
                     </div>
                     
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Total Locked Amount:</span>
-                        <span className="font-semibold text-gray-900">
+                        <span className="text-gray-400">Total Locked Amount:</span>
+                        <span className="font-semibold text-white">
                           ₹{escrowWallet?.totalEscrowAmount || 0}
                         </span>
                       </div>
                       
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Your Locked Amount:</span>
-                        <span className="font-semibold text-green-600">
+                        <span className="text-gray-400">Your Locked Amount:</span>
+                        <span className="font-semibold text-green-400">
                           ₹{userEarnings?.totalAmount || 0}
                         </span>
                       </div>
                       
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Status:</span>
+                        <span className="text-gray-400">Status:</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           escrowWallet?.status === 'locked' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                            : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                         }`}>
                           {escrowWallet?.status || 'Active'}
                         </span>
@@ -884,30 +884,30 @@ const ContributionPage = () => {
                   </div>
 
                   {/* Bonus Pool */}
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-yellow-500/20 p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-semibold text-gray-900">Bonus Pool</h3>
-                      <Trophy className="w-6 h-6 text-yellow-500" />
+                      <h3 className="text-xl font-semibold text-white">Bonus Pool</h3>
+                      <Trophy className="w-6 h-6 text-yellow-400" />
                     </div>
                     
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Total Pool:</span>
-                        <span className="font-semibold text-gray-900">
+                        <span className="text-gray-400">Total Pool:</span>
+                        <span className="font-semibold text-white">
                           ₹{bonusPool?.totalAmount || 0}
                         </span>
                       </div>
                       
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Your Share:</span>
-                        <span className="font-semibold text-yellow-600">
+                        <span className="text-gray-400">Your Share:</span>
+                        <span className="font-semibold text-yellow-400">
                           ₹{userEarnings?.bonusAmount || 0}
                         </span>
                       </div>
                       
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Remaining:</span>
-                        <span className="font-semibold text-blue-600">
+                        <span className="text-gray-400">Remaining:</span>
+                        <span className="font-semibold text-[#00A8E8]">
                           ₹{bonusPool?.remainingAmount || 0}
                         </span>
                       </div>
@@ -916,39 +916,39 @@ const ContributionPage = () => {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">Quick Actions</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <button 
                       onClick={() => setActiveTab('tasks')}
-                      className="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-[#00A8E8]/20 rounded-lg hover:bg-[#00A8E8]/10 hover:border-[#00A8E8]/40 transition-colors"
                     >
-                      <CheckSquare className="w-6 h-6 text-blue-500 mb-2" />
-                      <span className="text-sm font-medium text-blue-700">View Tasks</span>
+                      <CheckSquare className="w-6 h-6 text-[#00A8E8] mb-2" />
+                      <span className="text-sm font-medium text-[#00A8E8]">View Tasks</span>
                     </button>
                     
                     <button 
                       onClick={() => setActiveTab('chat')}
-                      className="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-green-500/20 rounded-lg hover:bg-green-500/10 hover:border-green-500/40 transition-colors"
                     >
-                      <MessageCircle className="w-6 h-6 text-green-500 mb-2" />
-                      <span className="text-sm font-medium text-green-700">Team Chat</span>
+                      <MessageCircle className="w-6 h-6 text-green-400 mb-2" />
+                      <span className="text-sm font-medium text-green-400">Team Chat</span>
                     </button>
                     
                     <button 
                       onClick={() => setActiveTab('team')}
-                      className="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-purple-500/20 rounded-lg hover:bg-purple-500/10 hover:border-purple-500/40 transition-colors"
                     >
-                      <Users2 className="w-6 h-6 text-purple-500 mb-2" />
-                      <span className="text-sm font-medium text-purple-700">Team Members</span>
+                      <Users2 className="w-6 h-6 text-purple-400 mb-2" />
+                      <span className="text-sm font-medium text-purple-400">Team Members</span>
                     </button>
                     
                     <button 
                       onClick={() => setActiveTab('earnings')}
-                      className="flex flex-col items-center p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-yellow-500/20 rounded-lg hover:bg-yellow-500/10 hover:border-yellow-500/40 transition-colors"
                     >
-                      <DollarSign className="w-6 h-6 text-yellow-500 mb-2" />
-                      <span className="text-sm font-medium text-yellow-700">Earnings</span>
+                      <DollarSign className="w-6 h-6 text-yellow-400 mb-2" />
+                      <span className="text-sm font-medium text-yellow-400">Earnings</span>
                     </button>
                   </div>
                 </div>
@@ -1038,42 +1038,42 @@ const ContributionPage = () => {
 
             {/* Project Chunks Tab */}
             {activeTab === 'chunks' && (
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Project Chunks</h2>
+                  <h2 className="text-xl font-semibold text-white">Project Chunks</h2>
                   <div className="flex items-center space-x-2">
-                    <GitBranch className="w-5 h-5 text-purple-500" />
-                    <span className="text-sm text-gray-600">Development Sections</span>
+                    <GitBranch className="w-5 h-5 text-purple-400" />
+                    <span className="text-sm text-gray-400">Development Sections</span>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {projectChunks.map((chunk) => (
-                    <div key={chunk.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div key={chunk.id} className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-gray-900">{chunk.name}</h3>
+                        <h3 className="font-semibold text-white">{chunk.name}</h3>
                         <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-xs text-gray-500">Active</span>
+                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                          <span className="text-xs text-gray-400">Active</span>
                         </div>
                       </div>
                       
                       <div className="mb-4">
-                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                        <div className="flex justify-between text-sm text-gray-400 mb-1">
                           <span>Progress</span>
                           <span>{chunk.progress}%</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-gray-700 rounded-full h-2">
                           <div 
-                            className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-300"
+                            className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${chunk.progress}%` }}
                           ></div>
                         </div>
                       </div>
                       
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Tasks: {chunk.tasks || 0}</span>
-                        <button className="text-purple-600 hover:text-purple-700 font-medium">
+                        <span className="text-gray-400">Tasks: {chunk.tasks || 0}</span>
+                        <button className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
                           View Details
                         </button>
                       </div>
@@ -1085,36 +1085,36 @@ const ContributionPage = () => {
 
             {/* Team Tab */}
             {activeTab === 'team' && (
-              <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Team Members</h2>
+                  <h2 className="text-xl font-semibold text-white">Team Members</h2>
                   <div className="flex items-center space-x-2">
-                    <Users2 className="w-5 h-5 text-indigo-500" />
-                    <span className="text-sm text-gray-600">{teamMembers.length} Contributors</span>
+                    <Users2 className="w-5 h-5 text-indigo-400" />
+                    <span className="text-sm text-gray-400">{teamMembers.length} Contributors</span>
                   </div>
                 </div>
                 
                 {teamMembers.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {teamMembers.map(member => (
-                      <div key={member.userId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div key={member.userId} className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
                         <div className="flex items-center space-x-3 mb-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
                             <User className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">{member.username || member.userId}</h3>
-                            <p className="text-sm text-gray-600">{member.role || 'Contributor'}</p>
+                            <h3 className="font-medium text-white">{member.username || member.userId}</h3>
+                            <p className="text-sm text-gray-400">{member.role || 'Contributor'}</p>
                           </div>
                         </div>
                         
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Status:</span>
+                            <span className="text-gray-400">Status:</span>
                             <span className={`px-2 py-1 rounded-full text-xs ${
                               member.isActive 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
                             }`}>
                               {member.isActive ? 'Active' : 'Inactive'}
                             </span>
@@ -1122,14 +1122,14 @@ const ContributionPage = () => {
                           
                           {member.joinedAt && (
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Joined:</span>
-                              <span>{new Date(member.joinedAt).toLocaleDateString()}</span>
+                              <span className="text-gray-400">Joined:</span>
+                              <span className="text-white">{new Date(member.joinedAt).toLocaleDateString()}</span>
                             </div>
                           )}
                           
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Tasks Completed:</span>
-                            <span className="font-medium">{member.completedTasks || 0}</span>
+                            <span className="text-gray-400">Tasks Completed:</span>
+                            <span className="font-medium text-white">{member.completedTasks || 0}</span>
                           </div>
                         </div>
                       </div>
@@ -1137,8 +1137,8 @@ const ContributionPage = () => {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <Users2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No team members found.</p>
+                    <Users2 className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-400">No team members found.</p>
                   </div>
                 )}
               </div>
@@ -1148,61 +1148,61 @@ const ContributionPage = () => {
             {activeTab === 'earnings' && (
               <div className="space-y-6">
                 {/* Earnings Overview */}
-                <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Your Earnings</h2>
-                    <DollarSign className="w-8 h-8 text-emerald-500" />
+                    <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">Your Earnings</h2>
+                    <DollarSign className="w-8 h-8 text-emerald-400" />
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4">
+                    <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] border border-emerald-500/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-emerald-600">Bid Amount</p>
-                          <p className="text-2xl font-bold text-emerald-900">
+                          <p className="text-sm font-medium text-emerald-400">Bid Amount</p>
+                          <p className="text-2xl font-bold text-white">
                             ₹{userEarnings?.bidAmount || 0}
                           </p>
                         </div>
-                        <Wallet className="w-8 h-8 text-emerald-500" />
+                        <Wallet className="w-8 h-8 text-emerald-400" />
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4">
+                    <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] border border-yellow-500/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-yellow-600">Bonus Pool Share</p>
-                          <p className="text-2xl font-bold text-yellow-900">
+                          <p className="text-sm font-medium text-yellow-400">Bonus Pool Share</p>
+                          <p className="text-2xl font-bold text-white">
                             ₹{userEarnings?.bonusAmount || 0}
                           </p>
                         </div>
-                        <Trophy className="w-8 h-8 text-yellow-500" />
+                        <Trophy className="w-8 h-8 text-yellow-400" />
                       </div>
                     </div>
                     
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4">
+                    <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] border border-[#00A8E8]/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-blue-600">Total Earnings</p>
-                          <p className="text-2xl font-bold text-blue-900">
+                          <p className="text-sm font-medium text-[#00A8E8]">Total Earnings</p>
+                          <p className="text-2xl font-bold text-white">
                             ₹{userEarnings?.totalAmount || 0}
                           </p>
                         </div>
-                        <TrendingUp className="w-8 h-8 text-blue-500" />
+                        <TrendingUp className="w-8 h-8 text-[#00A8E8]" />
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Payment Status</h3>
+                  <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-300 mb-3">Payment Status</h3>
                     <div className="flex items-center space-x-3">
                       <div className={`w-3 h-3 rounded-full ${
                         userEarnings?.status === 'released' 
-                          ? 'bg-green-500' 
+                          ? 'bg-green-400' 
                           : userEarnings?.status === 'locked'
-                          ? 'bg-yellow-500'
-                          : 'bg-gray-400'
+                          ? 'bg-yellow-400'
+                          : 'bg-gray-500'
                       }`}></div>
-                      <span className="text-gray-700">
+                      <span className="text-gray-300">
                         {userEarnings?.status === 'released' 
                           ? 'Payment Released - Available for Withdrawal'
                           : userEarnings?.status === 'locked'
@@ -1215,14 +1215,14 @@ const ContributionPage = () => {
                 </div>
 
                 {/* Withdrawal Section */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Withdraw Earnings</h3>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">Withdraw Earnings</h3>
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
                     <div className="flex items-start space-x-3">
-                      <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
+                      <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
                       <div>
-                        <h4 className="font-medium text-yellow-800">Payment Release Process</h4>
-                        <p className="text-sm text-yellow-700 mt-1">
+                        <h4 className="font-medium text-yellow-300">Payment Release Process</h4>
+                        <p className="text-sm text-yellow-200 mt-1">
                           Your earnings will be automatically released to your wallet once the project is completed and approved by the project owner.
                         </p>
                       </div>
@@ -1231,7 +1231,7 @@ const ContributionPage = () => {
                   
                   <button 
                     disabled={userEarnings?.status !== 'released'}
-                    className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                   >
                     {userEarnings?.status === 'released' 
                       ? 'Withdraw to Wallet'
@@ -1350,13 +1350,13 @@ const ContributionPage = () => {
 
             {/* Chat Tab */}
             {activeTab === 'chat' && (
-              <div className="bg-white rounded-lg shadow-md">
-                <div className="p-6 border-b border-gray-200">
+              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20">
+                <div className="p-6 border-b border-gray-700">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">Team Chat</h2>
+                    <h2 className="text-xl font-semibold text-white">Team Chat</h2>
                     <div className="flex items-center space-x-2">
-                      <MessageCircle className="w-5 h-5 text-yellow-500" />
-                      <span className="text-sm text-gray-600">Real-time messaging</span>
+                      <MessageCircle className="w-5 h-5 text-yellow-400" />
+                      <span className="text-sm text-gray-400">Real-time messaging</span>
                     </div>
                   </div>
                 </div>
@@ -1372,39 +1372,39 @@ const ContributionPage = () => {
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-medium text-gray-900">{msg.senderName || msg.sender}</span>
-                                <span className="text-xs text-gray-500">
+                                <span className="font-medium text-white">{msg.senderName || msg.sender}</span>
+                                <span className="text-xs text-gray-400">
                                   {msg.timestamp ? new Date(msg.timestamp.toDate ? msg.timestamp.toDate() : msg.timestamp).toLocaleTimeString() : 'Now'}
                                 </span>
                               </div>
-                              <p className="text-gray-700">{msg.content}</p>
+                              <p className="text-gray-300">{msg.content}</p>
                             </div>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="text-center py-8">
-                        <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">No messages yet. Start the conversation!</p>
+                        <MessageCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                        <p className="text-gray-400">No messages yet. Start the conversation!</p>
                       </div>
                     )}
                   </div>
                   
-                  <div className="p-4 border-t border-gray-200">
+                  <div className="p-4 border-t border-gray-700">
                     <div className="flex space-x-2">
                       <input
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type a message..."
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 px-3 py-2 bg-[#1A1A1A] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00A8E8] text-white placeholder-gray-400"
                         onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                         disabled={chatLoading}
                       />
                       <button
                         onClick={handleSendMessage}
                         disabled={chatLoading || !newMessage.trim()}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
+                        className="px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center transition-colors"
                       >
                         {chatLoading ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
