@@ -336,7 +336,8 @@ export const executeAutomaticSelection = async (req, res) => {
             `[ProjectSelection] Notification failed for user ${selectedUser.userId}: ${notificationError.message}`
           );
         }
-      }
+      } 
+      
 
       // Send notification to project owner
       try {
@@ -465,16 +466,22 @@ export const manualSelection = async (req, res) => {
         .json({ message: "Please select at least one user" });
     }
 
-    if (selectedUserIds.length > selection.requiredContributors) {
+    // Check if adding these users would exceed the required number of contributors
+    const currentSelectedCount = selection.selectedUsers.length;
+    const newUsersToAdd = selectedUserIds.filter(userId => 
+      !selection.selectedUsers.some(user => user.userId.toString() === userId.toString())
+    ).length;
+    
+    if (currentSelectedCount + newUsersToAdd > selection.requiredContributors) {
       logger.warn(
-        `[ProjectSelection] Too many users selected: ${selectedUserIds.length} > ${selection.requiredContributors}`
+        `[ProjectSelection] Too many users would be selected: ${currentSelectedCount + newUsersToAdd} > ${selection.requiredContributors}`
       );
       return res.status(400).json({
-        message: `Cannot select more than ${selection.requiredContributors} users`,
+        message: `Cannot select more than ${selection.requiredContributors} users total`,
       });
     }
 
-    // Get bids for selected users
+    // Get bids for selected users (including rejected bids that can be re-accepted)
     logger.info(
       `[ProjectSelection] Finding bids for users: ${selectedUserIds.join(", ")}`
     );
@@ -482,12 +489,19 @@ export const manualSelection = async (req, res) => {
     const bids = await Bidding.find({
       project_id: projectId,
       user_id: { $in: selectedUserIds },
-      bid_status: "Pending",
+      bid_status: { $in: ["Pending", "Rejected"] }, // Allow re-accepting rejected bids
     });
 
     logger.info(
       `[ProjectSelection] Found ${bids.length} valid bids out of ${selectedUserIds.length} selected users`
     );
+
+    // Log bid statuses for debugging
+    bids.forEach(bid => {
+      logger.info(
+        `[ProjectSelection] Bid ${bid._id} for user ${bid.user_id} has status: ${bid.bid_status}`
+      );
+    });
 
     if (bids.length !== selectedUserIds.length) {
       logger.warn(
@@ -511,10 +525,25 @@ export const manualSelection = async (req, res) => {
       selectedAt: new Date(),
     }));
 
-    // Update selection
-    selection.selectedUsers = selectedUsers;
-    selection.status = "completed";
-    selection.selectionCompletedAt = new Date();
+    // Update or add selections (replace existing selections for the same users)
+    const existingUserIds = selection.selectedUsers.map(user => user.userId.toString());
+    
+    // Remove existing selections for users being re-selected
+    selection.selectedUsers = selection.selectedUsers.filter(user => 
+      !selectedUserIds.includes(user.userId.toString())
+    );
+    
+    // Add new selections
+    selection.selectedUsers = [...selection.selectedUsers, ...selectedUsers];
+    
+    // Update status based on whether we have enough contributors
+    if (selection.selectedUsers.length >= selection.requiredContributors) {
+      selection.status = "completed";
+      selection.selectionCompletedAt = new Date();
+    } else {
+      selection.status = "in_progress";
+    }
+    
     selection.totalBidsConsidered = bids.length;
 
     // Add manual override log
