@@ -36,13 +36,13 @@ projectSelectionRoutes.get('/:projectId', authMiddleware, getProjectSelection);
 
 // Execute automatic selection
 projectSelectionRoutes.post('/:projectId/execute-automatic', authMiddleware, (req, res, next) => {
-  console.log(`🔍 Automatic selection route hit: ${req.params.projectId}`);
+  console.log(` Automatic selection route hit: ${req.params.projectId}`);
   next();
 }, executeAutomaticSelection);
 
 // Manual selection of users
 projectSelectionRoutes.post('/:projectId/manual-selection', authMiddleware, (req, res, next) => {
-  console.log(`🔍 Manual selection route hit: ${req.params.projectId}`);
+  console.log(` Manual selection route hit: ${req.params.projectId}`);
   next();
 }, manualSelection);
 

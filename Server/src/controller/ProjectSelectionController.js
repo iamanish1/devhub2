@@ -324,6 +324,8 @@ export const manualSelection = async (req, res) => {
     const { projectId } = req.params;
     const { selectedUserIds, reason = 'manual' } = req.body;
 
+    logger.info(`[ProjectSelection] Manual selection request for project: ${projectId}, users: ${selectedUserIds}, reason: ${reason}`);
+
     // Validate project exists and user owns it
     const project = await ProjectListing.findById(projectId);
     if (!project) {
@@ -334,31 +336,57 @@ export const manualSelection = async (req, res) => {
       return res.status(403).json({ message: 'You can only select users for your own projects' });
     }
 
-    // Get selection configuration
+    // Get or create selection configuration
     let selection = await ProjectSelection.findOne({ projectId });
     if (!selection) {
-      return res.status(404).json({ message: 'Selection configuration not found' });
+      // Create default selection configuration for manual selection
+      selection = new ProjectSelection({
+        projectId,
+        projectOwner: req.user._id,
+        selectionMode: 'manual',
+        requiredContributors: project.Project_Contributor || 10, // Default to 10 if not specified
+        maxBidsToConsider: 50,
+        requiredSkills: [],
+        criteriaWeights: {
+          skillMatch: 40,
+          bidAmount: 30,
+          experience: 20,
+          availability: 10
+        },
+        status: 'pending'
+      });
+      await selection.save();
+      logger.info(`[ProjectSelection] Created default selection config for project: ${projectId} with requiredContributors: ${selection.requiredContributors}`);
     }
 
     // Validate selected users
+    logger.info(`[ProjectSelection] Validating selected users: ${selectedUserIds?.length || 0} users, max allowed: ${selection.requiredContributors}`);
+    
     if (!selectedUserIds || !Array.isArray(selectedUserIds) || selectedUserIds.length === 0) {
+      logger.warn(`[ProjectSelection] No users selected for project: ${projectId}`);
       return res.status(400).json({ message: 'Please select at least one user' });
     }
 
     if (selectedUserIds.length > selection.requiredContributors) {
+      logger.warn(`[ProjectSelection] Too many users selected: ${selectedUserIds.length} > ${selection.requiredContributors}`);
       return res.status(400).json({ 
         message: `Cannot select more than ${selection.requiredContributors} users` 
       });
     }
 
     // Get bids for selected users
+    logger.info(`[ProjectSelection] Finding bids for users: ${selectedUserIds.join(', ')}`);
+    
     const bids = await Bidding.find({
       project_id: projectId,
       user_id: { $in: selectedUserIds },
       bid_status: 'Pending'
     });
 
+    logger.info(`[ProjectSelection] Found ${bids.length} valid bids out of ${selectedUserIds.length} selected users`);
+
     if (bids.length !== selectedUserIds.length) {
+      logger.warn(`[ProjectSelection] Bid mismatch: ${bids.length} bids found for ${selectedUserIds.length} users`);
       return res.status(400).json({ message: 'Some selected users do not have valid bids' });
     }
 
