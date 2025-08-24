@@ -671,7 +671,20 @@ const AdminContributionBoard = ({
   // Add/Edit Task
   const handleTaskFormSubmit = async (e) => {
     e.preventDefault();
-    if (!taskForm.title.trim() || !selectedProjectId) return;
+    
+    // Debug logging
+    console.log('🔍 Task form submission debug:');
+    console.log('  taskForm:', taskForm);
+    console.log('  selectedProjectId:', selectedProjectId);
+    console.log('  user:', user);
+    console.log('  user._id:', user?._id);
+    
+    if (!taskForm.title.trim() || !selectedProjectId) {
+      console.error('❌ Validation failed:');
+      console.error('  title:', taskForm.title);
+      console.error('  selectedProjectId:', selectedProjectId);
+      return;
+    }
 
     try {
       const taskData = {
@@ -683,6 +696,8 @@ const AdminContributionBoard = ({
         estimatedHours: taskForm.estimatedHours || 0,
         status: 'pending'
       };
+      
+      console.log('🔍 Task data being sent:', taskData);
 
       if (editTask) {
         // Update existing task using new API
@@ -710,6 +725,10 @@ const AdminContributionBoard = ({
         notificationService.success('Task updated successfully');
       } else {
         // Create new task using new API
+        console.log('🔍 About to call projectTaskApi.createTask with:');
+        console.log('  projectId:', selectedProjectId);
+        console.log('  taskData:', taskData);
+        
         const result = await projectTaskApi.createTask(selectedProjectId, taskData);
         console.log("Created Task:", result);
         
@@ -731,8 +750,24 @@ const AdminContributionBoard = ({
         notificationService.success('Task created successfully');
       }
     } catch (error) {
-      console.error("Error handling task:", error);
-      notificationService.error('Failed to save task');
+      console.error("❌ Error handling task:", error);
+      console.error("❌ Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      
+      // More specific error messages
+      if (error.response?.status === 404) {
+        notificationService.error('API endpoint not found. Please check server configuration.');
+      } else if (error.response?.status === 401) {
+        notificationService.error('Authentication failed. Please log in again.');
+      } else if (error.response?.status === 403) {
+        notificationService.error('Access denied. You may not have permission for this project.');
+      } else {
+        notificationService.error('Failed to save task: ' + (error.response?.data?.message || error.message));
+      }
       return;
     }
 
