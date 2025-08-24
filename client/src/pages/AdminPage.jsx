@@ -95,12 +95,7 @@ const AdminPage = () => {
     email: "jane.doe@devhubs.com",
   };
 
-  // Project Selection System State
-  const [projectSelections, setProjectSelections] = useState([]);
-  const [selectionsLoading, setSelectionsLoading] = useState(false);
-  const [selectionsError, setSelectionsError] = useState(null);
-  const [selectedProjectForSelection, setSelectedProjectForSelection] = useState(null);
-  const [showSelectionModal, setShowSelectionModal] = useState(false);
+
 
   // Enhanced Applicants State for Selection Integration
   const [applicantsByProject, setApplicantsByProject] = useState({});
@@ -164,7 +159,6 @@ const AdminPage = () => {
           setApplicantsByProject(groupedApplicants);
           setSelectionConfigs(configs);
           setApplicants(applicants);
-          setProjectSelections(selections);
           setApplicantsError(null);
         })
         .catch((error) => {
@@ -175,27 +169,7 @@ const AdminPage = () => {
     }
   }, [view]);
 
-  // Fetch project selections when "selection" view is active
-  useEffect(() => {
-    if (view === "selection") {
-      setSelectionsLoading(true);
-      setSelectionsError(null);
-      
-      console.log("🔍 Fetching project selections...");
-      
-      projectSelectionApi.getProjectOwnerSelections()
-        .then((data) => {
-          console.log("✅ Project selections fetched:", data);
-          setProjectSelections(data.selections || []);
-          setSelectionsError(null);
-        })
-        .catch((error) => {
-          console.error("❌ Error fetching selections:", error);
-          setSelectionsError(`Failed to fetch project selections: ${error.message || error}`);
-        })
-        .finally(() => setSelectionsLoading(false));
-    }
-  }, [view]);
+
 
   // Fetch escrow wallets when "escrow" view is active
   useEffect(() => {
@@ -357,7 +331,6 @@ const AdminPage = () => {
       notificationService.success("Project selection created successfully");
       // Refresh data
       const data = await projectSelectionApi.getProjectOwnerSelections();
-      setProjectSelections(data.selections || []);
       setSelectionConfigs(prev => ({
         ...prev,
         [projectId]: selectionData
@@ -398,7 +371,6 @@ const AdminPage = () => {
       });
       
       setApplicantsByProject(groupedApplicants);
-      setProjectSelections(selections);
       setApplicants(applicants);
     } catch (error) {
       notificationService.error("Failed to execute selection");
@@ -449,7 +421,6 @@ const AdminPage = () => {
       });
       
       setApplicantsByProject(groupedApplicants);
-      setProjectSelections(selections);
       setApplicants(applicants);
     } catch (error) {
       notificationService.error("Failed to complete manual selection");
@@ -540,17 +511,7 @@ const AdminPage = () => {
             Project Management 
           </button>
 
-          <button
-            className={`text-left px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
-              view === "selection"
-                ? "bg-blue-500 text-white shadow"
-                : "hover:bg-blue-500/10 hover:text-blue-400"
-            }`}
-            onClick={() => setView("selection")}
-          >
-            <FaUserCog className="inline mr-2" />
-            Project Selection
-          </button>
+
 
           <button
             className={`text-left px-4 py-2 rounded-lg transition-all duration-200 font-medium ${
@@ -1311,127 +1272,7 @@ const AdminPage = () => {
           </section>
         )}
 
-        {/* Project Selection System Section */}
-        {view === "selection" && (
-          <section>
-            <div className="mb-8">
-              <h1 className="text-4xl font-bold mb-2 text-blue-400">
-                Project Selection Management
-              </h1>
-              <p className="text-gray-300 text-lg">
-                Configure and manage user selection for your projects
-              </p>
-            </div>
 
-            {selectionsLoading ? (
-              <div className="text-blue-300 text-lg">Loading project selections...</div>
-            ) : selectionsError ? (
-              <div className="text-red-400 text-lg">{selectionsError}</div>
-            ) : (
-              <div className="space-y-6">
-                {/* Quick Actions */}
-                <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
-                  <h2 className="text-2xl font-bold mb-4 text-blue-400">Quick Actions</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                      onClick={() => setShowSelectionModal(true)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      <FaUserCog />
-                      Create New Selection
-                    </button>
-                    <Link to="/project-selection/new" className="block">
-                      <button className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2">
-                        <FaCog />
-                        Advanced Configuration
-                      </button>
-                    </Link>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      <FaChartLine />
-                      Refresh Data
-                    </button>
-                  </div>
-                </div>
-
-                {/* Project Selections List */}
-                <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
-                  <h2 className="text-2xl font-bold mb-4 text-blue-400">Active Selections</h2>
-                  {projectSelections.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <FaUserCog className="text-4xl mx-auto mb-4" />
-                      <p>No project selections found.</p>
-                      <p className="text-sm">Create a new selection to get started.</p>
-                      <div className="mt-4">
-                        <button
-                          onClick={() => setShowSelectionModal(true)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
-                        >
-                          Create Your First Selection
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {projectSelections.map((selection) => (
-                        <div
-                          key={selection._id}
-                          className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10 hover:border-blue-400 transition"
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-white">
-                              {selection.projectId?.project_Title || "Untitled Project"}
-                            </h3>
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                              selection.status === 'completed' ? 'bg-green-900/40 text-green-400' :
-                              selection.status === 'in_progress' ? 'bg-blue-900/40 text-blue-400' :
-                              'bg-yellow-900/40 text-yellow-400'
-                            }`}>
-                              {selection.status?.toUpperCase() || 'PENDING'}
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-2 text-sm text-gray-300">
-                            <div>
-                              <span className="font-semibold">Mode:</span> {selection.selectionMode}
-                            </div>
-                            <div>
-                              <span className="font-semibold">Required:</span> {selection.requiredContributors} contributors
-                            </div>
-                            <div>
-                              <span className="font-semibold">Considered:</span> {selection.totalBidsConsidered || 0} bids
-                            </div>
-                            <div>
-                              <span className="font-semibold">Selected:</span> {selection.selectedUsers?.length || 0} users
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2 mt-4">
-                            <Link to={`/project-selection/${selection.projectId}`}>
-                              <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition text-xs">
-                                Manage
-                              </button>
-                            </Link>
-                            {selection.status === 'pending' && (
-                              <button
-                                onClick={() => handleExecuteSelection(selection.projectId)}
-                                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition text-xs"
-                              >
-                                Execute
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-        )}
 
         {/* Escrow Management System Section */}
         {view === "escrow" && (
@@ -1581,164 +1422,7 @@ const AdminPage = () => {
           </section>
         )}
 
-        {/* Create Selection Modal */}
-        {showSelectionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-            <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-md border border-blue-500/20 shadow-2xl">
-              <h2 className="text-2xl font-bold mb-6 text-blue-400 text-center">
-                Create Project Selection
-              </h2>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const projectId = formData.get('projectId');
-                const selectionData = {
-                  requiredContributors: parseInt(formData.get('requiredContributors')),
-                  desiredBids: parseInt(formData.get('desiredBids')),
-                  selectionMode: formData.get('selectionMode'),
-                  selectionCriteria: {
-                    skillWeight: parseFloat(formData.get('skillWeight')),
-                    bidWeight: parseFloat(formData.get('bidWeight')),
-                    experienceWeight: parseFloat(formData.get('experienceWeight')),
-                    availabilityWeight: parseFloat(formData.get('availabilityWeight'))
-                  }
-                };
-                handleCreateSelection(projectId, selectionData);
-                setShowSelectionModal(false);
-              }}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Project ID
-                    </label>
-                    <input
-                      type="text"
-                      name="projectId"
-                      required
-                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                      placeholder="Enter project ID"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Required Contributors
-                    </label>
-                    <input
-                      type="number"
-                      name="requiredContributors"
-                      required
-                      min="1"
-                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Desired Bids
-                    </label>
-                    <input
-                      type="number"
-                      name="desiredBids"
-                      required
-                      min="1"
-                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Selection Mode
-                    </label>
-                    <select
-                      name="selectionMode"
-                      required
-                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                    >
-                      <option value="automatic">Automatic</option>
-                      <option value="manual">Manual</option>
-                      <option value="hybrid">Hybrid</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Skill Weight
-                      </label>
-                      <input
-                        type="number"
-                        name="skillWeight"
-                        required
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        defaultValue="0.3"
-                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Bid Weight
-                      </label>
-                      <input
-                        type="number"
-                        name="bidWeight"
-                        required
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        defaultValue="0.3"
-                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Experience Weight
-                      </label>
-                      <input
-                        type="number"
-                        name="experienceWeight"
-                        required
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        defaultValue="0.2"
-                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Availability Weight
-                      </label>
-                      <input
-                        type="number"
-                        name="availabilityWeight"
-                        required
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        defaultValue="0.2"
-                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-4 mt-6">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
-                  >
-                    Create Selection
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSelectionModal(false)}
-                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+
 
         {/* Selection Configuration Modal */}
         {showSelectionConfigModal && selectedProjectForConfig && (
