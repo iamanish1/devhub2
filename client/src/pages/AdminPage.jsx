@@ -430,8 +430,8 @@ const AdminPage = () => {
       const userId = applicant.user_id;
 
       if (action === "accept") {
-        // Use new manual selection system for individual acceptance
-        const result = await projectSelectionApi.manualSelection(projectId, [userId], "individual_selection");
+                  // Use new manual selection system for individual acceptance
+          const result = await projectSelectionApi.manualSelection(projectId, [userId], "manual");
         
         if (result.success) {
           // Update Firebase for real-time updates
