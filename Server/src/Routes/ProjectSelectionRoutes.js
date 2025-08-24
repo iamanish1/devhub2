@@ -18,7 +18,13 @@ const projectSelectionRoutes = express.Router();
 projectSelectionRoutes.get('/test', (req, res) => {
   res.status(200).json({ 
     message: 'Project Selection routes are working',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    routes: [
+      'POST /:projectId/manual-selection',
+      'POST /:projectId/execute-automatic',
+      'GET /:projectId/ranked-bidders',
+      'GET /owner/selections'
+    ]
   });
 });
 
@@ -29,19 +35,25 @@ projectSelectionRoutes.post('/create/:projectId', authMiddleware, createProjectS
 projectSelectionRoutes.get('/:projectId', authMiddleware, getProjectSelection);
 
 // Execute automatic selection
-projectSelectionRoutes.post('/:projectId/execute-automatic', authMiddleware, executeAutomaticSelection);
+projectSelectionRoutes.post('/:projectId/execute-automatic', authMiddleware, (req, res, next) => {
+  console.log(`🔍 Automatic selection route hit: ${req.params.projectId}`);
+  next();
+}, executeAutomaticSelection);
 
 // Manual selection of users
-projectSelectionRoutes.post('/:projectId/manual-selection', authMiddleware, manualSelection);
+projectSelectionRoutes.post('/:projectId/manual-selection', authMiddleware, (req, res, next) => {
+  console.log(`🔍 Manual selection route hit: ${req.params.projectId}`);
+  next();
+}, manualSelection);
+
+// Get all selections for project owner (must come before :projectId routes)
+projectSelectionRoutes.get('/owner/selections', authMiddleware, getProjectOwnerSelections);
 
 // Get ranked bidders for manual selection
 projectSelectionRoutes.get('/:projectId/ranked-bidders', authMiddleware, getRankedBidders);
 
 // Update selection configuration
 projectSelectionRoutes.put('/:projectId/config', authMiddleware, updateSelectionConfig);
-
-// Get all selections for project owner
-projectSelectionRoutes.get('/owner/selections', authMiddleware, getProjectOwnerSelections);
 
 // Cancel selection
 projectSelectionRoutes.post('/:projectId/cancel', authMiddleware, cancelSelection);
