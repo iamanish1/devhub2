@@ -164,11 +164,10 @@ const AdminContributionBoard = ({
     
     const listeners = [];
 
-    // 1. Real-time tasks listener
+    // 1. Real-time tasks listener (simplified query)
     const tasksQuery = query(
       collection(db, "project_tasks"),
-      where("projectId", "==", selectedProjectId),
-      orderBy("createdAt", "desc")
+      where("projectId", "==", selectedProjectId)
     );
     
     const tasksUnsubscribe = onSnapshot(tasksQuery, (snapshot) => {
@@ -176,6 +175,12 @@ const AdminContributionBoard = ({
       const tasksData = [];
       snapshot.forEach((doc) => {
         tasksData.push({ id: doc.id, ...doc.data() });
+      });
+      // Sort tasks by createdAt in JavaScript instead of Firebase
+      tasksData.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+        return dateB - dateA;
       });
       setTasks(tasksData);
       
@@ -193,6 +198,8 @@ const AdminContributionBoard = ({
       });
     }, (error) => {
       console.error("❌ Firebase tasks listener error:", error);
+      // Fallback to API if Firebase fails
+      loadTasksFromAPI();
     });
     listeners.push(tasksUnsubscribe);
 
@@ -214,11 +221,10 @@ const AdminContributionBoard = ({
     });
     listeners.push(teamUnsubscribe);
 
-    // 3. Real-time task comments listener
+    // 3. Real-time task comments listener (simplified query)
     const commentsQuery = query(
       collection(db, "task_comments"),
-      where("projectId", "==", selectedProjectId),
-      orderBy("createdAt", "desc")
+      where("projectId", "==", selectedProjectId)
     );
     
     const commentsUnsubscribe = onSnapshot(commentsQuery, (snapshot) => {
@@ -231,17 +237,24 @@ const AdminContributionBoard = ({
         }
         commentsData[data.taskId].push({ id: doc.id, ...data });
       });
+      // Sort comments by createdAt in JavaScript instead of Firebase
+      Object.keys(commentsData).forEach(taskId => {
+        commentsData[taskId].sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+          return dateB - dateA;
+        });
+      });
       setTaskComments(commentsData);
     }, (error) => {
       console.error("❌ Firebase comments listener error:", error);
     });
     listeners.push(commentsUnsubscribe);
 
-    // 4. Real-time task files listener
+    // 4. Real-time task files listener (simplified query)
     const filesQuery = query(
       collection(db, "task_files"),
-      where("projectId", "==", selectedProjectId),
-      orderBy("uploadedAt", "desc")
+      where("projectId", "==", selectedProjectId)
     );
     
     const filesUnsubscribe = onSnapshot(filesQuery, (snapshot) => {
@@ -254,24 +267,37 @@ const AdminContributionBoard = ({
         }
         filesData[data.taskId].push({ id: doc.id, ...data });
       });
+      // Sort files by uploadedAt in JavaScript instead of Firebase
+      Object.keys(filesData).forEach(taskId => {
+        filesData[taskId].sort((a, b) => {
+          const dateA = a.uploadedAt?.toDate?.() || new Date(a.uploadedAt);
+          const dateB = b.uploadedAt?.toDate?.() || new Date(b.uploadedAt);
+          return dateB - dateA;
+        });
+      });
       setTaskFiles(filesData);
     }, (error) => {
       console.error("❌ Firebase files listener error:", error);
     });
     listeners.push(filesUnsubscribe);
 
-    // 5. Real-time online users listener
+    // 5. Real-time online users listener (simplified query)
     const onlineQuery = query(
       collection(db, "online_users"),
-      where("projectId", "==", selectedProjectId),
-      where("lastSeen", ">", new Date(Date.now() - 5 * 60 * 1000)) // Last 5 minutes
+      where("projectId", "==", selectedProjectId)
     );
     
     const onlineUnsubscribe = onSnapshot(onlineQuery, (snapshot) => {
       console.log("🔄 Firebase online users update:", snapshot.docChanges().length, 'changes');
       const onlineData = [];
       snapshot.forEach((doc) => {
-        onlineData.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        // Filter online users in JavaScript instead of Firebase
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const lastSeen = data.lastSeen?.toDate?.() || new Date(data.lastSeen);
+        if (lastSeen > fiveMinutesAgo) {
+          onlineData.push({ id: doc.id, ...data });
+        }
       });
       setOnlineUsers(onlineData);
     }, (error) => {
@@ -279,12 +305,10 @@ const AdminContributionBoard = ({
     });
     listeners.push(onlineUnsubscribe);
 
-    // 6. Real-time notifications listener
+    // 6. Real-time notifications listener (simplified query)
     const notificationsQuery = query(
       collection(db, "project_notifications"),
-      where("projectId", "==", selectedProjectId),
-      orderBy("createdAt", "desc"),
-      limit(50)
+      where("projectId", "==", selectedProjectId)
     );
     
     const notificationsUnsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
@@ -293,6 +317,12 @@ const AdminContributionBoard = ({
       snapshot.forEach((doc) => {
         notificationsData.push({ id: doc.id, ...doc.data() });
       });
+      // Sort and limit notifications in JavaScript instead of Firebase
+      notificationsData.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+        return dateB - dateA;
+      }).slice(0, 50); // Limit to 50 most recent
       setNotifications(notificationsData);
     }, (error) => {
       console.error("❌ Firebase notifications listener error:", error);
@@ -568,11 +598,50 @@ const AdminContributionBoard = ({
         setStatistics(statsData.statistics);
       } catch (statsError) {
         console.error('Failed to load statistics:', statsError);
+        // Set default statistics if API fails
+        setStatistics({
+          project: { id: selectedProjectId, title: 'Project', description: '' },
+          tasks: { total: 0, completed: 0, inProgress: 0, pending: 0, progressPercentage: 0 },
+          team: { totalMembers: 0, activeContributors: 0 },
+          time: { totalEstimatedHours: 0, totalActualHours: 0, efficiency: 0 }
+        });
       }
       
     } catch (err) {
       console.error('Failed to load workspace:', err);
       // Don't show error for workspace loading as it's optional
+    }
+  };
+
+  // Fallback function to load tasks from API when Firebase fails
+  const loadTasksFromAPI = async () => {
+    if (!selectedProjectId) return;
+    
+    try {
+      console.log('🔄 Loading tasks from API as Firebase fallback...');
+      const response = await projectTaskApi.getUserTasks({ projectId: selectedProjectId });
+      if (response.tasks) {
+        setTasks(response.tasks);
+        console.log('✅ Loaded', response.tasks.length, 'tasks from API');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load tasks from API:', error);
+    }
+  };
+
+  // Fallback function to load statistics from API when Firebase fails
+  const loadStatisticsFromAPI = async () => {
+    if (!selectedProjectId) return;
+    
+    try {
+      console.log('🔄 Loading statistics from API as Firebase fallback...');
+      const response = await projectTaskApi.getProjectStatistics(selectedProjectId);
+      if (response.statistics) {
+        setStatistics(response.statistics);
+        console.log('✅ Loaded statistics from API');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load statistics from API:', error);
     }
   };
 

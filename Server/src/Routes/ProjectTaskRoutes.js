@@ -34,9 +34,9 @@ projectTaskRoutes.post('/:projectId/tasks/:taskId/comments', authMiddleware, add
 projectTaskRoutes.post('/:projectId/tasks/:taskId/files', authMiddleware, upload.single('file'), uploadTaskFile);
 
 // User and project data
-projectTaskRoutes.get('/user/tasks', authMiddleware, getUserTasks);
 projectTaskRoutes.get('/:projectId/statistics', authMiddleware, getProjectStatistics);
 projectTaskRoutes.get('/:projectId/team', authMiddleware, getTeamMembers);
+projectTaskRoutes.get('/user/tasks', authMiddleware, getUserTasks);
 
 // Debug endpoints
 projectTaskRoutes.get('/debug/:projectId', authMiddleware, debugProjectAccess);
