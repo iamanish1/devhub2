@@ -495,34 +495,75 @@ export const manualSelection = async (req, res) => {
       `[ProjectSelection] Finding bids for users: ${selectedUserIds.join(", ")}`
     );
 
-    const bids = await Bidding.find({
+    // First, get all bids for these users regardless of status
+    const allBids = await Bidding.find({
       project_id: projectId,
-      user_id: { $in: selectedUserIds },
-      bid_status: { $in: ["Pending", "Rejected"] }, // Allow re-accepting rejected bids
+      user_id: { $in: selectedUserIds }
     });
 
     logger.info(
-      `[ProjectSelection] Found ${bids.length} valid bids out of ${selectedUserIds.length} selected users`
+      `[ProjectSelection] Found ${allBids.length} total bids for ${selectedUserIds.length} selected users`
     );
 
-    // Log bid statuses for debugging
-    bids.forEach(bid => {
+    // Log all bid statuses for debugging
+    allBids.forEach(bid => {
       logger.info(
         `[ProjectSelection] Bid ${bid._id} for user ${bid.user_id} has status: ${bid.bid_status}`
       );
     });
 
-    if (bids.length !== selectedUserIds.length) {
+    // Create a map of user IDs to their bids
+    const userBidMap = new Map();
+    allBids.forEach(bid => {
+      const userId = bid.user_id.toString();
+      if (!userBidMap.has(userId)) {
+        userBidMap.set(userId, []);
+      }
+      userBidMap.get(userId).push(bid);
+    });
+
+    // Check which users don't have any bids
+    const usersWithoutBids = selectedUserIds.filter(userId => 
+      !userBidMap.has(userId.toString())
+    );
+
+    if (usersWithoutBids.length > 0) {
       logger.warn(
-        `[ProjectSelection] Bid mismatch: ${bids.length} bids found for ${selectedUserIds.length} users`
+        `[ProjectSelection] Users without any bids: ${usersWithoutBids.join(", ")}`
       );
       return res
         .status(400)
-        .json({ message: "Some selected users do not have valid bids" });
+        .json({ 
+          message: "Some selected users do not have any bids",
+          missingUsers: usersWithoutBids,
+          totalBidsFound: allBids.length,
+          expectedBids: selectedUserIds.length
+        });
     }
 
+    // For each user, select the best available bid (Accepted > Pending > Rejected)
+    const selectedBids = [];
+    for (const userId of selectedUserIds) {
+      const userBids = userBidMap.get(userId.toString());
+      if (!userBids || userBids.length === 0) {
+        continue; // This should not happen due to the check above
+      }
+
+      // Sort bids by priority: Accepted > Pending > Rejected
+      const sortedBids = userBids.sort((a, b) => {
+        const statusPriority = { 'Accepted': 3, 'Pending': 2, 'Rejected': 1 };
+        return statusPriority[b.bid_status] - statusPriority[a.bid_status];
+      });
+
+      selectedBids.push(sortedBids[0]); // Take the highest priority bid
+    }
+
+    logger.info(
+      `[ProjectSelection] Selected ${selectedBids.length} bids for ${selectedUserIds.length} users`
+    );
+
     // Create selected users array
-    const selectedUsers = bids.map((bid, index) => ({
+    const selectedUsers = selectedBids.map((bid, index) => ({
       userId: bid.user_id,
       bidId: bid._id,
       selectionScore: 100, // Manual selection gets full score
@@ -553,7 +594,7 @@ export const manualSelection = async (req, res) => {
       selection.status = "in_progress";
     }
     
-    selection.totalBidsConsidered = bids.length;
+    selection.totalBidsConsidered = selectedBids.length;
 
     // Add manual override log
     selectedUserIds.forEach((userId) => {

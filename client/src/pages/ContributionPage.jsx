@@ -132,6 +132,29 @@ const ContributionPage = () => {
     }
   };
 
+  // Load bid debug info
+  const loadBidDebugInfo = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/debug/${projectId}/bids`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔍 Bid debug info:', data);
+        setDebugInfo(prev => ({ ...prev, bidDebug: data }));
+      } else {
+        console.error('❌ Failed to load bid debug info:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error loading bid debug info:', error);
+    }
+  };
+
   const loadWorkspace = async () => {
     try {
       if (!projectId) {
@@ -420,6 +443,12 @@ const ContributionPage = () => {
                   Create Firebase Access
                 </button>
                 <button
+                  onClick={loadBidDebugInfo}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                >
+                  Load Bid Debug Info
+                </button>
+                <button
                   onClick={() => setShowDebug(false)}
                   className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                 >
@@ -454,6 +483,13 @@ const ContributionPage = () => {
                   <h3 className="font-semibold mb-2">Firebase Access</h3>
                   <pre className="text-sm overflow-auto">{JSON.stringify(debugInfo.firebase, null, 2)}</pre>
                 </div>
+                
+                {debugInfo.bidDebug && (
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <h3 className="font-semibold mb-2">Bid Debug Info</h3>
+                    <pre className="text-sm overflow-auto">{JSON.stringify(debugInfo.bidDebug, null, 2)}</pre>
+                  </div>
+                )}
               </div>
             )}
           </div>

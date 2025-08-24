@@ -1,5 +1,5 @@
 import express from 'express';
-import { checkWorkspaceAccess, getWorkspace, debugProjectAccess } from '../controller/ProjectTaskController.js';
+import { checkWorkspaceAccess, getWorkspace, debugProjectAccess, debugProjectBids } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 
 const projectTaskRoutes = express.Router();
@@ -12,5 +12,8 @@ projectTaskRoutes.get('/workspace/:projectId', authMiddleware, getWorkspace);
 
 // Debug endpoint for project access
 projectTaskRoutes.get('/debug/:projectId', authMiddleware, debugProjectAccess);
+
+// Debug endpoint for project bids
+projectTaskRoutes.get('/debug/:projectId/bids', authMiddleware, debugProjectBids);
 
 export default projectTaskRoutes;

@@ -322,3 +322,76 @@ export const createFirebaseAccess = async (req, res) => {
     });
   }
 };
+
+/**
+ * Debug endpoint to check all bids for a project
+ */
+export const debugProjectBids = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[ProjectTask] Debug bids for project ${projectId}`);
+
+    // Get project details
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Check if user is project owner
+    const isProjectOwner = project.user.toString() === userId.toString();
+    if (!isProjectOwner) {
+      return res.status(403).json({ message: 'Only project owner can view bid details' });
+    }
+
+    // Get all bids for this project
+    const allBids = await Bidding.find({ project_id: projectId })
+      .populate('user_id', 'username email')
+      .sort({ createdAt: -1 });
+
+    // Group bids by user
+    const bidsByUser = {};
+    allBids.forEach(bid => {
+      const userId = bid.user_id._id.toString();
+      if (!bidsByUser[userId]) {
+        bidsByUser[userId] = [];
+      }
+      bidsByUser[userId].push({
+        id: bid._id,
+        status: bid.bid_status,
+        amount: bid.bid_amount,
+        description: bid.bid_description,
+        createdAt: bid.createdAt,
+        user: {
+          id: bid.user_id._id,
+          username: bid.user_id.username,
+          email: bid.user_id.email
+        }
+      });
+    });
+
+    const debugInfo = {
+      project: {
+        id: project._id,
+        title: project.project_Title,
+        owner: project.user
+      },
+      totalBids: allBids.length,
+      bidsByUser: bidsByUser,
+      bidStatuses: allBids.reduce((acc, bid) => {
+        acc[bid.bid_status] = (acc[bid.bid_status] || 0) + 1;
+        return acc;
+      }, {})
+    };
+
+    res.status(200).json(debugInfo);
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error in debugProjectBids: ${error.message}`, error);
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: error.message 
+    });
+  }
+};
