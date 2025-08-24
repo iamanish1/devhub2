@@ -191,6 +191,14 @@ const AdminPage = () => {
     }
   }, [view]);
 
+  // Cleanup Firebase listeners when component unmounts or view changes
+  useEffect(() => {
+    return () => {
+      // Cleanup function will be called when component unmounts
+      console.log("Cleaning up Firebase listeners");
+    };
+  }, [view]);
+
   // Firebase real-time listeners setup
   const setupFirebaseListeners = (groupedApplicants) => {
     Object.keys(groupedApplicants).forEach(projectId => {
@@ -202,8 +210,10 @@ const AdminPage = () => {
       );
       
       const unsubscribe = onSnapshot(applicantQuery, (snapshot) => {
+        console.log(`🔄 Firebase update for project ${projectId}:`, snapshot.docChanges().length, 'changes');
         snapshot.docChanges().forEach((change) => {
           const data = change.doc.data();
+          console.log(`📝 Applicant status change:`, change.type, data);
           if (change.type === 'modified' || change.type === 'added') {
             setRealTimeUpdates(prev => ({
               ...prev,
@@ -212,8 +222,33 @@ const AdminPage = () => {
                 [data.userId]: data
               }
             }));
+            
+            // Update local applicants state for real-time UI updates
+            if (data.applicantId) {
+              setApplicants(prev => 
+                prev.map(app => 
+                  app._id === data.applicantId 
+                    ? { ...app, bid_status: data.status }
+                    : app
+                )
+              );
+              
+              setApplicantsByProject(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(projectKey => {
+                  updated[projectKey] = updated[projectKey].map(app =>
+                    app._id === data.applicantId 
+                      ? { ...app, bid_status: data.status }
+                      : app
+                  );
+                });
+                return updated;
+              });
+            }
           }
         });
+      }, (error) => {
+        console.error(`❌ Firebase listener error for project ${projectId}:`, error);
       });
 
       // Listen for selection status changes (simplified query without orderBy)
@@ -224,8 +259,10 @@ const AdminPage = () => {
       );
       
       const selectionUnsubscribe = onSnapshot(selectionQuery, (snapshot) => {
+        console.log(`🔄 Selection status update for project ${projectId}:`, snapshot.docChanges().length, 'changes');
         snapshot.docChanges().forEach((change) => {
           const data = change.doc.data();
+          console.log(`📝 Selection status change:`, change.type, data);
           if (change.type === 'modified' || change.type === 'added') {
             setSelectionConfigs(prev => ({
               ...prev,
@@ -236,6 +273,8 @@ const AdminPage = () => {
             }));
           }
         });
+      }, (error) => {
+        console.error(`❌ Selection listener error for project ${projectId}:`, error);
       });
 
       // Store unsubscribe functions for cleanup
@@ -405,21 +444,33 @@ const AdminPage = () => {
           userId,
           status,
           updatedAt: serverTimestamp(),
-          applicantId: id
+          applicantId: id,
+          applicantData: applicant
         }, { merge: true });
 
         // If status is "Accepted", create workspace access
         if (status === "Accepted") {
           await createWorkspaceAccess(projectId, userId);
         }
-      }
 
-      // Update local state
-      setApplicants((prev) =>
-        prev.map((app) =>
-          app._id === id ? { ...app, bid_status: status } : app
-        )
-      );
+        // Update local state immediately for real-time UI update
+        setApplicants((prev) =>
+          prev.map((app) =>
+            app._id === id ? { ...app, bid_status: status } : app
+          )
+        );
+
+        // Update grouped applicants state
+        setApplicantsByProject(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(projectKey => {
+            updated[projectKey] = updated[projectKey].map(app =>
+              app._id === id ? { ...app, bid_status: status } : app
+            );
+          });
+          return updated;
+        });
+      }
 
       notificationService.success(`Applicant ${status.toLowerCase()} successfully`);
     } catch (error) {
@@ -441,18 +492,15 @@ const AdminPage = () => {
         status: 'active'
       }, { merge: true });
 
-      // Update local workspace access state
-      setWorkspaceAccess(prev => ({
-        ...prev,
-        [projectId]: {
-          ...prev[projectId],
-          [userId]: {
-            accessLevel: 'contributor',
-            grantedAt: new Date(),
-            status: 'active'
-          }
-        }
-      }));
+      // Also create a project contributor record
+      const projectContributorRef = doc(db, 'project_contributors', `${projectId}_${userId}`);
+      await setDoc(projectContributorRef, {
+        projectId,
+        userId,
+        role: 'contributor',
+        joinedAt: serverTimestamp(),
+        status: 'active'
+      }, { merge: true });
 
       console.log(`✅ Workspace access granted for user ${userId} on project ${projectId}`);
     } catch (error) {

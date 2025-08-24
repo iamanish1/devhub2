@@ -123,25 +123,61 @@ const ContributionPage = () => {
         throw new Error('User not authenticated');
       }
 
+      console.log(`🔍 Checking workspace access for user ${user._id} on project ${projectId}`);
+
+      // First check workspace_access collection
       const workspaceAccessRef = doc(db, 'workspace_access', `${projectId}_${user._id}`);
       const accessDoc = await getDoc(workspaceAccessRef);
       
       if (accessDoc.exists()) {
         const accessData = accessDoc.data();
+        console.log('📋 Workspace access data:', accessData);
         
         if (accessData.status === 'active' && accessData.accessLevel === 'contributor') {
-          console.log('✅ User has workspace access');
+          console.log('✅ User has workspace access as contributor');
           return true;
         } else {
           throw new Error('Access denied: User does not have active contributor access');
         }
-      } else {
-        // Check if user is project owner (simplified approach)
-        // For now, we'll assume the user has access if they're authenticated
-        // In a production environment, you'd want to check against your backend
-        console.log('⚠️ Project owner check simplified - user authenticated');
-        return true;
       }
+
+      // Check project_contributors collection
+      const projectContributorRef = doc(db, 'project_contributors', `${projectId}_${user._id}`);
+      const contributorDoc = await getDoc(projectContributorRef);
+      
+      if (contributorDoc.exists()) {
+        const contributorData = contributorDoc.data();
+        console.log('📋 Project contributor data:', contributorData);
+        
+        if (contributorData.status === 'active' && contributorData.role === 'contributor') {
+          console.log('✅ User has project contributor access');
+          return true;
+        }
+      }
+
+      // Check if user is project owner by making a backend call
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/workspace/${projectId}/check-access`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasAccess) {
+            console.log('✅ User has access via backend check');
+            return true;
+          }
+        }
+      } catch {
+        console.log('Backend access check failed, continuing with Firebase check');
+      }
+
+      // If we reach here, user doesn't have access
+      throw new Error('Access denied: User is not a selected contributor or project owner');
     } catch (error) {
       console.error('Workspace access check failed:', error);
       throw new Error('Access denied: ' + error.message);
