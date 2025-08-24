@@ -115,6 +115,7 @@ const ContributionPage = () => {
   // Tab configuration
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Target, color: 'blue' },
+    { id: 'repository', label: 'Repository Setup', icon: GitBranch, color: 'indigo' },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, color: 'green' },
     { id: 'chunks', label: 'Project Chunks', icon: GitBranch, color: 'purple' },
     { id: 'team', label: 'Team', icon: Users2, color: 'indigo' },
@@ -847,85 +848,6 @@ const ContributionPage = () => {
                   </div>
                 </div>
 
-                {/* Repository Clone Section */}
-                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-white">Repository Setup</h2>
-                    <div className="flex items-center space-x-2">
-                      <GitBranch className="w-5 h-5 text-[#00A8E8]" />
-                      <span className="text-sm text-gray-400">Get Started</span>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-white mb-3">Clone Repository</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-2 h-2 bg-[#00A8E8] rounded-full"></div>
-                          <span className="text-gray-300">Clone the project repository to your local machine</span>
-                        </div>
-                        <div className="bg-gray-900 border border-gray-600 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-300">Git Command:</span>
-                            <button 
-                              onClick={() => navigator.clipboard.writeText(`git clone ${projectOverview?.Project_gitHub_link || 'https://github.com/project-repo'}`)}
-                              className="text-[#00A8E8] hover:text-[#0062E6] text-sm transition-colors"
-                            >
-                              Copy
-                            </button>
-                          </div>
-                          <code className="text-sm text-green-400 font-mono break-all">
-                            git clone {projectOverview?.Project_gitHub_link || 'https://github.com/project-repo'}
-                          </code>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-white mb-3">Setup Instructions</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-6 h-6 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">1</div>
-                          <div>
-                            <span className="text-gray-300 font-medium">Install Dependencies</span>
-                            <p className="text-gray-400 text-sm mt-1">Run npm install or yarn install to install project dependencies</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="w-6 h-6 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">2</div>
-                          <div>
-                            <span className="text-gray-300 font-medium">Setup Environment</span>
-                            <p className="text-gray-400 text-sm mt-1">Configure environment variables and database connections</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="w-6 h-6 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">3</div>
-                          <div>
-                            <span className="text-gray-300 font-medium">Start Development</span>
-                            <p className="text-gray-400 text-sm mt-1">Run the development server and start working on assigned tasks</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
-                      <div className="flex items-start space-x-3">
-                        <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-yellow-300">Important Notes</h4>
-                          <ul className="text-sm text-yellow-200 mt-2 space-y-1">
-                            <li>• Always create a new branch for your work</li>
-                            <li>• Follow the project's coding standards and conventions</li>
-                            <li>• Test your changes before submitting</li>
-                            <li>• Communicate with team members through the chat</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Financial Overview */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Escrow Wallet Status */}
@@ -995,41 +917,193 @@ const ContributionPage = () => {
                   </div>
                 </div>
 
-                {/* Quick Actions */}
+                                 {/* Quick Actions */}
+                 <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                   <h3 className="text-xl font-semibold text-white mb-4">Quick Actions</h3>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                     <button 
+                       onClick={() => setActiveTab('repository')}
+                       className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-indigo-500/20 rounded-lg hover:bg-indigo-500/10 hover:border-indigo-500/40 transition-colors"
+                     >
+                       <GitBranch className="w-6 h-6 text-indigo-400 mb-2" />
+                       <span className="text-sm font-medium text-indigo-400">Repository</span>
+                     </button>
+                     
+                     <button 
+                       onClick={() => setActiveTab('tasks')}
+                       className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-[#00A8E8]/20 rounded-lg hover:bg-[#00A8E8]/10 hover:border-[#00A8E8]/40 transition-colors"
+                     >
+                       <CheckSquare className="w-6 h-6 text-[#00A8E8] mb-2" />
+                       <span className="text-sm font-medium text-[#00A8E8]">View Tasks</span>
+                     </button>
+                     
+                     <button 
+                       onClick={() => setActiveTab('chat')}
+                       className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-green-500/20 rounded-lg hover:bg-green-500/10 hover:border-green-500/40 transition-colors"
+                     >
+                       <MessageCircle className="w-6 h-6 text-green-400 mb-2" />
+                       <span className="text-sm font-medium text-green-400">Team Chat</span>
+                     </button>
+                     
+                     <button 
+                       onClick={() => setActiveTab('earnings')}
+                       className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-yellow-500/20 rounded-lg hover:bg-yellow-500/10 hover:border-yellow-500/40 transition-colors"
+                     >
+                       <DollarSign className="w-6 h-6 text-yellow-400 mb-2" />
+                       <span className="text-sm font-medium text-yellow-400">Earnings</span>
+                     </button>
+                   </div>
+                 </div>
+              </div>
+            )}
+
+            {/* Repository Setup Tab */}
+            {activeTab === 'repository' && (
+              <div className="space-y-6">
+                {/* Main Repository Link */}
                 <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
-                  <h3 className="text-xl font-semibold text-white mb-4">Quick Actions</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">Repository Setup</h2>
+                    <div className="flex items-center space-x-2">
+                      <GitBranch className="w-6 h-6 text-indigo-400" />
+                      <span className="text-sm text-gray-400">Get Started</span>
+                    </div>
+                  </div>
+                  
+                  {/* Main Project Repository */}
+                  <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-semibold text-white">Main Project Repository</h3>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                        <span className="text-sm text-green-400">Active</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="bg-gray-900 border border-gray-600 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-medium text-gray-300">Repository URL:</span>
+                          <button 
+                            onClick={() => navigator.clipboard.writeText(projectOverview?.Project_gitHub_link || 'https://github.com/project-repo')}
+                            className="text-[#00A8E8] hover:text-[#0062E6] text-sm transition-colors flex items-center space-x-1"
+                          >
+                            <span>Copy URL</span>
+                          </button>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <GitBranch className="w-4 h-4 text-green-400" />
+                          <code className="text-sm text-green-400 font-mono break-all">
+                            {projectOverview?.Project_gitHub_link || 'https://github.com/project-repo'}
+                          </code>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gray-900 border border-gray-600 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-medium text-gray-300">Git Clone Command:</span>
+                          <button 
+                            onClick={() => navigator.clipboard.writeText(`git clone ${projectOverview?.Project_gitHub_link || 'https://github.com/project-repo'}`)}
+                            className="text-[#00A8E8] hover:text-[#0062E6] text-sm transition-colors flex items-center space-x-1"
+                          >
+                            <span>Copy Command</span>
+                          </button>
+                        </div>
+                        <code className="text-sm text-green-400 font-mono break-all">
+                          git clone {projectOverview?.Project_gitHub_link || 'https://github.com/project-repo'}
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Setup Instructions */}
+                  <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6 mb-6">
+                    <h3 className="text-xl font-semibold text-white mb-4">Setup Instructions</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-sm font-bold mt-0.5">1</div>
+                        <div>
+                          <h4 className="text-gray-300 font-medium mb-2">Clone the Repository</h4>
+                          <p className="text-gray-400 text-sm">Open your terminal and run the git clone command above to download the project to your local machine.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-sm font-bold mt-0.5">2</div>
+                        <div>
+                          <h4 className="text-gray-300 font-medium mb-2">Install Dependencies</h4>
+                          <p className="text-gray-400 text-sm">Navigate to the project directory and run <code className="bg-gray-800 px-2 py-1 rounded text-green-400">npm install</code> or <code className="bg-gray-800 px-2 py-1 rounded text-green-400">yarn install</code> to install project dependencies.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-sm font-bold mt-0.5">3</div>
+                        <div>
+                          <h4 className="text-gray-300 font-medium mb-2">Setup Environment</h4>
+                          <p className="text-gray-400 text-sm">Configure environment variables, database connections, and any required API keys as specified in the project documentation.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start space-x-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-sm font-bold mt-0.5">4</div>
+                        <div>
+                          <h4 className="text-gray-300 font-medium mb-2">Start Development</h4>
+                          <p className="text-gray-400 text-sm">Run the development server with <code className="bg-gray-800 px-2 py-1 rounded text-green-400">npm run dev</code> or <code className="bg-gray-800 px-2 py-1 rounded text-green-400">yarn dev</code> to ensure everything works correctly.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <button 
-                      onClick={() => setActiveTab('tasks')}
-                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-[#00A8E8]/20 rounded-lg hover:bg-[#00A8E8]/10 hover:border-[#00A8E8]/40 transition-colors"
+                      onClick={() => window.open(projectOverview?.Project_gitHub_link || 'https://github.com/project-repo', '_blank')}
+                      className="flex items-center justify-center p-4 bg-[#1A1A1A] border border-[#00A8E8]/20 rounded-lg hover:bg-[#00A8E8]/10 hover:border-[#00A8E8]/40 transition-colors"
                     >
-                      <CheckSquare className="w-6 h-6 text-[#00A8E8] mb-2" />
-                      <span className="text-sm font-medium text-[#00A8E8]">View Tasks</span>
+                      <GitBranch className="w-5 h-5 text-[#00A8E8] mr-2" />
+                      <span className="text-[#00A8E8] font-medium">Open Repository</span>
                     </button>
                     
                     <button 
-                      onClick={() => setActiveTab('chat')}
-                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-green-500/20 rounded-lg hover:bg-green-500/10 hover:border-green-500/40 transition-colors"
+                      onClick={() => setActiveTab('how-to-work')}
+                      className="flex items-center justify-center p-4 bg-[#1A1A1A] border border-green-500/20 rounded-lg hover:bg-green-500/10 hover:border-green-500/40 transition-colors"
                     >
-                      <MessageCircle className="w-6 h-6 text-green-400 mb-2" />
-                      <span className="text-sm font-medium text-green-400">Team Chat</span>
+                      <FileText className="w-5 h-5 text-green-400 mr-2" />
+                      <span className="text-green-400 font-medium">View Work Guide</span>
                     </button>
-                    
-                    <button 
-                      onClick={() => setActiveTab('team')}
-                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-purple-500/20 rounded-lg hover:bg-purple-500/10 hover:border-purple-500/40 transition-colors"
-                    >
-                      <Users2 className="w-6 h-6 text-purple-400 mb-2" />
-                      <span className="text-sm font-medium text-purple-400">Team Members</span>
-                    </button>
-                    
-                    <button 
-                      onClick={() => setActiveTab('earnings')}
-                      className="flex flex-col items-center p-4 bg-[#1A1A1A] border border-yellow-500/20 rounded-lg hover:bg-yellow-500/10 hover:border-yellow-500/40 transition-colors"
-                    >
-                      <DollarSign className="w-6 h-6 text-yellow-400 mb-2" />
-                      <span className="text-sm font-medium text-yellow-400">Earnings</span>
-                    </button>
+                  </div>
+                </div>
+
+                {/* Important Notes */}
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-6">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-6 h-6 text-yellow-400 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-yellow-300 text-lg mb-3">Important Development Guidelines</h4>
+                      <ul className="text-sm text-yellow-200 space-y-2">
+                        <li>• <strong>Always create a new branch</strong> for your work: <code className="bg-gray-800 px-2 py-1 rounded text-green-400">git checkout -b feature/your-feature-name</code></li>
+                        <li>• <strong>Follow the project's coding standards</strong> and conventions as specified in the codebase</li>
+                        <li>• <strong>Test your changes thoroughly</strong> before committing and pushing</li>
+                        <li>• <strong>Write descriptive commit messages</strong> that explain what you've changed</li>
+                        <li>• <strong>Communicate with team members</strong> through the chat when working on shared components</li>
+                        <li>• <strong>Update task status</strong> in the Tasks tab as you progress</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Project Structure Info */}
+                <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">Project Structure</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <h4 className="text-[#00A8E8] font-medium mb-2">Tech Stack</h4>
+                      <p className="text-gray-400">{projectOverview?.Project_tech_stack || 'Loading...'}</p>
+                    </div>
+                    <div>
+                      <h4 className="text-[#00A8E8] font-medium mb-2">Project Type</h4>
+                      <p className="text-gray-400">{projectOverview?.project_Title ? 'Full-stack Application' : 'Loading...'}</p>
+                    </div>
                   </div>
                 </div>
               </div>
