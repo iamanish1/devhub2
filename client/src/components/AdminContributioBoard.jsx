@@ -33,6 +33,9 @@ import {
   FaPlay,
   FaPause,
   FaStop,
+  FaExternalLinkAlt,
+  FaCheckCircle,
+  FaHistory,
 } from "react-icons/fa";
 import axios from "axios";
 import { 
@@ -71,7 +74,32 @@ const AdminContributionBoard = ({
 }) => {
   // State
   const [tasks, setTasks] = useState(initialTasks);
-  const [chat, setChat] = useState(initialChat);
+  const [chat, setChat] = useState([
+    {
+      sender: "admin",
+      senderName: "Admin User",
+      content: "Welcome to the project team chat! Let's collaborate effectively.",
+      timestamp: new Date(Date.now() - 3600000) // 1 hour ago
+    },
+    {
+      sender: "contributor1",
+      senderName: "John Developer",
+      content: "Thanks! I've started working on the frontend components.",
+      timestamp: new Date(Date.now() - 1800000) // 30 minutes ago
+    },
+    {
+      sender: "contributor2",
+      senderName: "Sarah Designer",
+      content: "I've uploaded the latest design mockups to the resources section.",
+      timestamp: new Date(Date.now() - 900000) // 15 minutes ago
+    },
+    {
+      sender: "admin",
+      senderName: "Admin User",
+      content: "Great work everyone! Let's keep up the momentum.",
+      timestamp: new Date(Date.now() - 300000) // 5 minutes ago
+    }
+  ]);
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState(initialNotes);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -98,7 +126,40 @@ const AdminContributionBoard = ({
   const [activeTab, setActiveTab] = useState('tasks');
   const [workspace, setWorkspace] = useState(null);
   const [userAccess, setUserAccess] = useState(null);
-  const [resources, setResources] = useState([]);
+  const [resources, setResources] = useState([
+    {
+      id: 1,
+      name: "Project Requirements Document",
+      type: "document",
+      url: "https://example.com/requirements.pdf",
+      description: "Complete project requirements and specifications",
+      uploadedAt: new Date(Date.now() - 86400000) // 1 day ago
+    },
+    {
+      id: 2,
+      name: "Design Mockups",
+      type: "file",
+      url: "https://example.com/mockups.zip",
+      description: "UI/UX design mockups and wireframes",
+      uploadedAt: new Date(Date.now() - 172800000) // 2 days ago
+    },
+    {
+      id: 3,
+      name: "GitHub Repository",
+      type: "link",
+      url: "https://github.com/example/project",
+      description: "Main project repository with source code",
+      uploadedAt: new Date(Date.now() - 259200000) // 3 days ago
+    },
+    {
+      id: 4,
+      name: "API Documentation",
+      type: "link",
+      url: "https://docs.example.com/api",
+      description: "REST API documentation and endpoints",
+      uploadedAt: new Date(Date.now() - 345600000) // 4 days ago
+    }
+  ]);
   const [statistics, setStatistics] = useState(null);
   const [showResourceModal, setShowResourceModal] = useState(false);
   const [resourceForm, setResourceForm] = useState({
@@ -116,7 +177,26 @@ const AdminContributionBoard = ({
   const [teamMembers, setTeamMembers] = useState([]);
   const [taskComments, setTaskComments] = useState({});
   const [taskFiles, setTaskFiles] = useState({});
-  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([
+    {
+      id: 1,
+      userId: "admin",
+      username: "Admin User",
+      lastSeen: new Date()
+    },
+    {
+      id: 2,
+      userId: "contributor1",
+      username: "John Developer",
+      lastSeen: new Date(Date.now() - 300000) // 5 minutes ago
+    },
+    {
+      id: 3,
+      userId: "contributor2",
+      username: "Sarah Designer",
+      lastSeen: new Date(Date.now() - 600000) // 10 minutes ago
+    }
+  ]);
   const [notifications, setNotifications] = useState([]);
 
   // Time tracking state
@@ -1220,29 +1300,543 @@ const AdminContributionBoard = ({
                 </div>
               )}
 
-              {/* Other tabs can be implemented similarly */}
+              {/* Resources Tab */}
               {activeTab === 'resources' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-6">Resources</h2>
-                  <p className="text-gray-400">Resource management coming soon...</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-white">Project Resources</h2>
+                    <button
+                      onClick={() => setShowResourceModal(true)}
+                      className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <FaPlus />
+                      Add Resource
+                    </button>
+                  </div>
+
+                  {/* Resource Statistics */}
+                  <div className="grid grid-cols-4 gap-4 mb-6">
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-green-500/20 text-center">
+                      <div className="text-2xl font-bold text-green-400">{resources.length}</div>
+                      <div className="text-sm text-gray-400">Total Resources</div>
+                    </div>
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-blue-500/20 text-center">
+                      <div className="text-2xl font-bold text-blue-400">
+                        {resources.filter(r => r.type === 'file').length}
+                      </div>
+                      <div className="text-sm text-gray-400">Files</div>
+                    </div>
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-purple-500/20 text-center">
+                      <div className="text-2xl font-bold text-purple-400">
+                        {resources.filter(r => r.type === 'link').length}
+                      </div>
+                      <div className="text-sm text-gray-400">Links</div>
+                    </div>
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-yellow-500/20 text-center">
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {resources.filter(r => r.type === 'document').length}
+                      </div>
+                      <div className="text-sm text-gray-400">Documents</div>
+                    </div>
+                  </div>
+
+                  {/* Resource Categories */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Files Section */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10">
+                      <div className="flex items-center gap-2 mb-4">
+                        <FaFileAlt className="text-blue-400" />
+                        <h3 className="text-lg font-semibold text-white">Files</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {resources.filter(r => r.type === 'file').map((resource, index) => (
+                          <div key={index} className="bg-[#232a34] rounded-lg p-3 border border-blue-500/20">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-white">{resource.name}</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => window.open(resource.url, '_blank')}
+                                  className="text-blue-400 hover:text-blue-300 text-xs"
+                                >
+                                  <FaEye />
+                                </button>
+                                <button
+                                  onClick={() => window.open(resource.url, '_blank')}
+                                  className="text-green-400 hover:text-green-300 text-xs"
+                                >
+                                  <FaDownload />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-400 line-clamp-2">{resource.description}</p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Added: {new Date(resource.uploadedAt || Date.now()).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ))}
+                        {resources.filter(r => r.type === 'file').length === 0 && (
+                          <div className="text-center py-4 text-gray-400">
+                            <FaFileAlt className="text-2xl mx-auto mb-2" />
+                            <p className="text-sm">No files uploaded yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Links Section */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-purple-500/10">
+                      <div className="flex items-center gap-2 mb-4">
+                        <FaLink className="text-purple-400" />
+                        <h3 className="text-lg font-semibold text-white">Links</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {resources.filter(r => r.type === 'link').map((resource, index) => (
+                          <div key={index} className="bg-[#232a34] rounded-lg p-3 border border-purple-500/20">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-white">{resource.name}</span>
+                              <button
+                                onClick={() => window.open(resource.url, '_blank')}
+                                className="text-purple-400 hover:text-purple-300 text-xs"
+                              >
+                                <FaExternalLinkAlt />
+                              </button>
+                            </div>
+                            <p className="text-xs text-gray-400 line-clamp-2">{resource.description}</p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Added: {new Date(resource.uploadedAt || Date.now()).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ))}
+                        {resources.filter(r => r.type === 'link').length === 0 && (
+                          <div className="text-center py-4 text-gray-400">
+                            <FaLink className="text-2xl mx-auto mb-2" />
+                            <p className="text-sm">No links added yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Documents Section */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-yellow-500/10">
+                      <div className="flex items-center gap-2 mb-4">
+                        <FaFileAlt className="text-yellow-400" />
+                        <h3 className="text-lg font-semibold text-white">Documents</h3>
+                      </div>
+                      <div className="space-y-3">
+                        {resources.filter(r => r.type === 'document').map((resource, index) => (
+                          <div key={index} className="bg-[#232a34] rounded-lg p-3 border border-yellow-500/20">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-white">{resource.name}</span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => window.open(resource.url, '_blank')}
+                                  className="text-yellow-400 hover:text-yellow-300 text-xs"
+                                >
+                                  <FaEye />
+                                </button>
+                                <button
+                                  onClick={() => window.open(resource.url, '_blank')}
+                                  className="text-green-400 hover:text-green-300 text-xs"
+                                >
+                                  <FaDownload />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-400 line-clamp-2">{resource.description}</p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Added: {new Date(resource.uploadedAt || Date.now()).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ))}
+                        {resources.filter(r => r.type === 'document').length === 0 && (
+                          <div className="text-center py-4 text-gray-400">
+                            <FaFileAlt className="text-2xl mx-auto mb-2" />
+                            <p className="text-sm">No documents added yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {resources.length === 0 && (
+                    <div className="text-center py-8 text-gray-400">
+                      <FaFolderOpen className="text-4xl mx-auto mb-4" />
+                      <p>No resources found for this project.</p>
+                      <p className="text-sm">Add files, links, and documents to help your team.</p>
+                    </div>
+                  )}
                 </div>
               )}
 
+              {/* Progress Tab */}
               {activeTab === 'progress' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-6">Progress Analytics</h2>
-                  <p className="text-gray-400">Progress tracking and analytics coming soon...</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-white">Progress Analytics</h2>
+                    <div className="flex items-center gap-2">
+                      <FaSync className="text-blue-400" />
+                      <span className="text-sm text-gray-400">Auto-updating</span>
+                    </div>
+                  </div>
+
+                  {/* Progress Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="bg-gradient-to-br from-blue-900/60 to-blue-700/40 rounded-2xl p-6 border border-blue-500/10">
+                      <div className="flex items-center justify-between mb-4">
+                        <FaChartBar className="text-3xl text-blue-400" />
+                        <span className="text-2xl font-bold text-blue-400">
+                          {statistics?.tasks?.progressPercentage || 0}%
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">Overall Progress</h3>
+                      <div className="w-full bg-blue-900/40 rounded-full h-2">
+                        <div 
+                          className="bg-blue-400 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${statistics?.tasks?.progressPercentage || 0}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-green-900/60 to-green-700/40 rounded-2xl p-6 border border-green-500/10">
+                      <div className="flex items-center justify-between mb-4">
+                        <FaCheckCircle className="text-3xl text-green-400" />
+                        <span className="text-2xl font-bold text-green-400">
+                          {statistics?.tasks?.completed || 0}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">Completed Tasks</h3>
+                      <p className="text-gray-300 text-sm">
+                        {statistics?.tasks?.total || 0} total tasks
+                      </p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-yellow-900/60 to-yellow-700/40 rounded-2xl p-6 border border-yellow-500/10">
+                      <div className="flex items-center justify-between mb-4">
+                        <FaClock className="text-3xl text-yellow-400" />
+                        <span className="text-2xl font-bold text-yellow-400">
+                          {statistics?.time?.totalActualHours || 0}h
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">Time Spent</h3>
+                      <p className="text-gray-300 text-sm">
+                        {statistics?.time?.totalEstimatedHours || 0}h estimated
+                      </p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-purple-900/60 to-purple-700/40 rounded-2xl p-6 border border-purple-500/10">
+                      <div className="flex items-center justify-between mb-4">
+                        <FaUsers className="text-3xl text-purple-400" />
+                        <span className="text-2xl font-bold text-purple-400">
+                          {statistics?.team?.activeContributors || 0}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">Active Contributors</h3>
+                      <p className="text-gray-300 text-sm">
+                        {statistics?.team?.totalMembers || 0} total members
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Detailed Progress Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {/* Task Status Distribution */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Task Status Distribution</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                            <span className="text-gray-300">Pending</span>
+                          </div>
+                          <span className="text-white font-semibold">
+                            {statistics?.tasks?.pending || 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                            <span className="text-gray-300">In Progress</span>
+                          </div>
+                          <span className="text-white font-semibold">
+                            {statistics?.tasks?.inProgress || 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <span className="text-gray-300">Completed</span>
+                          </div>
+                          <span className="text-white font-semibold">
+                            {statistics?.tasks?.completed || 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Time Efficiency */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-green-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Time Efficiency</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Estimated Hours</span>
+                          <span className="text-white font-semibold">
+                            {statistics?.time?.totalEstimatedHours || 0}h
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Actual Hours</span>
+                          <span className="text-white font-semibold">
+                            {statistics?.time?.totalActualHours || 0}h
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Efficiency</span>
+                          <span className={`font-semibold ${
+                            (statistics?.time?.efficiency || 0) > 100 ? 'text-green-400' : 'text-yellow-400'
+                          }`}>
+                            {statistics?.time?.efficiency || 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Activity */}
+                  <div className="bg-[#181b23] rounded-xl p-6 border border-purple-500/10">
+                    <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
+                    <div className="space-y-3">
+                      {notifications.slice(0, 5).map((notification, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-[#232a34] rounded-lg">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                          <div className="flex-1">
+                            <p className="text-white text-sm">{notification.message}</p>
+                            <p className="text-gray-400 text-xs">
+                              {notification.createdAt?.toDate?.() ? 
+                                new Date(notification.createdAt.toDate()).toLocaleString() :
+                                new Date(notification.createdAt).toLocaleString()
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {notifications.length === 0 && (
+                        <div className="text-center py-4 text-gray-400">
+                          <FaChartBar className="text-2xl mx-auto mb-2" />
+                          <p className="text-sm">No recent activity</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
+              {/* Chat Tab */}
               {activeTab === 'chat' && (
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-6">Team Chat</h2>
-                  <p className="text-gray-400">Real-time chat functionality coming soon...</p>
+                <div className="flex flex-col h-[600px]">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold text-white">Team Chat</h2>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-green-400">Live</span>
+                    </div>
+                  </div>
+
+                  {/* Online Users */}
+                  <div className="bg-[#181b23] rounded-xl p-4 border border-blue-500/10 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FaUsers className="text-blue-400" />
+                      <span className="text-sm font-medium text-white">Online Team Members</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {onlineUsers.map((user, index) => (
+                        <div key={index} className="flex items-center gap-2 bg-[#232a34] rounded-lg px-3 py-1">
+                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                          <span className="text-sm text-white">{user.username}</span>
+                        </div>
+                      ))}
+                      {onlineUsers.length === 0 && (
+                        <span className="text-sm text-gray-400">No team members online</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Chat Messages */}
+                  <div className="flex-1 bg-[#181b23] rounded-xl border border-blue-500/10 overflow-hidden flex flex-col">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                      {chat.map((msg, index) => (
+                        <div
+                          key={index}
+                          className={`flex ${msg.sender === user?.username || msg.senderId === user?._id ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            msg.sender === user?.username || msg.senderId === user?._id
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-[#232a34] text-white border border-blue-500/20'
+                          }`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium opacity-75">
+                                {msg.senderName || msg.sender}
+                              </span>
+                              <span className="text-xs opacity-50">
+                                {msg.timestamp?.toDate?.() ? 
+                                  new Date(msg.timestamp.toDate()).toLocaleTimeString() :
+                                  new Date(msg.timestamp).toLocaleTimeString()
+                                }
+                              </span>
+                            </div>
+                            <p className="text-sm">{msg.content || msg.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={chatEndRef} />
+                    </div>
+
+                    {/* Message Input */}
+                    <div className="p-4 border-t border-blue-500/10">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                          placeholder="Type your message..."
+                          className="flex-1 bg-[#232a34] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                        />
+                        <button
+                          onClick={sendMessage}
+                          disabled={!message.trim()}
+                          className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <FaPaperPlane />
+                          Send
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chat Features */}
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-[#181b23] rounded-xl p-4 border border-green-500/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaFileAlt className="text-green-400" />
+                        <span className="text-sm font-medium text-white">File Sharing</span>
+                      </div>
+                      <p className="text-xs text-gray-400">Share files directly in chat</p>
+                    </div>
+                    <div className="bg-[#181b23] rounded-xl p-4 border border-purple-500/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaBell className="text-purple-400" />
+                        <span className="text-sm font-medium text-white">Notifications</span>
+                      </div>
+                      <p className="text-xs text-gray-400">Real-time message alerts</p>
+                    </div>
+                    <div className="bg-[#181b23] rounded-xl p-4 border border-yellow-500/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FaHistory className="text-yellow-400" />
+                        <span className="text-sm font-medium text-white">Message History</span>
+                      </div>
+                      <p className="text-xs text-gray-400">Access previous conversations</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           </>
+        )}
+
+        {/* Resource Modal */}
+        {showResourceModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-md border border-blue-500/20">
+              <h2 className="text-2xl font-bold text-blue-400 mb-6 text-center">
+                Add New Resource
+              </h2>
+              <form onSubmit={handleResourceSubmit}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Resource Name
+                    </label>
+                    <input
+                      type="text"
+                      value={resourceForm.name}
+                      onChange={(e) => setResourceForm({ ...resourceForm, name: e.target.value })}
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      placeholder="Enter resource name"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Resource Type
+                    </label>
+                    <select
+                      value={resourceForm.type}
+                      onChange={(e) => setResourceForm({ ...resourceForm, type: e.target.value })}
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    >
+                      <option value="file">File</option>
+                      <option value="link">Link</option>
+                      <option value="document">Document</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      {resourceForm.type === 'link' ? 'URL' : 'File Upload'}
+                    </label>
+                    {resourceForm.type === 'link' ? (
+                      <input
+                        type="url"
+                        value={resourceForm.url}
+                        onChange={(e) => setResourceForm({ ...resourceForm, url: e.target.value })}
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                        placeholder="Enter URL"
+                        required
+                      />
+                    ) : (
+                      <input
+                        type="file"
+                        onChange={(e) => setResourceForm({ ...resourceForm, url: e.target.files[0] })}
+                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                        required
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={resourceForm.description}
+                      onChange={(e) => setResourceForm({ ...resourceForm, description: e.target.value })}
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      rows="3"
+                      placeholder="Enter resource description"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-4 mt-6">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Add Resource
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowResourceModal(false)}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
 
         {/* Task Modal */}
