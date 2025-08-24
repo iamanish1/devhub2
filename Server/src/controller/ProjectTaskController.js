@@ -1,11 +1,598 @@
 import ProjectListing from '../Model/ProjectListingModel.js';
 import ProjectSelection from '../Model/ProjectSelectionModel.js';
 import Bidding from '../Model/BiddingModel.js';
+import ProjectTask from '../Model/ProjectTaskModel.js';
+import UserProfile from '../Model/UserProfileModel.js';
 import { logger } from '../utils/logger.js';
 
 // Firebase imports for checking workspace access
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "../config/firebase.js";
+
+/**
+ * Create project workspace
+ */
+export const createWorkspace = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+    const workspaceData = req.body;
+
+    logger.info(`[ProjectTask] Creating workspace for project ${projectId}`);
+
+    // Check if user is project owner
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    if (project.user.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'Only project owner can create workspace' });
+    }
+
+    // Create workspace in Firebase
+    const workspaceRef = doc(db, 'project_workspaces', projectId);
+    await setDoc(workspaceRef, {
+      projectId,
+      createdBy: userId,
+      createdAt: serverTimestamp(),
+      ...workspaceData
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'Workspace created successfully',
+      workspace: { projectId, ...workspaceData }
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error creating workspace: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Update project workspace
+ */
+export const updateWorkspace = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+    const updateData = req.body;
+
+    logger.info(`[ProjectTask] Updating workspace for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Update workspace in Firebase
+    const workspaceRef = doc(db, 'project_workspaces', projectId);
+    await setDoc(workspaceRef, {
+      ...updateData,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Workspace updated successfully'
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error updating workspace: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Create a new task
+ */
+export const createTask = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+    const { title, description, priority = 'medium', dueDate, assignedTo, estimatedHours } = req.body;
+
+    logger.info(`[ProjectTask] Creating task for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Create task in database
+    const newTask = new ProjectTask({
+      title,
+      description,
+      priority,
+      dueDate: dueDate ? new Date(dueDate) : null,
+      assignedTo: assignedTo || userId,
+      estimatedHours: estimatedHours || 0,
+      projectId,
+      createdBy: userId,
+      status: 'pending'
+    });
+
+    const savedTask = await newTask.save();
+
+    // Sync to Firebase for real-time updates
+    const taskRef = doc(db, 'project_tasks', savedTask._id.toString());
+    await setDoc(taskRef, {
+      id: savedTask._id.toString(),
+      projectId,
+      title: savedTask.title,
+      description: savedTask.description,
+      status: savedTask.status,
+      priority: savedTask.priority,
+      assignedTo: savedTask.assignedTo.toString(),
+      createdBy: savedTask.createdBy.toString(),
+      createdAt: serverTimestamp()
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'Task created successfully',
+      task: savedTask
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error creating task: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Update a task
+ */
+export const updateTask = async (req, res) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const userId = req.user._id;
+    const updateData = req.body;
+
+    logger.info(`[ProjectTask] Updating task ${taskId} for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Update task in database
+    const updatedTask = await ProjectTask.findByIdAndUpdate(
+      taskId,
+      { ...updateData, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Sync to Firebase for real-time updates
+    const taskRef = doc(db, 'project_tasks', taskId);
+    await setDoc(taskRef, {
+      ...updateData,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Task updated successfully',
+      task: updatedTask
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error updating task: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Complete a task
+ */
+export const completeTask = async (req, res) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const userId = req.user._id;
+    const { completionNotes, actualHours } = req.body;
+
+    logger.info(`[ProjectTask] Completing task ${taskId} for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Update task status to completed
+    const updatedTask = await ProjectTask.findByIdAndUpdate(
+      taskId,
+      { 
+        status: 'completed',
+        completionNotes,
+        actualHours,
+        completedAt: new Date(),
+        completedBy: userId
+      },
+      { new: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Sync to Firebase for real-time updates
+    const taskRef = doc(db, 'project_tasks', taskId);
+    await setDoc(taskRef, {
+      status: 'completed',
+      completionNotes,
+      actualHours,
+      completedAt: serverTimestamp(),
+      completedBy: userId.toString()
+    }, { merge: true });
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Task completed successfully',
+      task: updatedTask
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error completing task: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Add comment to task
+ */
+export const addTaskComment = async (req, res) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const userId = req.user._id;
+    const { content } = req.body;
+
+    logger.info(`[ProjectTask] Adding comment to task ${taskId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Add comment to Firebase for real-time updates
+    const commentRef = collection(db, 'task_comments');
+    const newComment = await addDoc(commentRef, {
+      taskId,
+      projectId,
+      content,
+      authorId: userId.toString(),
+      authorName: req.user.username || req.user.name || 'Unknown',
+      createdAt: serverTimestamp()
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'Comment added successfully',
+      comment: {
+        id: newComment.id,
+        content,
+        authorId: userId.toString(),
+        authorName: req.user.username || req.user.name || 'Unknown',
+        createdAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error adding comment: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Upload file to task
+ */
+export const uploadTaskFile = async (req, res) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const userId = req.user._id;
+    const { title, description, isPublic = true, tags } = req.body;
+    const file = req.file;
+
+    logger.info(`[ProjectTask] Uploading file to task ${taskId}`);
+
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Save file info to Firebase
+    const fileRef = collection(db, 'task_files');
+    const newFile = await addDoc(fileRef, {
+      taskId,
+      projectId,
+      filename: file.filename,
+      originalName: file.originalname,
+      url: `/uploads/${file.filename}`,
+      size: file.size,
+      title: title || file.originalname,
+      description: description || '',
+      isPublic: isPublic === 'true',
+      tags: tags ? JSON.parse(tags) : [],
+      uploadedBy: userId.toString(),
+      uploadedAt: serverTimestamp()
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'File uploaded successfully',
+      file: {
+        id: newFile.id,
+        filename: file.filename,
+        originalName: file.originalname,
+        url: `/uploads/${file.filename}`,
+        size: file.size,
+        title: title || file.originalname,
+        description: description || '',
+        uploadedBy: userId.toString(),
+        uploadedAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error uploading file: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Get user's tasks
+ */
+export const getUserTasks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { status, priority, projectId } = req.query;
+
+    logger.info(`[ProjectTask] Getting tasks for user ${userId}`);
+
+    // Build filter
+    const filter = { assignedTo: userId };
+    if (status) filter.status = status;
+    if (priority) filter.priority = priority;
+    if (projectId) filter.projectId = projectId;
+
+    // Get tasks from database
+    const tasks = await ProjectTask.find(filter)
+      .populate('projectId', 'project_Title Project_Description')
+      .populate('assignedTo', 'username email')
+      .populate('createdBy', 'username email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ 
+      success: true,
+      tasks,
+      total: tasks.length
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error getting user tasks: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Get project statistics
+ */
+export const getProjectStatistics = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[ProjectTask] Getting statistics for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Get task statistics
+    const tasks = await ProjectTask.find({ projectId });
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(task => task.status === 'completed').length;
+    const inProgressTasks = tasks.filter(task => task.status === 'in_progress').length;
+    const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+
+    // Calculate progress percentage
+    const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+    // Get team statistics
+    const teamMembers = selection?.selectedUsers || [];
+    const activeContributors = teamMembers.length;
+
+    // Calculate estimated vs actual hours
+    const totalEstimatedHours = tasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
+    const totalActualHours = tasks.reduce((sum, task) => sum + (task.actualHours || 0), 0);
+
+    const statistics = {
+      project: {
+        id: project._id,
+        title: project.project_Title,
+        description: project.Project_Description
+      },
+      tasks: {
+        total: totalTasks,
+        completed: completedTasks,
+        inProgress: inProgressTasks,
+        pending: pendingTasks,
+        progressPercentage: Math.round(progressPercentage * 100) / 100
+      },
+      team: {
+        totalMembers: teamMembers.length,
+        activeContributors
+      },
+      time: {
+        totalEstimatedHours,
+        totalActualHours,
+        efficiency: totalEstimatedHours > 0 ? ((totalEstimatedHours - totalActualHours) / totalEstimatedHours) * 100 : 0
+      }
+    };
+
+    res.status(200).json({ 
+      success: true,
+      statistics
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error getting project statistics: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Get team members for a project
+ */
+export const getTeamMembers = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[ProjectTask] Getting team members for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Get project owner
+    const ownerProfile = await UserProfile.findOne({ username: project.user }).lean();
+
+    // Get selected contributors
+    const teamMembers = [];
+    
+    if (selection && selection.selectedUsers) {
+      for (const selectedUser of selection.selectedUsers) {
+        const userProfile = await UserProfile.findOne({ username: selectedUser.userId }).lean();
+        if (userProfile) {
+          teamMembers.push({
+            userId: selectedUser.userId,
+            username: userProfile.username,
+            email: userProfile.user_profile_email,
+            avatar: userProfile.user_profile_cover_photo,
+            role: 'contributor',
+            joinedAt: selectedUser.selectedAt,
+            selectionReason: selectedUser.selectionReason
+          });
+        }
+      }
+    }
+
+    // Add project owner
+    if (ownerProfile) {
+      teamMembers.unshift({
+        userId: project.user.toString(),
+        username: ownerProfile.username,
+        email: ownerProfile.user_profile_email,
+        avatar: ownerProfile.user_profile_cover_photo,
+        role: 'owner',
+        joinedAt: project.createdAt,
+        selectionReason: 'Project Owner'
+      });
+    }
+
+    res.status(200).json({ 
+      success: true,
+      teamMembers,
+      totalMembers: teamMembers.length
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error getting team members: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 /**
  * Check if user has access to project workspace
