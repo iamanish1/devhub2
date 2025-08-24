@@ -17,7 +17,7 @@ import { db } from "../config/firebase.js";
 /**
  * Create Firebase workspace access for selected contributors
  */
-const createFirebaseWorkspaceAccess = async (projectId, userId) => {
+export const createFirebaseWorkspaceAccess = async (projectId, userId) => {
   try {
     // Create workspace access document
     const workspaceAccessRef = doc(
@@ -314,7 +314,16 @@ export const executeAutomaticSelection = async (req, res) => {
           });
 
           // Create Firebase workspace access
-          await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
+          const firebaseResult = await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
+          if (firebaseResult) {
+            logger.info(
+              `[ProjectSelection] Firebase workspace access created for user ${selectedUser.userId} on project ${projectId}`
+            );
+          } else {
+            logger.error(
+              `[ProjectSelection] Failed to create Firebase workspace access for user ${selectedUser.userId} on project ${projectId}`
+            );
+          }
         } catch (error) {
           logger.error(
             `[ProjectSelection] Failed to process selected user ${selectedUser.userId}: ${error.message}`
@@ -567,7 +576,16 @@ export const manualSelection = async (req, res) => {
         });
 
         // Create Firebase workspace access
-        await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
+        const firebaseResult = await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
+        if (firebaseResult) {
+          logger.info(
+            `[ProjectSelection] Firebase workspace access created for user ${selectedUser.userId} on project ${projectId}`
+          );
+        } else {
+          logger.error(
+            `[ProjectSelection] Failed to create Firebase workspace access for user ${selectedUser.userId} on project ${projectId}`
+          );
+        }
       } catch (error) {
         logger.error(
           `[ProjectSelection] Failed to process selected user ${selectedUser.userId}: ${error.message}`

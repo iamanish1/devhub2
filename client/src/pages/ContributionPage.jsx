@@ -3,6 +3,7 @@ import Navbar from "../components/NavBar";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { projectTaskApi } from "../services/projectTaskApi";
+import { notificationService } from "../services/notificationService";
 import { 
   CheckSquare, 
   Users, 
@@ -31,7 +32,7 @@ import {
 
 
 const ContributionPage = () => {
-  const { projectId } = useParams();
+  const { _id: projectId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -62,6 +63,10 @@ const ContributionPage = () => {
   // Statistics and progress
   const [statistics, setStatistics] = useState(null);
 
+  // Debug state
+  const [debugInfo, setDebugInfo] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
+
   // Tab configuration
   const tabs = [
     { id: 'tasks', label: 'Tasks', icon: CheckSquare, color: 'blue' },
@@ -73,11 +78,67 @@ const ContributionPage = () => {
 
   // Load workspace data
   useEffect(() => {
-    loadWorkspace();
+    if (projectId) {
+      loadWorkspace();
+    }
   }, [projectId]);
+
+  // Debug function
+  const loadDebugInfo = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/debug/${projectId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setDebugInfo(data);
+        console.log('🔍 Debug info:', data);
+      } else {
+        console.error('❌ Failed to load debug info:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error loading debug info:', error);
+    }
+  };
+
+  // Create Firebase access manually
+  const createFirebaseAccess = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/firebase-access/${projectId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Firebase access created:', data);
+        notificationService.success('Firebase access created successfully');
+        await loadDebugInfo(); // Refresh debug info
+      } else {
+        console.error('❌ Failed to create Firebase access:', response.status);
+        notificationService.error('Failed to create Firebase access');
+      }
+    } catch (error) {
+      console.error('❌ Error creating Firebase access:', error);
+      notificationService.error('Error creating Firebase access');
+    }
+  };
 
   const loadWorkspace = async () => {
     try {
+      if (!projectId) {
+        setError('Project ID is required');
+        return;
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -122,6 +183,10 @@ const ContributionPage = () => {
     try {
       if (!user?._id) {
         throw new Error('User not authenticated');
+      }
+
+      if (!projectId) {
+        throw new Error('Project ID is required');
       }
 
       console.log(`🔍 Checking workspace access for user ${user._id} on project ${projectId}`);
@@ -312,12 +377,85 @@ const ContributionPage = () => {
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-red-800 mb-2">Access Denied</h2>
             <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-            >
-              Back to Dashboard
-            </button>
+            <div className="space-x-2">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Back to Dashboard
+              </button>
+              <button
+                onClick={() => setShowDebug(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Debug Access Issue
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Debug section
+  if (showDebug) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <Navbar />
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Debug Information</h2>
+              <div className="space-x-2">
+                <button
+                  onClick={loadDebugInfo}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Refresh Debug Info
+                </button>
+                <button
+                  onClick={createFirebaseAccess}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  Create Firebase Access
+                </button>
+                <button
+                  onClick={() => setShowDebug(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  Close Debug
+                </button>
+              </div>
+            </div>
+            
+            {debugInfo && (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-semibold mb-2">Project Info</h3>
+                  <pre className="text-sm overflow-auto">{JSON.stringify(debugInfo.project, null, 2)}</pre>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-semibold mb-2">User Access</h3>
+                  <pre className="text-sm overflow-auto">{JSON.stringify(debugInfo.user, null, 2)}</pre>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-semibold mb-2">Selection Info</h3>
+                  <pre className="text-sm overflow-auto">{JSON.stringify(debugInfo.selection, null, 2)}</pre>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-semibold mb-2">Bids</h3>
+                  <pre className="text-sm overflow-auto">{JSON.stringify(debugInfo.bids, null, 2)}</pre>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-semibold mb-2">Firebase Access</h3>
+                  <pre className="text-sm overflow-auto">{JSON.stringify(debugInfo.firebase, null, 2)}</pre>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
