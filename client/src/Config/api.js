@@ -5,6 +5,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 console.log('🔍 API Configuration:');
 console.log('🔍 VITE_API_URL:', import.meta.env.VITE_API_URL);
 console.log('🔍 API_BASE_URL:', API_BASE_URL);
+console.log('🔍 Environment:', import.meta.env.MODE);
+console.log('🔍 Base URL:', import.meta.env.BASE_URL);
 
 // Socket server URL
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_SERVER || 'http://localhost:8000';

@@ -46,7 +46,7 @@ const CreateAccount = () => {
       );
       setSuccess(true);
       if (response.data.token) {
-        localStorage.setItem("authToken", response.data.token);
+        localStorage.setItem("token", response.data.token);
       }
       navigate("/loginaccount");
     } catch (err) {

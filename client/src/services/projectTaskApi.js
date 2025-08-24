@@ -2,7 +2,17 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../Config/api.js';
 
 // Get auth token
-const getAuthToken = () => localStorage.getItem('token');
+const getAuthToken = () => {
+  const token = localStorage.getItem('token');
+  const authToken = localStorage.getItem('authToken');
+  
+  console.log('🔍 Token check:');
+  console.log('  token key:', token ? `${token.substring(0, 20)}...` : 'No token');
+  console.log('  authToken key:', authToken ? `${authToken.substring(0, 20)}...` : 'No authToken');
+  
+  // Return token from either key
+  return token || authToken;
+};
 
 // Create axios instance with auth header
 const createAuthInstance = () => {
