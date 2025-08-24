@@ -121,7 +121,8 @@ const ContributionPage = () => {
     { id: 'chat', label: 'Chat', icon: MessageCircle, color: 'yellow' },
     { id: 'resources', label: 'Resources', icon: FolderOpen, color: 'orange' },
     { id: 'progress', label: 'Progress', icon: BarChart3, color: 'pink' },
-    { id: 'earnings', label: 'Earnings', icon: DollarSign, color: 'emerald' }
+    { id: 'earnings', label: 'Earnings', icon: DollarSign, color: 'emerald' },
+    { id: 'how-to-work', label: 'How to Work', icon: FileText, color: 'cyan' }
   ];
 
   // Load workspace data
@@ -846,6 +847,85 @@ const ContributionPage = () => {
                   </div>
                 </div>
 
+                {/* Repository Clone Section */}
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-white">Repository Setup</h2>
+                    <div className="flex items-center space-x-2">
+                      <GitBranch className="w-5 h-5 text-[#00A8E8]" />
+                      <span className="text-sm text-gray-400">Get Started</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                      <h3 className="text-lg font-semibold text-white mb-3">Clone Repository</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-2 h-2 bg-[#00A8E8] rounded-full"></div>
+                          <span className="text-gray-300">Clone the project repository to your local machine</span>
+                        </div>
+                        <div className="bg-gray-900 border border-gray-600 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-300">Git Command:</span>
+                            <button 
+                              onClick={() => navigator.clipboard.writeText(`git clone ${projectOverview?.Project_gitHub_link || 'https://github.com/project-repo'}`)}
+                              className="text-[#00A8E8] hover:text-[#0062E6] text-sm transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <code className="text-sm text-green-400 font-mono break-all">
+                            git clone {projectOverview?.Project_gitHub_link || 'https://github.com/project-repo'}
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                      <h3 className="text-lg font-semibold text-white mb-3">Setup Instructions</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-6 h-6 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">1</div>
+                          <div>
+                            <span className="text-gray-300 font-medium">Install Dependencies</span>
+                            <p className="text-gray-400 text-sm mt-1">Run npm install or yarn install to install project dependencies</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-6 h-6 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">2</div>
+                          <div>
+                            <span className="text-gray-300 font-medium">Setup Environment</span>
+                            <p className="text-gray-400 text-sm mt-1">Configure environment variables and database connections</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-6 h-6 bg-[#00A8E8] rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">3</div>
+                          <div>
+                            <span className="text-gray-300 font-medium">Start Development</span>
+                            <p className="text-gray-400 text-sm mt-1">Run the development server and start working on assigned tasks</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-yellow-300">Important Notes</h4>
+                          <ul className="text-sm text-yellow-200 mt-2 space-y-1">
+                            <li>• Always create a new branch for your work</li>
+                            <li>• Follow the project's coding standards and conventions</li>
+                            <li>• Test your changes before submitting</li>
+                            <li>• Communicate with team members through the chat</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Financial Overview */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Escrow Wallet Status */}
@@ -1412,6 +1492,164 @@ const ContributionPage = () => {
                           <Send className="w-4 h-4" />
                         )}
                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* How to Work Tab */}
+            {activeTab === 'how-to-work' && (
+              <div className="space-y-6">
+                {/* Complete Process Guide */}
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">How to Work on This Project</h2>
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-6 h-6 text-cyan-400" />
+                      <span className="text-sm text-gray-400">Complete Guide</span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-8">
+                    {/* Step 1: Repository Setup */}
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white font-bold">1</div>
+                        <h3 className="text-xl font-semibold text-white">Repository Setup</h3>
+                      </div>
+                      <div className="space-y-3 text-gray-300">
+                        <p>• Clone the project repository using the git command from the Overview tab</p>
+                        <p>• Install project dependencies with <code className="bg-gray-800 px-2 py-1 rounded text-green-400">npm install</code></p>
+                        <p>• Set up environment variables and database connections</p>
+                        <p>• Run the development server to ensure everything works</p>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Understanding Project Structure */}
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white font-bold">2</div>
+                        <h3 className="text-xl font-semibold text-white">Understanding Project Structure</h3>
+                      </div>
+                      <div className="space-y-3 text-gray-300">
+                        <p>• Review the <strong className="text-white">Project Chunks</strong> tab to understand different development sections</p>
+                        <p>• Check the <strong className="text-white">Tasks</strong> tab to see your assigned work</p>
+                        <p>• Familiarize yourself with the tech stack and project requirements</p>
+                        <p>• Review existing codebase and documentation</p>
+                      </div>
+                    </div>
+
+                    {/* Step 3: Development Workflow */}
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white font-bold">3</div>
+                        <h3 className="text-xl font-semibold text-white">Development Workflow</h3>
+                      </div>
+                      <div className="space-y-3 text-gray-300">
+                        <p>• Create a new branch for each task: <code className="bg-gray-800 px-2 py-1 rounded text-green-400">git checkout -b feature/task-name</code></p>
+                        <p>• Work on your assigned tasks following the project's coding standards</p>
+                        <p>• Test your changes thoroughly before committing</p>
+                        <p>• Commit your work with descriptive commit messages</p>
+                        <p>• Push your branch and create a pull request</p>
+                      </div>
+                    </div>
+
+                    {/* Step 4: Communication & Collaboration */}
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white font-bold">4</div>
+                        <h3 className="text-xl font-semibold text-white">Communication & Collaboration</h3>
+                      </div>
+                      <div className="space-y-3 text-gray-300">
+                        <p>• Use the <strong className="text-white">Team Chat</strong> to communicate with other contributors</p>
+                        <p>• Update task status in the <strong className="text-white">Tasks</strong> tab</p>
+                        <p>• Report progress and ask questions when needed</p>
+                        <p>• Coordinate with team members on shared components</p>
+                      </div>
+                    </div>
+
+                    {/* Step 5: Quality Assurance */}
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white font-bold">5</div>
+                        <h3 className="text-xl font-semibold text-white">Quality Assurance</h3>
+                      </div>
+                      <div className="space-y-3 text-gray-300">
+                        <p>• Write unit tests for your code</p>
+                        <p>• Ensure your code follows the project's style guidelines</p>
+                        <p>• Test your changes across different browsers/devices</p>
+                        <p>• Document any new features or changes</p>
+                      </div>
+                    </div>
+
+                    {/* Step 6: Completion & Payment */}
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-8 h-8 bg-[#00A8E8] rounded-full flex items-center justify-center text-white font-bold">6</div>
+                        <h3 className="text-xl font-semibold text-white">Completion & Payment</h3>
+                      </div>
+                      <div className="space-y-3 text-gray-300">
+                        <p>• Mark your tasks as completed in the <strong className="text-white">Tasks</strong> tab</p>
+                        <p>• Ensure all code reviews are approved</p>
+                        <p>• Wait for project owner approval and final testing</p>
+                        <p>• Once project is completed, your earnings will be automatically released</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Earnings Process */}
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">How You Earn Money</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                      <h4 className="text-lg font-medium text-[#00A8E8] mb-3">Bid Amount</h4>
+                      <p className="text-gray-300 text-sm">
+                        Your original bid amount (₹{userEarnings?.bidAmount || 0}) is locked in escrow when you're selected for the project. This amount is guaranteed upon successful completion.
+                      </p>
+                    </div>
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                      <h4 className="text-lg font-medium text-yellow-400 mb-3">Bonus Pool</h4>
+                      <p className="text-gray-300 text-sm">
+                        Equal share of the bonus pool (₹{userEarnings?.bonusAmount || 0}) is distributed among all contributors upon project completion.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-6 bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <CheckCircle className="w-5 h-5 text-green-400 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-green-300">Payment Process</h4>
+                        <p className="text-green-200 text-sm mt-1">
+                          Your total earnings (₹{userEarnings?.totalAmount || 0}) will be automatically released to your wallet once the project is completed and approved by the project owner. You can then withdraw these funds.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Best Practices */}
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                  <h3 className="text-xl font-semibold text-white mb-4">Best Practices</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="text-lg font-medium text-[#00A8E8] mb-3">Code Quality</h4>
+                      <ul className="text-gray-300 text-sm space-y-2">
+                        <li>• Write clean, readable, and maintainable code</li>
+                        <li>• Follow the project's coding conventions</li>
+                        <li>• Add proper comments and documentation</li>
+                        <li>• Write comprehensive tests</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-medium text-[#00A8E8] mb-3">Communication</h4>
+                      <ul className="text-gray-300 text-sm space-y-2">
+                        <li>• Keep the team updated on your progress</li>
+                        <li>• Ask questions when you're unsure</li>
+                        <li>• Report issues or blockers immediately</li>
+                        <li>• Be responsive to feedback and reviews</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
