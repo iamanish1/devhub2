@@ -135,6 +135,20 @@ export const projectSelectionApi = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  /**
+   * Get team members for a project
+   */
+  getProjectTeamMembers: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_TEAM_MEMBERS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 

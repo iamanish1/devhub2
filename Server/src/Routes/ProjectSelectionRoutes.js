@@ -9,7 +9,8 @@ import {
   getRankedBidders,
   updateSelectionConfig,
   getProjectOwnerSelections,
-  cancelSelection
+  cancelSelection,
+  getProjectTeamMembers
 } from '../controller/ProjectSelectionController.js';
 
 const projectSelectionRoutes = express.Router();
@@ -23,6 +24,7 @@ projectSelectionRoutes.get('/test', (req, res) => {
       'POST /:projectId/manual-selection',
       'POST /:projectId/execute-automatic',
       'GET /:projectId/ranked-bidders',
+      'GET /:projectId/team-members',
       'GET /owner/selections'
     ]
   });
@@ -33,6 +35,9 @@ projectSelectionRoutes.post('/create/:projectId', authMiddleware, createProjectS
 
 // Get project selection configuration
 projectSelectionRoutes.get('/:projectId', authMiddleware, getProjectSelection);
+
+// Get team members for a project
+projectSelectionRoutes.get('/:projectId/team-members', authMiddleware, getProjectTeamMembers);
 
 // Execute automatic selection
 projectSelectionRoutes.post('/:projectId/execute-automatic', authMiddleware, (req, res, next) => {

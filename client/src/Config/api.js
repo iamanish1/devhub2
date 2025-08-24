@@ -53,6 +53,7 @@ export const API_ENDPOINTS = {
   PROJECT_SELECTION_BASE: `${API_BASE_URL}/api/project-selection`,
   CREATE_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}`,
   GET_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}`,
+  GET_TEAM_MEMBERS: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/team-members`,
   EXECUTE_AUTOMATIC_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/execute-automatic`,
   MANUAL_SELECTION: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/manual-selection`,
   GET_RANKED_BIDDERS: (projectId) => `${API_BASE_URL}/api/project-selection/${projectId}/ranked-bidders`,

@@ -920,3 +920,151 @@ export const cancelSelection = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
+
+/**
+ * Get team members for a specific project
+ */
+export const getProjectTeamMembers = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    // Verify the user owns this project or is a selected contributor
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Check if user is project owner or a selected contributor
+    const isProjectOwner = project.user.toString() === userId.toString();
+    
+    // Get project selection to check if user is a selected contributor
+    const projectSelection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = projectSelection?.selectedUsers?.some(
+      user => user.userId.toString() === userId.toString()
+    );
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied. You are not authorized to view this project team.' });
+    }
+
+    // Get the project selection with populated user data
+    const selection = await ProjectSelection.findOne({ projectId })
+      .populate({
+        path: 'selectedUsers.userId',
+        select: 'username email name'
+      })
+      .populate({
+        path: 'selectedUsers.bidId',
+        select: 'bid_amount bid_description year_of_experience hours_avilable_per_week skills'
+      });
+
+    if (!selection) {
+      return res.status(200).json({ 
+        teamMembers: [],
+        project: {
+          id: project._id,
+          title: project.project_Title,
+          description: project.Project_Description
+        }
+      });
+    }
+
+    // Get user profiles for selected users
+    const teamMembersWithProfiles = await Promise.all(
+      selection.selectedUsers.map(async (selectedUser) => {
+        const userProfile = await UserProfile.findOne(
+          { username: selectedUser.userId._id },
+          'user_profile_cover_photo user_profile_bio user_profile_skills user_profile_linkedIn user_profile_github user_profile_website user_profile_instagram user_profile_location user_profile_created_at user_project_contribution user_completed_projects'
+        );
+
+        return {
+          id: selectedUser.userId._id,
+          userId: selectedUser.userId._id,
+          username: selectedUser.userId.username || selectedUser.userId.name,
+          email: selectedUser.userId.email,
+          role: 'contributor',
+          selectionScore: selectedUser.selectionScore,
+          selectionReason: selectedUser.selectionReason,
+          selectedAt: selectedUser.selectedAt,
+          acceptedByUser: selectedUser.acceptedByUser,
+          acceptedAt: selectedUser.acceptedAt,
+          escrowLocked: selectedUser.escrowLocked,
+          escrowLockedAt: selectedUser.escrowLockedAt,
+          // Bid information
+          bidAmount: selectedUser.bidId?.bid_amount,
+          bidDescription: selectedUser.bidId?.bid_description,
+          experience: selectedUser.bidId?.year_of_experience,
+          hoursPerWeek: selectedUser.bidId?.hours_avilable_per_week,
+          skills: selectedUser.bidId?.skills || [],
+          // Profile information
+          avatar: userProfile?.user_profile_cover_photo,
+          bio: userProfile?.user_profile_bio,
+          profileSkills: userProfile?.user_profile_skills,
+          linkedIn: userProfile?.user_profile_linkedIn,
+          github: userProfile?.user_profile_github,
+          website: userProfile?.user_profile_website,
+          instagram: userProfile?.user_profile_instagram,
+          location: userProfile?.user_profile_location,
+          profileCreatedAt: userProfile?.user_profile_created_at,
+          projectContribution: userProfile?.user_project_contribution,
+          completedProjects: userProfile?.user_completed_projects
+        };
+      })
+    );
+
+    // Add project owner to team members
+    const projectOwnerProfile = await UserProfile.findOne(
+      { username: project.user },
+      'user_profile_cover_photo user_profile_bio user_profile_skills user_profile_linkedIn user_profile_github user_profile_website user_profile_instagram user_profile_location user_profile_created_at user_project_contribution user_completed_projects'
+    );
+
+    const projectOwner = {
+      id: project.user,
+      userId: project.user,
+      username: projectOwnerProfile?.username || 'Project Owner',
+      email: '', // Don't expose owner email for security
+      role: 'project_owner',
+      selectionScore: 100,
+      selectionReason: 'project_owner',
+      selectedAt: project.createdAt,
+      acceptedByUser: true,
+      acceptedAt: project.createdAt,
+      escrowLocked: false,
+      // Profile information
+      avatar: projectOwnerProfile?.user_profile_cover_photo,
+      bio: projectOwnerProfile?.user_profile_bio,
+      profileSkills: projectOwnerProfile?.user_profile_skills,
+      linkedIn: projectOwnerProfile?.user_profile_linkedIn,
+      github: projectOwnerProfile?.user_profile_github,
+      website: projectOwnerProfile?.user_profile_website,
+      instagram: projectOwnerProfile?.user_profile_instagram,
+      location: projectOwnerProfile?.user_profile_location,
+      profileCreatedAt: projectOwnerProfile?.user_profile_created_at,
+      projectContribution: projectOwnerProfile?.user_project_contribution,
+      completedProjects: projectOwnerProfile?.user_completed_projects
+    };
+
+    // Combine owner and contributors
+    const allTeamMembers = [projectOwner, ...teamMembersWithProfiles];
+
+    res.status(200).json({
+      teamMembers: allTeamMembers,
+      project: {
+        id: project._id,
+        title: project.project_Title,
+        description: project.Project_Description,
+        totalContributors: selection?.selectedUsers?.length || 0,
+        requiredContributors: selection?.requiredContributors || 0,
+        selectionStatus: selection?.status || 'pending'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting project team members:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch team members',
+      error: error.message 
+    });
+  }
+};

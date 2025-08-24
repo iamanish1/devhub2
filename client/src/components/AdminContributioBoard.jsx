@@ -57,6 +57,7 @@ import io from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { projectTaskApi } from "../services/projectTaskApi";
 import { notificationService } from "../services/notificationService";
+import { projectSelectionApi } from "../services/projectSelectionApi";
 const Socket_URl =
   import.meta.env.VITE_SOCKET_SERVER || `${import.meta.env.VITE_API_URL}`;
 
@@ -175,6 +176,8 @@ const AdminContributionBoard = ({
   const [firebaseListeners, setFirebaseListeners] = useState([]);
   const [realTimeUpdates, setRealTimeUpdates] = useState({});
   const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(false);
+  const [teamMembersError, setTeamMembersError] = useState(null);
   const [taskComments, setTaskComments] = useState({});
   const [taskFiles, setTaskFiles] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([
@@ -693,6 +696,30 @@ const AdminContributionBoard = ({
     }
   };
 
+  // Load team members from API
+  const loadTeamMembers = async () => {
+    if (!selectedProjectId) return;
+    
+    try {
+      setTeamMembersLoading(true);
+      setTeamMembersError(null);
+      console.log('🔄 Loading team members for project:', selectedProjectId);
+      const response = await projectSelectionApi.getProjectTeamMembers(selectedProjectId);
+      
+      if (response.teamMembers) {
+        setTeamMembers(response.teamMembers);
+        console.log('✅ Loaded', response.teamMembers.length, 'team members');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load team members:', error);
+      setTeamMembersError(error.message || 'Failed to load team members');
+      // Set empty array if API fails
+      setTeamMembers([]);
+    } finally {
+      setTeamMembersLoading(false);
+    }
+  };
+
   // Fallback function to load tasks from API when Firebase fails
   const loadTasksFromAPI = async () => {
     if (!selectedProjectId) return;
@@ -729,6 +756,7 @@ const AdminContributionBoard = ({
   useEffect(() => {
     if (selectedProjectId) {
       loadWorkspace();
+      loadTeamMembers(); // Load team members when project changes
     }
   }, [selectedProjectId]);
 
@@ -1051,7 +1079,7 @@ const AdminContributionBoard = ({
     );
   };
 
-  // Team Member Card Component
+  // Enhanced Team Member Card Component
   const TeamMemberCard = ({ member }) => {
     const isOnline = onlineUsers.some(user => user.userId === member.userId);
     
@@ -1069,18 +1097,107 @@ const AdminContributionBoard = ({
             }`}></div>
           </div>
           <div className="flex-1">
-            <h4 className="font-semibold text-white">{member.username}</h4>
-            <p className="text-gray-400 text-sm">{member.role}</p>
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold text-white">{member.username}</h4>
+              <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                member.role === 'project_owner' ? 'bg-blue-900/40 text-blue-400' :
+                member.role === 'contributor' ? 'bg-green-900/40 text-green-400' :
+                'bg-gray-900/40 text-gray-400'
+              }`}>
+                {member.role === 'project_owner' ? 'Owner' : 'Contributor'}
+              </span>
+            </div>
+            <p className="text-gray-400 text-sm">{member.bio || 'No bio available'}</p>
           </div>
         </div>
         
-        <div className="text-xs text-gray-400 space-y-1">
-          <div>Email: {member.email}</div>
-          <div>Joined: {new Date(member.joinedAt).toLocaleDateString()}</div>
+        <div className="text-xs text-gray-400 space-y-1 mb-3">
+          {member.email && (
+            <div>Email: {member.email}</div>
+          )}
+          <div>Joined: {new Date(member.selectedAt || member.joinedAt).toLocaleDateString()}</div>
+          {member.bidAmount && (
+            <div>Bid Amount: ₹{member.bidAmount}</div>
+          )}
+          {member.experience && (
+            <div>Experience: {member.experience} years</div>
+          )}
+          {member.hoursPerWeek && (
+            <div>Hours/Week: {member.hoursPerWeek}</div>
+          )}
+          {member.selectionScore && (
+            <div>Selection Score: {member.selectionScore}/100</div>
+          )}
           {member.selectionReason && (
-            <div>Reason: {member.selectionReason}</div>
+            <div>Selection: {member.selectionReason}</div>
           )}
         </div>
+
+        {/* Skills */}
+        {member.skills && member.skills.length > 0 && (
+          <div className="mb-3">
+            <div className="text-xs text-gray-400 mb-1">Skills:</div>
+            <div className="flex flex-wrap gap-1">
+              {member.skills.slice(0, 3).map((skill, idx) => (
+                <span
+                  key={idx}
+                  className="bg-blue-900/40 text-blue-200 px-2 py-1 rounded text-xs"
+                >
+                  {skill}
+                </span>
+              ))}
+              {member.skills.length > 3 && (
+                <span className="text-gray-400 text-xs">+{member.skills.length - 3} more</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Social Links */}
+        {(member.github || member.linkedIn || member.website || member.instagram) && (
+          <div className="flex gap-2">
+            {member.github && (
+              <a
+                href={member.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white text-xs"
+              >
+                GitHub
+              </a>
+            )}
+            {member.linkedIn && (
+              <a
+                href={member.linkedIn}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white text-xs"
+              >
+                LinkedIn
+              </a>
+            )}
+            {member.website && (
+              <a
+                href={member.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white text-xs"
+              >
+                Website
+              </a>
+            )}
+            {member.instagram && (
+              <a
+                href={member.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white text-xs"
+              >
+                Instagram
+              </a>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -1261,15 +1378,77 @@ const AdminContributionBoard = ({
               {/* Team Tab */}
               {activeTab === 'team' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-6">Team Members</h2>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {teamMembers.map((member) => (
-                      <TeamMemberCard key={member.id} member={member} />
-                    ))}
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-white">Team Members</h2>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={loadTeamMembers}
+                        disabled={teamMembersLoading}
+                        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 text-white px-3 py-1 rounded-lg transition-colors text-sm"
+                      >
+                        <FaSync className={`text-xs ${teamMembersLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <FaSync className="text-blue-400" />
+                        <span className="text-sm text-gray-400">Real-time updates</span>
+                      </div>
+                    </div>
                   </div>
 
-                  {teamMembers.length === 0 && (
+                  {/* Team Statistics */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-blue-500/20 text-center">
+                      <div className="text-2xl font-bold text-blue-400">{teamMembers.length}</div>
+                      <div className="text-sm text-gray-400">Total Members</div>
+                    </div>
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-green-500/20 text-center">
+                      <div className="text-2xl font-bold text-green-400">
+                        {teamMembers.filter(m => m.role === 'contributor').length}
+                      </div>
+                      <div className="text-sm text-gray-400">Contributors</div>
+                    </div>
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-purple-500/20 text-center">
+                      <div className="text-2xl font-bold text-purple-400">
+                        {teamMembers.filter(m => m.role === 'project_owner').length}
+                      </div>
+                      <div className="text-sm text-gray-400">Project Owner</div>
+                    </div>
+                    <div className="bg-[#181b23] rounded-lg p-4 border border-yellow-500/20 text-center">
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {onlineUsers.length}
+                      </div>
+                      <div className="text-sm text-gray-400">Online Now</div>
+                    </div>
+                  </div>
+
+                  {/* Team Members Grid */}
+                  {teamMembersLoading ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
+                      <p>Loading team members...</p>
+                    </div>
+                  ) : teamMembersError ? (
+                    <div className="text-center py-8 text-red-400">
+                      <FaExclamationTriangle className="text-4xl mx-auto mb-4" />
+                      <p className="font-semibold mb-2">Error loading team members</p>
+                      <p className="text-sm mb-4">{teamMembersError}</p>
+                      <button
+                        onClick={loadTeamMembers}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {teamMembers.map((member) => (
+                        <TeamMemberCard key={member.id} member={member} />
+                      ))}
+                    </div>
+                  )}
+
+                  {!teamMembersLoading && !teamMembersError && teamMembers.length === 0 && (
                     <div className="text-center py-8 text-gray-400">
                       <FaUsers className="text-4xl mx-auto mb-4" />
                       <p>No team members found.</p>
