@@ -10,6 +10,45 @@ import { logger } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 import mongoose from 'mongoose';
 
+// Firebase imports
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase.js';
+
+/**
+ * Create Firebase workspace access for selected contributors
+ */
+const createFirebaseWorkspaceAccess = async (projectId, userId) => {
+  try {
+    // Create workspace access document
+    const workspaceAccessRef = doc(db, 'workspace_access', `${projectId}_${userId}`);
+    await setDoc(workspaceAccessRef, {
+      projectId,
+      userId,
+      accessLevel: 'contributor',
+      grantedAt: serverTimestamp(),
+      status: 'active',
+      createdBy: 'ProjectSelectionController'
+    }, { merge: true });
+
+    // Create project contributor document
+    const projectContributorRef = doc(db, 'project_contributors', `${projectId}_${userId}`);
+    await setDoc(projectContributorRef, {
+      projectId,
+      userId,
+      role: 'contributor',
+      joinedAt: serverTimestamp(),
+      status: 'active',
+      createdBy: 'ProjectSelectionController'
+    }, { merge: true });
+
+    logger.info(`[ProjectSelection] Firebase workspace access created for user ${userId} on project ${projectId}`);
+    return true;
+  } catch (error) {
+    logger.error(`[ProjectSelection] Error creating Firebase workspace access: ${error.message}`, error);
+    return false;
+  }
+};
+
 /**
  * Create a new project selection configuration
  */
@@ -202,14 +241,18 @@ export const executeAutomaticSelection = async (req, res) => {
       selection.totalBidsConsidered = result.totalBidders;
       await selection.save();
 
-      // Update bid statuses for selected users
+      // Update bid statuses and create Firebase workspace access for selected users
       for (const selectedUser of result.selectedUsers) {
         try {
+          // Update bid status
           await Bidding.findByIdAndUpdate(selectedUser.bidId, {
             bid_status: 'Accepted'
           });
-        } catch (bidUpdateError) {
-          logger.error(`[ProjectSelection] Failed to update bid status for ${selectedUser.bidId}: ${bidUpdateError.message}`);
+
+          // Create Firebase workspace access
+          await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
+        } catch (error) {
+          logger.error(`[ProjectSelection] Failed to process selected user ${selectedUser.userId}: ${error.message}`);
         }
       }
 
@@ -350,14 +393,18 @@ export const manualSelection = async (req, res) => {
 
     await selection.save();
 
-    // Update bid statuses for selected users
+    // Update bid statuses and create Firebase workspace access for selected users
     for (const selectedUser of selectedUsers) {
       try {
+        // Update bid status
         await Bidding.findByIdAndUpdate(selectedUser.bidId, {
           bid_status: 'Accepted'
         });
-      } catch (bidUpdateError) {
-        logger.error(`[ProjectSelection] Failed to update bid status for ${selectedUser.bidId}: ${bidUpdateError.message}`);
+
+        // Create Firebase workspace access
+        await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
+      } catch (error) {
+        logger.error(`[ProjectSelection] Failed to process selected user ${selectedUser.userId}: ${error.message}`);
       }
     }
 

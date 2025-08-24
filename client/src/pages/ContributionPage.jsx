@@ -29,6 +29,7 @@ import {
   getDoc 
 } from "firebase/firestore";
 
+
 const ContributionPage = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -137,8 +138,10 @@ const ContributionPage = () => {
           console.log('✅ User has workspace access as contributor');
           return true;
         } else {
-          throw new Error('Access denied: User does not have active contributor access');
+          console.log('⚠️ Workspace access exists but status/level incorrect:', accessData);
         }
+      } else {
+        console.log('❌ No workspace_access document found');
       }
 
       // Check project_contributors collection
@@ -152,11 +155,16 @@ const ContributionPage = () => {
         if (contributorData.status === 'active' && contributorData.role === 'contributor') {
           console.log('✅ User has project contributor access');
           return true;
+        } else {
+          console.log('⚠️ Project contributor exists but status/role incorrect:', contributorData);
         }
+      } else {
+        console.log('❌ No project_contributors document found');
       }
 
       // Check if user is project owner by making a backend call
       try {
+        console.log('🔍 Checking backend access...');
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/workspace/${projectId}/check-access`, {
           method: 'GET',
           headers: {
@@ -165,15 +173,22 @@ const ContributionPage = () => {
           }
         });
         
+        console.log('📡 Backend response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('📋 Backend response data:', data);
           if (data.hasAccess) {
             console.log('✅ User has access via backend check');
             return true;
+          } else {
+            console.log('❌ Backend denied access:', data.message);
           }
+        } else {
+          console.log('❌ Backend request failed with status:', response.status);
         }
-      } catch {
-        console.log('Backend access check failed, continuing with Firebase check');
+      } catch (error) {
+        console.log('❌ Backend access check failed:', error.message);
       }
 
       // If we reach here, user doesn't have access
@@ -274,6 +289,8 @@ const ContributionPage = () => {
     );
   };
 
+
+
   if (loading && !workspace) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -325,6 +342,7 @@ const ContributionPage = () => {
                 </span>
               )}
             </div>
+
           </div>
         </div>
       </div>

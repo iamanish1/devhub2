@@ -417,65 +417,69 @@ const AdminPage = () => {
     }
   };
 
-  const handleApplicantStatus = async (id, status) => {
+  // Individual contributor selection using new system
+  const handleIndividualSelection = async (applicantId, action) => {
     try {
-      // Update backend
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/admin/applicant/${id}`,
-        { status },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const applicant = applicants.find(app => app._id === applicantId);
+      if (!applicant) {
+        notificationService.error("Applicant not found");
+        return;
+      }
 
-      // Update Firebase for real-time updates
-      const applicant = applicants.find(app => app._id === id);
-      if (applicant) {
-        const projectId = applicant.project_id?._id || applicant.project_id;
-        const userId = applicant.user_id;
+      const projectId = applicant.project_id?._id || applicant.project_id;
+      const userId = applicant.user_id;
+
+      if (action === "accept") {
+        // Use new manual selection system for individual acceptance
+        const result = await projectSelectionApi.manualSelection(projectId, [userId], "individual_selection");
         
-        // Update Firebase document
+        if (result.success) {
+          // Update Firebase for real-time updates
+          const selectionStatusRef = doc(db, 'selection_status', projectId);
+          await setDoc(selectionStatusRef, {
+            projectId,
+            status: 'completed',
+            selectedUsers: result.selectedUsers,
+            completedAt: serverTimestamp(),
+            totalBidders: 1
+          }, { merge: true });
+
+          notificationService.success("Contributor accepted successfully");
+        } else {
+          notificationService.error(result.message || "Failed to accept contributor");
+        }
+      } else if (action === "reject") {
+        // For rejection, we'll update the bid status directly
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/admin/applicant/${applicantId}`,
+          { status: "Rejected" },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        // Update Firebase for real-time updates
         const applicantStatusRef = doc(db, 'applicant_status', `${projectId}_${userId}`);
         await setDoc(applicantStatusRef, {
           projectId,
           userId,
-          status,
+          status: "Rejected",
           updatedAt: serverTimestamp(),
-          applicantId: id,
+          applicantId: applicantId,
           applicantData: applicant
         }, { merge: true });
 
-        // If status is "Accepted", create workspace access
-        if (status === "Accepted") {
-          await createWorkspaceAccess(projectId, userId);
-        }
-
-        // Update local state immediately for real-time UI update
-        setApplicants((prev) =>
-          prev.map((app) =>
-            app._id === id ? { ...app, bid_status: status } : app
-          )
-        );
-
-        // Update grouped applicants state
-        setApplicantsByProject(prev => {
-          const updated = { ...prev };
-          Object.keys(updated).forEach(projectKey => {
-            updated[projectKey] = updated[projectKey].map(app =>
-              app._id === id ? { ...app, bid_status: status } : app
-            );
-          });
-          return updated;
-        });
+        notificationService.success("Contributor rejected successfully");
       }
 
-      notificationService.success(`Applicant ${status.toLowerCase()} successfully`);
+      // Refresh data to get updated status
+      await refreshApplicantsData();
     } catch (error) {
-      console.error("Error updating applicant status:", error);
-      notificationService.error("Failed to update applicant status");
+      console.error("Error in individual selection:", error);
+      notificationService.error("Failed to process selection");
     }
   };
 
@@ -508,6 +512,46 @@ const AdminPage = () => {
     }
   };
 
+  // Refresh applicants data
+  const refreshApplicantsData = async () => {
+    try {
+      const [applicantsRes, selectionsRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/applicant`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+        projectSelectionApi.getProjectOwnerSelections()
+      ]);
+      
+      const applicants = applicantsRes.data.applicants || [];
+      const selections = selectionsRes.selections || [];
+      
+      // Group applicants by project
+      const groupedApplicants = {};
+      applicants.forEach(applicant => {
+        const projectId = applicant.project_id?._id || applicant.project_id;
+        if (!groupedApplicants[projectId]) {
+          groupedApplicants[projectId] = [];
+        }
+        groupedApplicants[projectId].push(applicant);
+      });
+
+      // Create selection configs for each project
+      const configs = {};
+      selections.forEach(selection => {
+        configs[selection.projectId] = selection;
+      });
+
+      setApplicantsByProject(groupedApplicants);
+      setSelectionConfigs(configs);
+      setApplicants(applicants);
+    } catch (error) {
+      console.error("Error refreshing applicants data:", error);
+    }
+  };
+
   // Enhanced Project Selection Handlers
   const handleCreateSelection = async (projectId, selectionData) => {
     try {
@@ -531,28 +575,21 @@ const AdminPage = () => {
       // Execute automatic selection
       const result = await projectSelectionApi.executeAutomaticSelection(projectId);
       
-      if (result.success) {
-        // Update Firebase for real-time updates
-        const selectionStatusRef = doc(db, 'selection_status', projectId);
-        await setDoc(selectionStatusRef, {
-          projectId,
-          status: 'completed',
-          selectedUsers: result.selectedUsers,
-          completedAt: serverTimestamp(),
-          totalBidders: result.totalBidders
-        }, { merge: true });
+              if (result.success) {
+          // Update Firebase for real-time updates
+          const selectionStatusRef = doc(db, 'selection_status', projectId);
+          await setDoc(selectionStatusRef, {
+            projectId,
+            status: 'completed',
+            selectedUsers: result.selectedUsers,
+            completedAt: serverTimestamp(),
+            totalBidders: result.totalBidders
+          }, { merge: true });
 
-        // Create workspace access for selected users
-        if (result.selectedUsers && result.selectedUsers.length > 0) {
-          for (const selectedUser of result.selectedUsers) {
-            await createWorkspaceAccess(projectId, selectedUser.userId);
-          }
+          notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected.`);
+        } else {
+          notificationService.error(result.message || "Automatic selection failed");
         }
-
-        notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected.`);
-      } else {
-        notificationService.error(result.message || "Automatic selection failed");
-      }
       
       // Refresh data
       const [applicantsRes, selectionsRes] = await Promise.all([
@@ -604,26 +641,21 @@ const AdminPage = () => {
     try {
       const result = await projectSelectionApi.manualSelection(projectId, selectedUserIds, "manual_selection");
       
-      if (result.success) {
-        // Update Firebase for real-time updates
-        const selectionStatusRef = doc(db, 'selection_status', projectId);
-        await setDoc(selectionStatusRef, {
-          projectId,
-          status: 'completed',
-          selectedUsers: result.selectedUsers,
-          completedAt: serverTimestamp(),
-          totalBidders: selectedUserIds.length
-        }, { merge: true });
+              if (result.success) {
+          // Update Firebase for real-time updates
+          const selectionStatusRef = doc(db, 'selection_status', projectId);
+          await setDoc(selectionStatusRef, {
+            projectId,
+            status: 'completed',
+            selectedUsers: result.selectedUsers,
+            completedAt: serverTimestamp(),
+            totalBidders: selectedUserIds.length
+          }, { merge: true });
 
-        // Create workspace access for selected users
-        for (const userId of selectedUserIds) {
-          await createWorkspaceAccess(projectId, userId);
+          notificationService.success(`Manual selection completed! ${selectedUserIds.length} contributors selected.`);
+        } else {
+          notificationService.error(result.message || "Manual selection failed");
         }
-
-        notificationService.success(`Manual selection completed! ${selectedUserIds.length} contributors selected.`);
-      } else {
-        notificationService.error(result.message || "Manual selection failed");
-      }
       
       // Refresh data
       const [applicantsRes, selectionsRes] = await Promise.all([
@@ -1462,14 +1494,14 @@ const AdminPage = () => {
                               <div className="mt-3 flex gap-2">
                                 <button
                                   className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-lg transition flex items-center gap-1 text-xs"
-                                  onClick={() => handleApplicantStatus(app._id, "Accepted")}
+                                  onClick={() => handleIndividualSelection(app._id, "accept")}
                                   disabled={app.bid_status === "Accepted"}
                                 >
                                   <FaUserCheck /> Accept
                                 </button>
                                 <button
                                   className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg transition flex items-center gap-1 text-xs"
-                                  onClick={() => handleApplicantStatus(app._id, "Rejected")}
+                                  onClick={() => handleIndividualSelection(app._id, "reject")}
                                   disabled={app.bid_status === "Rejected"}
                                 >
                                   <FaUserTimes /> Reject
