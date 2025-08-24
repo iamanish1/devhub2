@@ -17,7 +17,7 @@ import {
   updateWorkspace
 } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
-import { upload } from '../Middleware/upload.js';
+import upload from '../Middleware/upload.js';
 
 const projectTaskRoutes = express.Router();
 
