@@ -1,5 +1,5 @@
 import express from 'express';
-import { acceptUpload, deleteFile, getFileInfo } from '../controller/upload.controller.js';
+import { acceptUpload, deleteFile, getFileInfo, uploadChatFile } from '../controller/upload.controller.js';
 import { uploadSingle, uploadAny, uploadFields, normalizeFiles } from '../Middleware/upload.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 
@@ -29,6 +29,9 @@ uploadRoutes.post('/uploads/multiple', authMiddleware, (req, res, next) => {
     normalizeFiles(req, res, next);
   });
 }, acceptUpload);
+
+// Chat file upload endpoint
+uploadRoutes.post('/chat-file', authMiddleware, uploadSingle('file'), uploadChatFile);
 
 // Delete file endpoint
 uploadRoutes.delete('/uploads/:filename', authMiddleware, deleteFile);

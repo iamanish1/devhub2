@@ -6,23 +6,23 @@ import {
   deleteMessage, 
   getOnlineUsers 
 } from "../controller/ChatController.js";
-import { authenticateMiddelware } from "../Middleware/authenticateMiddelware.js";
+import authMiddleware from "../Middleware/authenticateMiddelware.js";
 
 const chatRoutes = express.Router();
 
 // Get project messages
-chatRoutes.get("/chat/:projectId", authenticateMiddelware, getProjectMessages);
+chatRoutes.get("/chat/:projectId", authMiddleware, getProjectMessages);
 
 // Post a new message
-chatRoutes.post("/chat/:projectId", authenticateMiddelware, postMessage);
+chatRoutes.post("/chat/:projectId", authMiddleware, postMessage);
 
 // Edit a message
-chatRoutes.put("/chat/message/:messageId", authenticateMiddelware, editMessage);
+chatRoutes.put("/chat/message/:messageId", authMiddleware, editMessage);
 
 // Delete a message
-chatRoutes.delete("/chat/message/:messageId", authenticateMiddelware, deleteMessage);
+chatRoutes.delete("/chat/message/:messageId", authMiddleware, deleteMessage);
 
 // Get online users for a project
-chatRoutes.get("/chat/:projectId/online-users", authenticateMiddelware, getOnlineUsers);
+chatRoutes.get("/chat/:projectId/online-users", authMiddleware, getOnlineUsers);
 
 export default chatRoutes;
