@@ -44,14 +44,7 @@ import {
 import { db } from "../Config/firebase";
 import { 
   doc, 
-  getDoc,
-  onSnapshot,
-  collection,
-  query,
-  orderBy,
-  addDoc,
-  serverTimestamp,
-  where
+  getDoc
 } from "firebase/firestore";
 
 
@@ -90,10 +83,7 @@ const ContributionPage = () => {
   const [projectChunks, setProjectChunks] = useState([]);
   const [activeChunk, setActiveChunk] = useState('all');
   
-  // Chat and communication
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [chatLoading, setChatLoading] = useState(false);
+
   
   // Resources and files
   const [resources, setResources] = useState([]);
@@ -248,50 +238,7 @@ const ContributionPage = () => {
     }
   };
 
-  // Setup real-time chat
-  const setupRealTimeChat = () => {
-    if (!projectId) return;
-    
-    const chatRef = collection(db, 'project_chats');
-    const chatQuery = query(
-      chatRef,
-      where('projectId', '==', projectId),
-      orderBy('timestamp', 'asc')
-    );
-    
-    const unsubscribe = onSnapshot(chatQuery, (snapshot) => {
-      const newMessages = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setMessages(newMessages);
-    });
-    
-    return unsubscribe;
-  };
 
-  // Send chat message
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !projectId) return;
-    
-    setChatLoading(true);
-    try {
-      const chatRef = collection(db, 'project_chats');
-      await addDoc(chatRef, {
-        projectId,
-        senderId: user._id,
-        senderName: user.username,
-        content: newMessage,
-        timestamp: serverTimestamp()
-      });
-      setNewMessage('');
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      notificationService.error('Failed to send message');
-    } finally {
-      setChatLoading(false);
-    }
-  };
 
   // Debug function
   const loadDebugInfo = async () => {
@@ -534,20 +481,7 @@ const ContributionPage = () => {
     }
   };
 
-  // Legacy send message function (replaced by Firebase real-time chat)
-  const handleLegacySendMessage = () => {
-    if (!newMessage.trim()) return;
-    
-    const message = {
-      id: Date.now(),
-      content: newMessage,
-      sender: user?.username || 'Unknown',
-      timestamp: new Date().toISOString()
-    };
-    
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
-  };
+
 
   // Get status badge
   const getStatusBadge = (status) => {
