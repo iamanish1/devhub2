@@ -201,11 +201,11 @@ const AdminPage = () => {
     }
   }, [view]);
 
-  // Cleanup Firebase listeners when component unmounts or view changes
+  // Cleanup Firebase listeners when component unmounts
   useEffect(() => {
     return () => {
       // Cleanup function will be called when component unmounts
-      console.log("Cleaning up Firebase listeners");
+      console.log("Cleaning up Firebase listeners on unmount");
       firebaseListeners.forEach(unsubscribe => {
         if (typeof unsubscribe === 'function') {
           unsubscribe();
@@ -213,7 +213,18 @@ const AdminPage = () => {
       });
       setFirebaseListeners([]);
     };
-  }, [view, firebaseListeners]);
+  }, []); // Empty dependency array - only runs on unmount
+
+  // Cleanup Firebase listeners when view changes
+  useEffect(() => {
+    // Cleanup previous listeners when view changes
+    firebaseListeners.forEach(unsubscribe => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    });
+    setFirebaseListeners([]);
+  }, [view]);
 
   // Firebase real-time listeners setup
   const setupFirebaseListeners = (groupedApplicants) => {
