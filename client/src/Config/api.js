@@ -84,6 +84,7 @@ export const API_ENDPOINTS = {
   UPDATE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}`,
   DELETE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}`,
   COMPLETE_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/complete`,
+  REVIEW_TASK: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/review`,
   ADD_TASK_COMMENT: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/comments`,
   UPLOAD_TASK_FILE: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/files`,
   GET_USER_TASKS: `${API_BASE_URL}/api/project-tasks/user/tasks`,

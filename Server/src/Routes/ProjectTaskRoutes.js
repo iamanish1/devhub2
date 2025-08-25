@@ -8,6 +8,7 @@ import {
   updateTask,
   deleteTask,
   completeTask,
+  reviewTask,
   addTaskComment,
   uploadTaskFile,
   getUserTasks,
@@ -60,6 +61,7 @@ projectTaskRoutes.post('/:projectId/tasks', authMiddleware, createTask);
 projectTaskRoutes.put('/:projectId/tasks/:taskId', authMiddleware, updateTask);
 projectTaskRoutes.delete('/:projectId/tasks/:taskId', authMiddleware, deleteTask);
 projectTaskRoutes.post('/:projectId/tasks/:taskId/complete', authMiddleware, completeTask);
+projectTaskRoutes.post('/:projectId/tasks/:taskId/review', authMiddleware, reviewTask);
 projectTaskRoutes.post('/:projectId/tasks/:taskId/comments', authMiddleware, addTaskComment);
 projectTaskRoutes.post('/:projectId/tasks/:taskId/files', authMiddleware, upload.single('file'), uploadTaskFile);
 

@@ -338,6 +338,66 @@ export const completeTask = async (req, res) => {
 };
 
 /**
+ * Review task (Admin only)
+ */
+export const reviewTask = async (req, res) => {
+  try {
+    const { projectId, taskId } = req.params;
+    const userId = req.user._id;
+    const { reviewNotes, approved = true } = req.body;
+
+    logger.info(`[ProjectTask] Reviewing task ${taskId} for project ${projectId}`);
+
+    // Check if user is project owner (admin)
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    if (project.user.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'Only project owner can review tasks' });
+    }
+
+    // Update task status to reviewed
+    const updatedTask = await ProjectTask.findByIdAndUpdate(
+      taskId,
+      { 
+        status: 'reviewed',
+        reviewNotes,
+        approved,
+        reviewedAt: new Date(),
+        reviewedBy: userId
+      },
+      { new: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Sync to Firebase for real-time updates
+    const taskRef = doc(db, 'project_tasks', taskId);
+    await setDoc(taskRef, {
+      status: 'reviewed',
+      reviewNotes,
+      approved,
+      reviewedAt: serverTimestamp(),
+      reviewedBy: userId.toString()
+    }, { merge: true });
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Task reviewed successfully',
+      task: updatedTask
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error reviewing task: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
  * Add comment to task
  */
 export const addTaskComment = async (req, res) => {

@@ -181,6 +181,22 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
     }
   };
 
+  // Review task (Admin only)
+  const handleReviewTask = async (taskId, reviewNotes = "", approved = true) => {
+    try {
+      setUpdatingTask(true);
+      setError(null);
+      
+      await projectTaskApi.reviewTask(projectId, taskId, { reviewNotes, approved });
+      notificationService.success('Task reviewed successfully!');
+    } catch (err) {
+      setError(err.message || 'Failed to review task');
+      notificationService.error(err.message || 'Failed to review task');
+    } finally {
+      setUpdatingTask(false);
+    }
+  };
+
   // Edit task
   const handleEditTask = async () => {
     try {
@@ -226,6 +242,7 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       in_progress: { color: 'bg-blue-500/20 text-blue-400 border border-blue-500/30', icon: FaSync },
       review: { color: 'bg-purple-500/20 text-purple-400 border border-purple-500/30', icon: FaEye },
       completed: { color: 'bg-green-500/20 text-green-400 border border-green-500/30', icon: FaCheckCircle },
+      reviewed: { color: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', icon: FaCheckCircle },
       cancelled: { color: 'bg-red-500/20 text-red-400 border border-red-500/30', icon: FaExclamationTriangle }
     };
     
@@ -384,12 +401,24 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
               </button>
             )}
             
-            {task.status !== 'completed' && (
+            {task.status !== 'completed' && task.status !== 'reviewed' && (
               <button
                 onClick={() => onStatusUpdate(task.id, 'completed')}
                 disabled={updatingTask}
                 className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
                 title="Complete Task"
+              >
+                <FaCheckCircle className="w-3 h-3" />
+              </button>
+            )}
+
+            {/* Admin can review completed tasks */}
+            {task.status === 'completed' && (
+              <button
+                onClick={() => handleReviewTask(task.id)}
+                disabled={updatingTask}
+                className="p-2 text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
+                title="Review Task"
               >
                 <FaCheckCircle className="w-3 h-3" />
               </button>
@@ -449,7 +478,7 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       </div>
 
       {/* Task Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-[#181b23] rounded-lg p-4 border border-blue-500/20 text-center">
           <div className="text-2xl font-bold text-blue-400">{tasks.length}</div>
           <div className="text-sm text-gray-400">Total Tasks</div>
@@ -471,6 +500,12 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
             {tasks.filter(t => t.status === 'completed').length}
           </div>
           <div className="text-sm text-gray-400">Completed</div>
+        </div>
+        <div className="bg-[#181b23] rounded-lg p-4 border border-emerald-500/20 text-center">
+          <div className="text-2xl font-bold text-emerald-400">
+            {tasks.filter(t => t.status === 'reviewed').length}
+          </div>
+          <div className="text-sm text-gray-400">Reviewed</div>
         </div>
       </div>
 
@@ -520,6 +555,7 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
               <option value="in_progress">In Progress</option>
               <option value="review">Review</option>
               <option value="completed">Completed</option>
+              <option value="reviewed">Reviewed</option>
             </select>
           </div>
           

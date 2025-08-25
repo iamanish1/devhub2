@@ -134,7 +134,6 @@ const ContributionPage = () => {
 
   // Project chunks/sections
   const [projectChunks, setProjectChunks] = useState([]);
-  const [activeChunk, setActiveChunk] = useState("all");
 
   // Resources and files
   const [resources, setResources] = useState([]);
@@ -678,6 +677,8 @@ const ContributionPage = () => {
     }
   };
 
+
+
   // Handle withdrawal request
   const handleWithdrawalRequest = async () => {
     try {
@@ -728,6 +729,10 @@ const ContributionPage = () => {
       },
       completed: {
         color: "bg-green-500/20 text-green-400 border border-green-500/30",
+        icon: CheckCircle,
+      },
+      reviewed: {
+        color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
         icon: CheckCircle,
       },
       cancelled: {
@@ -1754,6 +1759,7 @@ const ContributionPage = () => {
                               ? task.assignedTo._id
                               : task.assignedTo) === user?._id) && (
                             <div className="flex items-center space-x-1">
+                              {/* User can start pending tasks */}
                               {task.status === "pending" && (
                                 <button
                                   onClick={() =>
@@ -1770,6 +1776,7 @@ const ContributionPage = () => {
                                 </button>
                               )}
 
+                              {/* User can mark in-progress tasks for review */}
                               {task.status === "in_progress" && (
                                 <button
                                   onClick={() =>
@@ -1783,7 +1790,8 @@ const ContributionPage = () => {
                                 </button>
                               )}
 
-                              {task.status !== "completed" && (
+                              {/* User can complete tasks from any status except completed/reviewed */}
+                              {task.status !== "completed" && task.status !== "reviewed" && (
                                 <button
                                   onClick={() => handleCompleteTask(task._id)}
                                   disabled={

@@ -130,6 +130,21 @@ export const projectTaskApi = {
   },
 
   /**
+   * Review task (Admin only)
+   */
+  reviewTask: async (projectId, taskId, reviewData) => {
+    try {
+      const response = await createAuthInstance().post(
+        API_ENDPOINTS.REVIEW_TASK(projectId, taskId),
+        reviewData
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
    * Add comment to task
    */
   addTaskComment: async (projectId, taskId, content) => {
