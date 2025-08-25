@@ -45,6 +45,17 @@ projectTaskRoutes.get('/test-team/:projectId', (req, res) => {
   });
 });
 
+// Test endpoint for resources route (without auth for debugging)
+projectTaskRoutes.get('/test-resources/:projectId', (req, res) => {
+  console.log('🔍 Test resources endpoint hit');
+  console.log('🔍 Project ID:', req.params.projectId);
+  res.json({ 
+    message: 'Test resources endpoint working',
+    projectId: req.params.projectId,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Test endpoint for task creation (without auth for debugging)
 projectTaskRoutes.post('/test-task/:projectId', (req, res) => {
   console.log('🔍 Test task endpoint hit');

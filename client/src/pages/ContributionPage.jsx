@@ -138,8 +138,7 @@ const ContributionPage = () => {
   // Resources and files
   const [resources, setResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
-
-
+  const [resourcesError, setResourcesError] = useState(null);
 
   // Team collaboration
   const [teamMembers, setTeamMembers] = useState([]);
@@ -433,12 +432,22 @@ const ContributionPage = () => {
   const loadProjectResources = async () => {
     try {
       console.log('🔍 Loading project resources for project:', projectId);
+      console.log('🔍 API endpoint:', `${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/resources`);
+      console.log('🔍 Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       setResourcesLoading(true);
+      setResourcesError(null);
       const data = await projectTaskApi.getProjectResources(projectId);
       console.log('✅ Project resources loaded:', data);
       setResources(data.resources || []);
     } catch (error) {
       console.error("Failed to load project resources:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      setResourcesError(error.message || "Failed to load project resources");
       setResources([]);
     } finally {
       setResourcesLoading(false);
@@ -2177,6 +2186,18 @@ const ContributionPage = () => {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-[#00A8E8] mr-3" />
                     <span className="text-gray-400">Loading resources...</span>
+                  </div>
+                ) : resourcesError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <p className="text-red-400 mb-2">{resourcesError}</p>
+                    <p className="text-sm text-gray-500">{resourcesError}</p>
+                    <button
+                      onClick={loadProjectResources}
+                      className="mt-4 px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] transition-colors"
+                    >
+                      Try Again
+                    </button>
                   </div>
                 ) : resources && resources.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

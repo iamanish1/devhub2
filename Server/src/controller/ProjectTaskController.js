@@ -627,49 +627,104 @@ export const getProjectResources = async (req, res) => {
     const userId = req.user._id;
 
     logger.info(`[ProjectTask] Getting resources for project ${projectId}`);
+    console.log('🔍 [ProjectTask] Getting resources for project:', projectId);
+    console.log('🔍 [ProjectTask] User ID:', userId);
 
     // Check if user has access
     const project = await ProjectListing.findById(projectId);
     if (!project) {
+      console.log('❌ [ProjectTask] Project not found:', projectId);
       return res.status(404).json({ message: 'Project not found' });
     }
+
+    console.log('✅ [ProjectTask] Project found:', project.project_Title);
 
     const isProjectOwner = project.user.toString() === userId.toString();
     const selection = await ProjectSelection.findOne({ projectId });
     const isSelectedContributor = selection && selection.selectedUsers && 
       selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
 
+    console.log('🔍 [ProjectTask] Access check:', {
+      isProjectOwner,
+      isSelectedContributor,
+      projectOwner: project.user.toString(),
+      userId: userId.toString()
+    });
+
     if (!isProjectOwner && !isSelectedContributor) {
+      console.log('❌ [ProjectTask] Access denied for user:', userId);
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Get resources from Firebase
-    const resourcesQuery = query(
-      collection(db, 'project_resources'),
-      where('projectId', '==', projectId),
-      orderBy('uploadedAt', 'desc')
-    );
+    console.log('🔍 [ProjectTask] Access granted, fetching resources from Firebase...');
 
-    const resourcesSnapshot = await getDocs(resourcesQuery);
-    const resources = [];
-    
-    resourcesSnapshot.forEach((doc) => {
-      const data = doc.data();
-      resources.push({
-        id: doc.id,
-        ...data,
-        uploadedAt: data.uploadedAt?.toDate?.() || new Date(data.uploadedAt)
+    // Check if Firebase is properly configured
+    if (!db) {
+      console.log('⚠️ [ProjectTask] Firebase db is not available, returning empty resources');
+      return res.status(200).json({ 
+        success: true,
+        resources: [],
+        total: 0,
+        message: 'Firebase not configured'
       });
-    });
+    }
 
-    res.status(200).json({ 
-      success: true,
-      resources,
-      total: resources.length
-    });
+    try {
+      // Get resources from Firebase
+      const resourcesQuery = query(
+        collection(db, 'project_resources'),
+        where('projectId', '==', projectId),
+        orderBy('uploadedAt', 'desc')
+      );
+
+      console.log('🔍 [ProjectTask] Firebase query created, executing...');
+
+      const resourcesSnapshot = await getDocs(resourcesQuery);
+      console.log('🔍 [ProjectTask] Firebase query executed, docs count:', resourcesSnapshot.size);
+
+      const resources = [];
+      
+      resourcesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log('🔍 [ProjectTask] Processing resource:', doc.id, data);
+        resources.push({
+          id: doc.id,
+          ...data,
+          uploadedAt: data.uploadedAt?.toDate?.() || new Date(data.uploadedAt)
+        });
+      });
+
+      console.log('✅ [ProjectTask] Returning', resources.length, 'resources');
+
+      res.status(200).json({ 
+        success: true,
+        resources,
+        total: resources.length
+      });
+
+    } catch (firebaseError) {
+      console.error('❌ [ProjectTask] Firebase error:', firebaseError);
+      console.error('❌ [ProjectTask] Firebase error details:', {
+        code: firebaseError.code,
+        message: firebaseError.message,
+        stack: firebaseError.stack
+      });
+      
+      // If Firebase fails, return empty resources instead of error
+      console.log('🔍 [ProjectTask] Returning empty resources due to Firebase error');
+      res.status(200).json({ 
+        success: true,
+        resources: [],
+        total: 0,
+        message: 'No resources found or Firebase connection issue',
+        firebaseError: firebaseError.message
+      });
+    }
 
   } catch (error) {
     logger.error(`[ProjectTask] Error getting project resources: ${error.message}`, error);
+    console.error('❌ [ProjectTask] Error getting project resources:', error);
+    console.error('❌ [ProjectTask] Error stack:', error.stack);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
