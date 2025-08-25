@@ -14,7 +14,11 @@ import {
   getProjectStatistics,
   getTeamMembers,
   createWorkspace,
-  updateWorkspace
+  updateWorkspace,
+  uploadProjectResource,
+  getProjectResources,
+  deleteProjectResource,
+  updateProjectResource
 } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 import upload from '../Middleware/upload.js';
@@ -54,6 +58,12 @@ projectTaskRoutes.delete('/:projectId/tasks/:taskId', authMiddleware, deleteTask
 projectTaskRoutes.post('/:projectId/tasks/:taskId/complete', authMiddleware, completeTask);
 projectTaskRoutes.post('/:projectId/tasks/:taskId/comments', authMiddleware, addTaskComment);
 projectTaskRoutes.post('/:projectId/tasks/:taskId/files', authMiddleware, upload.single('file'), uploadTaskFile);
+
+// Resource management
+projectTaskRoutes.post('/:projectId/resources', authMiddleware, upload.single('file'), uploadProjectResource);
+projectTaskRoutes.get('/:projectId/resources', authMiddleware, getProjectResources);
+projectTaskRoutes.put('/:projectId/resources/:resourceId', authMiddleware, updateProjectResource);
+projectTaskRoutes.delete('/:projectId/resources/:resourceId', authMiddleware, deleteProjectResource);
 
 // Project-specific routes
 projectTaskRoutes.get('/:projectId/statistics', authMiddleware, getProjectStatistics);

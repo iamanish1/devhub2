@@ -127,50 +127,19 @@ const AdminContributionBoard = ({
   const [activeTab, setActiveTab] = useState('tasks');
   const [workspace, setWorkspace] = useState(null);
   const [userAccess, setUserAccess] = useState(null);
-  const [resources, setResources] = useState([
-    {
-      id: 1,
-      name: "Project Requirements Document",
-      type: "document",
-      url: "https://example.com/requirements.pdf",
-      description: "Complete project requirements and specifications",
-      uploadedAt: new Date(Date.now() - 86400000) // 1 day ago
-    },
-    {
-      id: 2,
-      name: "Design Mockups",
-      type: "file",
-      url: "https://example.com/mockups.zip",
-      description: "UI/UX design mockups and wireframes",
-      uploadedAt: new Date(Date.now() - 172800000) // 2 days ago
-    },
-    {
-      id: 3,
-      name: "GitHub Repository",
-      type: "link",
-      url: "https://github.com/example/project",
-      description: "Main project repository with source code",
-      uploadedAt: new Date(Date.now() - 259200000) // 3 days ago
-    },
-    {
-      id: 4,
-      name: "API Documentation",
-      type: "link",
-      url: "https://docs.example.com/api",
-      description: "REST API documentation and endpoints",
-      uploadedAt: new Date(Date.now() - 345600000) // 4 days ago
-    }
-  ]);
+  const [resources, setResources] = useState([]);
   const [statistics, setStatistics] = useState(null);
   const [showResourceModal, setShowResourceModal] = useState(false);
   const [resourceForm, setResourceForm] = useState({
     name: '',
     type: 'file',
     url: '',
-    description: ''
+    description: '',
+    file: null
   });
   const [selectedResource, setSelectedResource] = useState(null);
   const [showStatistics, setShowStatistics] = useState(false);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
 
   // Real-time Firebase listeners
   const [firebaseListeners, setFirebaseListeners] = useState([]);
@@ -424,6 +393,37 @@ const AdminContributionBoard = ({
     });
     listeners.push(workspaceUnsubscribe);
 
+    // 8. Real-time project resources listener
+    const resourcesQuery = query(
+      collection(db, "project_resources"),
+      where("projectId", "==", selectedProjectId)
+    );
+    
+    const resourcesUnsubscribe = onSnapshot(resourcesQuery, (snapshot) => {
+      console.log("🔄 Firebase resources update:", snapshot.docChanges().length, 'changes');
+      const resourcesData = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        resourcesData.push({
+          id: doc.id,
+          ...data,
+          uploadedAt: data.uploadedAt?.toDate?.() || new Date(data.uploadedAt)
+        });
+      });
+      // Sort resources by uploadedAt in JavaScript instead of Firebase
+      resourcesData.sort((a, b) => {
+        const dateA = a.uploadedAt?.toDate?.() || new Date(a.uploadedAt);
+        const dateB = b.uploadedAt?.toDate?.() || new Date(b.uploadedAt);
+        return dateB - dateA;
+      });
+      setResources(resourcesData);
+    }, (error) => {
+      console.error("❌ Firebase resources listener error:", error);
+      // Fallback to API if Firebase fails
+      loadResourcesFromAPI();
+    });
+    listeners.push(resourcesUnsubscribe);
+
     // Store listeners for cleanup
     setFirebaseListeners(listeners);
 
@@ -610,24 +610,81 @@ const AdminContributionBoard = ({
     if (!selectedProjectId) return;
 
     try {
-      const formData = new FormData();
-      formData.append('name', resourceForm.name);
-      formData.append('type', resourceForm.type);
-      formData.append('description', resourceForm.description);
-      
-      if (resourceForm.type === 'file' && resourceForm.url) {
-        formData.append('file', resourceForm.url);
-      } else if (resourceForm.type === 'link') {
-        formData.append('url', resourceForm.url);
+      const resourceData = {
+        name: resourceForm.name,
+        type: resourceForm.type,
+        description: resourceForm.description
+      };
+
+      if (resourceForm.type === 'file' && resourceForm.file) {
+        resourceData.file = resourceForm.file;
+      } else if (resourceForm.type === 'link' && resourceForm.url) {
+        resourceData.url = resourceForm.url;
+      } else if (resourceForm.type === 'document' && resourceForm.file) {
+        resourceData.file = resourceForm.file;
+      } else {
+        notificationService.error('Please provide a file or URL based on the resource type');
+        return;
       }
 
-      await projectTaskApi.uploadTaskFile(selectedProjectId, 'resource', formData);
+      await projectTaskApi.uploadProjectResource(selectedProjectId, resourceData);
       notificationService.success('Resource added successfully');
       
       setShowResourceModal(false);
-      setResourceForm({ name: '', type: 'file', url: '', description: '' });
+      setResourceForm({ name: '', type: 'file', url: '', description: '', file: null });
     } catch (error) {
-      notificationService.error('Failed to add resource');
+      console.error('Error uploading resource:', error);
+      notificationService.error('Failed to add resource: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  // Delete resource
+  const handleDeleteResource = async (resourceId) => {
+    if (!selectedProjectId || !resourceId) return;
+
+    // Show confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to delete this resource? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await projectTaskApi.deleteProjectResource(selectedProjectId, resourceId);
+      notificationService.success('Resource deleted successfully');
+    } catch (error) {
+      console.error('Error deleting resource:', error);
+      notificationService.error('Failed to delete resource: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  // Update resource
+  const handleUpdateResource = async (resourceId, updateData) => {
+    if (!selectedProjectId || !resourceId) return;
+
+    try {
+      await projectTaskApi.updateProjectResource(selectedProjectId, resourceId, updateData);
+      notificationService.success('Resource updated successfully');
+    } catch (error) {
+      console.error('Error updating resource:', error);
+      notificationService.error('Failed to update resource: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  // Load resources from API
+  const loadResourcesFromAPI = async () => {
+    if (!selectedProjectId) return;
+    
+    try {
+      setResourcesLoading(true);
+      console.log('🔄 Loading resources from API as Firebase fallback...');
+      const response = await projectTaskApi.getProjectResources(selectedProjectId);
+      if (response.resources) {
+        setResources(response.resources);
+        console.log('✅ Loaded', response.resources.length, 'resources from API');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load resources from API:', error);
+      notificationService.error('Failed to load resources: ' + (error.message || 'Unknown error'));
+    } finally {
+      setResourcesLoading(false);
     }
   };
 
@@ -1484,13 +1541,22 @@ const AdminContributionBoard = ({
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-white">Project Resources</h2>
-                    <button
-                      onClick={() => setShowResourceModal(true)}
-                      className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <FaPlus />
-                      Add Resource
-                    </button>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={loadResourcesFromAPI}
+                        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition-colors text-sm"
+                      >
+                        <FaSync className="text-xs" />
+                        Refresh
+                      </button>
+                      <button
+                        onClick={() => setShowResourceModal(true)}
+                        className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <FaPlus />
+                        Add Resource
+                      </button>
+                    </div>
                   </div>
 
                   {/* Resource Statistics */}
@@ -1526,40 +1592,64 @@ const AdminContributionBoard = ({
                       <div className="flex items-center gap-2 mb-4">
                         <FaFileAlt className="text-blue-400" />
                         <h3 className="text-lg font-semibold text-white">Files</h3>
+                        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                          {resources.filter(r => r.type === 'file').length}
+                        </span>
+                        <div className="flex items-center gap-1 ml-auto">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-green-400">Live</span>
+                        </div>
                       </div>
-                      <div className="space-y-3">
-                        {resources.filter(r => r.type === 'file').map((resource, index) => (
-                          <div key={index} className="bg-[#232a34] rounded-lg p-3 border border-blue-500/20">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-white">{resource.name}</span>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => window.open(resource.url, '_blank')}
-                                  className="text-blue-400 hover:text-blue-300 text-xs"
-                                >
-                                  <FaEye />
-                                </button>
-                                <button
-                                  onClick={() => window.open(resource.url, '_blank')}
-                                  className="text-green-400 hover:text-green-300 text-xs"
-                                >
-                                  <FaDownload />
-                                </button>
+                      {resourcesLoading ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
+                          <p>Loading resources...</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {resources.filter(r => r.type === 'file').map((resource, index) => (
+                            <div key={resource.id} className="bg-[#232a34] rounded-lg p-3 border border-blue-500/20">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-white truncate">{resource.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => window.open(`${import.meta.env.VITE_API_URL}${resource.url}`, '_blank')}
+                                    className="text-blue-400 hover:text-blue-300 text-xs"
+                                    title="View"
+                                  >
+                                    <FaEye />
+                                  </button>
+                                  <button
+                                    onClick={() => window.open(`${import.meta.env.VITE_API_URL}${resource.url}`, '_blank')}
+                                    className="text-green-400 hover:text-green-300 text-xs"
+                                    title="Download"
+                                  >
+                                    <FaDownload />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteResource(resource.id)}
+                                    className="text-red-400 hover:text-red-300 text-xs"
+                                    title="Delete"
+                                  >
+                                    <FaTrash />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-400 line-clamp-2 mb-1">{resource.description}</p>
+                              <div className="text-xs text-gray-500">
+                                {resource.size && `${(resource.size / 1024 / 1024).toFixed(2)} MB • `}
+                                Added: {new Date(resource.uploadedAt).toLocaleDateString()}
                               </div>
                             </div>
-                            <p className="text-xs text-gray-400 line-clamp-2">{resource.description}</p>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Added: {new Date(resource.uploadedAt || Date.now()).toLocaleDateString()}
+                          ))}
+                          {resources.filter(r => r.type === 'file').length === 0 && (
+                            <div className="text-center py-4 text-gray-400">
+                              <FaFileAlt className="text-2xl mx-auto mb-2" />
+                              <p className="text-sm">No files uploaded yet</p>
                             </div>
-                          </div>
-                        ))}
-                        {resources.filter(r => r.type === 'file').length === 0 && (
-                          <div className="text-center py-4 text-gray-400">
-                            <FaFileAlt className="text-2xl mx-auto mb-2" />
-                            <p className="text-sm">No files uploaded yet</p>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Links Section */}
@@ -1567,32 +1657,59 @@ const AdminContributionBoard = ({
                       <div className="flex items-center gap-2 mb-4">
                         <FaLink className="text-purple-400" />
                         <h3 className="text-lg font-semibold text-white">Links</h3>
+                        <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">
+                          {resources.filter(r => r.type === 'link').length}
+                        </span>
+                        <div className="flex items-center gap-1 ml-auto">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-green-400">Live</span>
+                        </div>
                       </div>
-                      <div className="space-y-3">
-                        {resources.filter(r => r.type === 'link').map((resource, index) => (
-                          <div key={index} className="bg-[#232a34] rounded-lg p-3 border border-purple-500/20">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-white">{resource.name}</span>
-                              <button
-                                onClick={() => window.open(resource.url, '_blank')}
-                                className="text-purple-400 hover:text-purple-300 text-xs"
-                              >
-                                <FaExternalLinkAlt />
-                              </button>
+                      {resourcesLoading ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto mb-4"></div>
+                          <p>Loading resources...</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {resources.filter(r => r.type === 'link').map((resource, index) => (
+                            <div key={resource.id} className="bg-[#232a34] rounded-lg p-3 border border-purple-500/20">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-white truncate">{resource.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => window.open(resource.url, '_blank')}
+                                    className="text-purple-400 hover:text-purple-300 text-xs"
+                                    title="Open Link"
+                                  >
+                                    <FaExternalLinkAlt />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteResource(resource.id)}
+                                    className="text-red-400 hover:text-red-300 text-xs"
+                                    title="Delete"
+                                  >
+                                    <FaTrash />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-400 line-clamp-2 mb-1">{resource.description}</p>
+                              <div className="text-xs text-gray-500 truncate">
+                                {resource.url}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Added: {new Date(resource.uploadedAt).toLocaleDateString()}
+                              </div>
                             </div>
-                            <p className="text-xs text-gray-400 line-clamp-2">{resource.description}</p>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Added: {new Date(resource.uploadedAt || Date.now()).toLocaleDateString()}
+                          ))}
+                          {resources.filter(r => r.type === 'link').length === 0 && (
+                            <div className="text-center py-4 text-gray-400">
+                              <FaLink className="text-2xl mx-auto mb-2" />
+                              <p className="text-sm">No links added yet</p>
                             </div>
-                          </div>
-                        ))}
-                        {resources.filter(r => r.type === 'link').length === 0 && (
-                          <div className="text-center py-4 text-gray-400">
-                            <FaLink className="text-2xl mx-auto mb-2" />
-                            <p className="text-sm">No links added yet</p>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Documents Section */}
@@ -1600,40 +1717,64 @@ const AdminContributionBoard = ({
                       <div className="flex items-center gap-2 mb-4">
                         <FaFileAlt className="text-yellow-400" />
                         <h3 className="text-lg font-semibold text-white">Documents</h3>
+                        <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
+                          {resources.filter(r => r.type === 'document').length}
+                        </span>
+                        <div className="flex items-center gap-1 ml-auto">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-green-400">Live</span>
+                        </div>
                       </div>
-                      <div className="space-y-3">
-                        {resources.filter(r => r.type === 'document').map((resource, index) => (
-                          <div key={index} className="bg-[#232a34] rounded-lg p-3 border border-yellow-500/20">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-white">{resource.name}</span>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => window.open(resource.url, '_blank')}
-                                  className="text-yellow-400 hover:text-yellow-300 text-xs"
-                                >
-                                  <FaEye />
-                                </button>
-                                <button
-                                  onClick={() => window.open(resource.url, '_blank')}
-                                  className="text-green-400 hover:text-green-300 text-xs"
-                                >
-                                  <FaDownload />
-                                </button>
+                      {resourcesLoading ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+                          <p>Loading resources...</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {resources.filter(r => r.type === 'document').map((resource, index) => (
+                            <div key={resource.id} className="bg-[#232a34] rounded-lg p-3 border border-yellow-500/20">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-white truncate">{resource.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => window.open(`${import.meta.env.VITE_API_URL}${resource.url}`, '_blank')}
+                                    className="text-yellow-400 hover:text-yellow-300 text-xs"
+                                    title="View"
+                                  >
+                                    <FaEye />
+                                  </button>
+                                  <button
+                                    onClick={() => window.open(`${import.meta.env.VITE_API_URL}${resource.url}`, '_blank')}
+                                    className="text-green-400 hover:text-green-300 text-xs"
+                                    title="Download"
+                                  >
+                                    <FaDownload />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteResource(resource.id)}
+                                    className="text-red-400 hover:text-red-300 text-xs"
+                                    title="Delete"
+                                  >
+                                    <FaTrash />
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-400 line-clamp-2 mb-1">{resource.description}</p>
+                              <div className="text-xs text-gray-500">
+                                {resource.size && `${(resource.size / 1024 / 1024).toFixed(2)} MB • `}
+                                Added: {new Date(resource.uploadedAt).toLocaleDateString()}
                               </div>
                             </div>
-                            <p className="text-xs text-gray-400 line-clamp-2">{resource.description}</p>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Added: {new Date(resource.uploadedAt || Date.now()).toLocaleDateString()}
+                          ))}
+                          {resources.filter(r => r.type === 'document').length === 0 && (
+                            <div className="text-center py-4 text-gray-400">
+                              <FaFileAlt className="text-2xl mx-auto mb-2" />
+                              <p className="text-sm">No documents added yet</p>
                             </div>
-                          </div>
-                        ))}
-                        {resources.filter(r => r.type === 'document').length === 0 && (
-                          <div className="text-center py-4 text-gray-400">
-                            <FaFileAlt className="text-2xl mx-auto mb-2" />
-                            <p className="text-sm">No documents added yet</p>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1952,7 +2093,7 @@ const AdminContributionBoard = ({
                     </label>
                     <select
                       value={resourceForm.type}
-                      onChange={(e) => setResourceForm({ ...resourceForm, type: e.target.value })}
+                      onChange={(e) => setResourceForm({ ...resourceForm, type: e.target.value, file: null, url: '' })}
                       className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
                     >
                       <option value="file">File</option>
@@ -1975,12 +2116,24 @@ const AdminContributionBoard = ({
                         required
                       />
                     ) : (
-                      <input
-                        type="file"
-                        onChange={(e) => setResourceForm({ ...resourceForm, url: e.target.files[0] })}
-                        className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                        required
-                      />
+                      <div className="space-y-2">
+                        <input
+                          type="file"
+                          onChange={(e) => setResourceForm({ ...resourceForm, file: e.target.files[0] })}
+                          className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                          required
+                          accept={
+                            resourceForm.type === 'document' 
+                              ? '.pdf,.doc,.docx,.txt,.csv,.xlsx,.xls'
+                              : 'image/*,.pdf,.doc,.docx,.txt,.csv,.zip,.rar'
+                          }
+                        />
+                        {resourceForm.file && (
+                          <div className="text-xs text-gray-400">
+                            Selected: {resourceForm.file.name} ({(resourceForm.file.size / 1024 / 1024).toFixed(2)} MB)
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 

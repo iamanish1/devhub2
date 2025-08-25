@@ -212,6 +212,82 @@ export const projectTaskApi = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  /**
+   * Upload project resource
+   */
+  uploadProjectResource: async (projectId, resourceData) => {
+    try {
+      const formData = new FormData();
+      formData.append('name', resourceData.name);
+      formData.append('type', resourceData.type);
+      formData.append('description', resourceData.description || '');
+      
+      if (resourceData.type === 'file' && resourceData.file) {
+        formData.append('file', resourceData.file);
+      } else if (resourceData.type === 'link' && resourceData.url) {
+        formData.append('url', resourceData.url);
+      } else if (resourceData.type === 'document' && resourceData.file) {
+        formData.append('file', resourceData.file);
+      }
+
+      const response = await createAuthInstance().post(
+        API_ENDPOINTS.UPLOAD_PROJECT_RESOURCE(projectId),
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get project resources
+   */
+  getProjectResources: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_PROJECT_RESOURCES(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Update project resource
+   */
+  updateProjectResource: async (projectId, resourceId, updateData) => {
+    try {
+      const response = await createAuthInstance().put(
+        API_ENDPOINTS.UPDATE_PROJECT_RESOURCE(projectId, resourceId),
+        updateData
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Delete project resource
+   */
+  deleteProjectResource: async (projectId, resourceId) => {
+    try {
+      const response = await createAuthInstance().delete(
+        API_ENDPOINTS.DELETE_PROJECT_RESOURCE(projectId, resourceId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 

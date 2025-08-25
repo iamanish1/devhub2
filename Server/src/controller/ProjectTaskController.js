@@ -6,7 +6,7 @@ import UserProfile from '../Model/UserProfileModel.js';
 import { logger } from '../utils/logger.js';
 
 // Firebase imports for checking workspace access
-import { doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, getDocs, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "../config/firebase.js";
 
 /**
@@ -458,6 +458,308 @@ export const uploadTaskFile = async (req, res) => {
 
   } catch (error) {
     logger.error(`[ProjectTask] Error uploading file: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Upload project resource
+ */
+export const uploadProjectResource = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+    const { name, type, description, url } = req.body;
+    const file = req.file;
+
+    logger.info(`[ProjectTask] Uploading resource to project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    let resourceData = {
+      projectId,
+      name,
+      type,
+      description: description || '',
+      uploadedBy: userId.toString(),
+      uploadedAt: serverTimestamp()
+    };
+
+    // Handle different resource types
+    if (type === 'file' && file) {
+      resourceData = {
+        ...resourceData,
+        filename: file.filename,
+        originalName: file.originalname,
+        url: `/uploads/${file.filename}`,
+        size: file.size,
+        mimetype: file.mimetype
+      };
+    } else if (type === 'link' && url) {
+      resourceData = {
+        ...resourceData,
+        url: url
+      };
+    } else if (type === 'document' && file) {
+      resourceData = {
+        ...resourceData,
+        filename: file.filename,
+        originalName: file.originalname,
+        url: `/uploads/${file.filename}`,
+        size: file.size,
+        mimetype: file.mimetype
+      };
+    } else {
+      return res.status(400).json({ message: 'Invalid resource type or missing file/URL' });
+    }
+
+    // Save resource to Firebase for real-time updates
+    const resourceRef = collection(db, 'project_resources');
+    const newResource = await addDoc(resourceRef, resourceData);
+
+    // Create notification for new resource
+    await addDoc(collection(db, "project_notifications"), {
+      projectId,
+      type: 'resource_uploaded',
+      title: 'New Resource Added',
+      message: `Resource "${name}" has been added to the project`,
+      resourceId: newResource.id,
+      createdBy: userId.toString(),
+      createdAt: serverTimestamp(),
+      readBy: []
+    });
+
+    res.status(201).json({ 
+      success: true,
+      message: 'Resource uploaded successfully',
+      resource: {
+        id: newResource.id,
+        ...resourceData,
+        uploadedAt: new Date()
+      }
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error uploading resource: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Get project resources
+ */
+export const getProjectResources = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[ProjectTask] Getting resources for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Get resources from Firebase
+    const resourcesQuery = query(
+      collection(db, 'project_resources'),
+      where('projectId', '==', projectId),
+      orderBy('uploadedAt', 'desc')
+    );
+
+    const resourcesSnapshot = await getDocs(resourcesQuery);
+    const resources = [];
+    
+    resourcesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      resources.push({
+        id: doc.id,
+        ...data,
+        uploadedAt: data.uploadedAt?.toDate?.() || new Date(data.uploadedAt)
+      });
+    });
+
+    res.status(200).json({ 
+      success: true,
+      resources,
+      total: resources.length
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error getting project resources: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Delete project resource
+ */
+export const deleteProjectResource = async (req, res) => {
+  try {
+    const { projectId, resourceId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[ProjectTask] Deleting resource ${resourceId} from project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Get resource from Firebase
+    const resourceRef = doc(db, 'project_resources', resourceId);
+    const resourceDoc = await getDoc(resourceRef);
+
+    if (!resourceDoc.exists()) {
+      return res.status(404).json({ message: 'Resource not found' });
+    }
+
+    const resourceData = resourceDoc.data();
+
+    // Check if user is the uploader or project owner
+    if (resourceData.uploadedBy !== userId.toString() && !isProjectOwner) {
+      return res.status(403).json({ message: 'Only the uploader or project owner can delete this resource' });
+    }
+
+    // Delete file from server if it's a file resource
+    if (resourceData.filename) {
+      const fs = await import('fs');
+      const path = await import('path');
+      const uploadsDir = process.env.UPLOADS_DIR || 'uploads';
+      const filePath = path.join(uploadsDir, resourceData.filename);
+      
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Delete from Firebase
+    await deleteDoc(resourceRef);
+
+    // Create notification for resource deletion
+    await addDoc(collection(db, "project_notifications"), {
+      projectId,
+      type: 'resource_deleted',
+      title: 'Resource Deleted',
+      message: `Resource "${resourceData.name}" has been deleted`,
+      resourceId: resourceId,
+      createdBy: userId.toString(),
+      createdAt: serverTimestamp(),
+      readBy: []
+    });
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Resource deleted successfully'
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error deleting resource: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Update project resource
+ */
+export const updateProjectResource = async (req, res) => {
+  try {
+    const { projectId, resourceId } = req.params;
+    const userId = req.user._id;
+    const { name, description } = req.body;
+
+    logger.info(`[ProjectTask] Updating resource ${resourceId} in project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Get resource from Firebase
+    const resourceRef = doc(db, 'project_resources', resourceId);
+    const resourceDoc = await getDoc(resourceRef);
+
+    if (!resourceDoc.exists()) {
+      return res.status(404).json({ message: 'Resource not found' });
+    }
+
+    const resourceData = resourceDoc.data();
+
+    // Check if user is the uploader or project owner
+    if (resourceData.uploadedBy !== userId.toString() && !isProjectOwner) {
+      return res.status(403).json({ message: 'Only the uploader or project owner can update this resource' });
+    }
+
+    // Update resource in Firebase
+    await updateDoc(resourceRef, {
+      name: name || resourceData.name,
+      description: description || resourceData.description,
+      updatedAt: serverTimestamp(),
+      updatedBy: userId.toString()
+    });
+
+    // Create notification for resource update
+    await addDoc(collection(db, "project_notifications"), {
+      projectId,
+      type: 'resource_updated',
+      title: 'Resource Updated',
+      message: `Resource "${name || resourceData.name}" has been updated`,
+      resourceId: resourceId,
+      createdBy: userId.toString(),
+      createdAt: serverTimestamp(),
+      readBy: []
+    });
+
+    res.status(200).json({ 
+      success: true,
+      message: 'Resource updated successfully'
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error updating resource: ${error.message}`, error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
