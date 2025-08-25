@@ -326,23 +326,14 @@ const ContributionPage = () => {
   // Load project chunks/sections
   const loadProjectChunks = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/chunks/${projectId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setProjectChunks(data.chunks || [
-          { id: 'frontend', name: 'Frontend Development', progress: 0 },
-          { id: 'backend', name: 'Backend Development', progress: 0 },
-          { id: 'database', name: 'Database Design', progress: 0 },
-          { id: 'testing', name: 'Testing & QA', progress: 0 },
-          { id: 'deployment', name: 'Deployment', progress: 0 }
-        ]);
-      }
+      const data = await projectTaskApi.getProjectChunks(projectId);
+      setProjectChunks(data.chunks || [
+        { id: 'frontend', name: 'Frontend Development', progress: 0 },
+        { id: 'backend', name: 'Backend Development', progress: 0 },
+        { id: 'database', name: 'Database Design', progress: 0 },
+        { id: 'testing', name: 'Testing & QA', progress: 0 },
+        { id: 'deployment', name: 'Deployment', progress: 0 }
+      ]);
     } catch (error) {
       console.error('Failed to load project chunks:', error);
       // Set default chunks if API fails
@@ -359,17 +350,8 @@ const ContributionPage = () => {
   // Load team members
   const loadTeamMembers = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/team/${projectId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTeamMembers(data.teamMembers || []);
-      }
+      const data = await projectTaskApi.getProjectTeamMembers(projectId);
+      setTeamMembers(data.teamMembers || []);
     } catch (error) {
       console.error('Failed to load team members:', error);
     }
@@ -380,21 +362,9 @@ const ContributionPage = () => {
   // Debug function
   const loadDebugInfo = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/debug/${projectId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setDebugInfo(data);
-        console.log('🔍 Debug info:', data);
-      } else {
-        console.error('❌ Failed to load debug info:', response.status);
-      }
+      const data = await projectTaskApi.debugProjectAccess(projectId);
+      setDebugInfo(data);
+      console.log('🔍 Debug info:', data);
     } catch (error) {
       console.error('❌ Error loading debug info:', error);
     }
@@ -403,23 +373,10 @@ const ContributionPage = () => {
   // Create Firebase access manually
   const createFirebaseAccess = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/firebase-access/${projectId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Firebase access created:', data);
-        notificationService.success('Firebase access created successfully');
-        await loadDebugInfo(); // Refresh debug info
-      } else {
-        console.error('❌ Failed to create Firebase access:', response.status);
-        notificationService.error('Failed to create Firebase access');
-      }
+      const data = await projectTaskApi.createFirebaseAccess(projectId);
+      console.log('✅ Firebase access created:', data);
+      notificationService.success('Firebase access created successfully');
+      await loadDebugInfo(); // Refresh debug info
     } catch (error) {
       console.error('❌ Error creating Firebase access:', error);
       notificationService.error('Error creating Firebase access');
@@ -429,21 +386,9 @@ const ContributionPage = () => {
   // Load bid debug info
   const loadBidDebugInfo = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/debug/${projectId}/bids`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🔍 Bid debug info:', data);
-        setDebugInfo(prev => ({ ...prev, bidDebug: data }));
-      } else {
-        console.error('❌ Failed to load bid debug info:', response.status);
-      }
+      const data = await projectTaskApi.debugProjectBids(projectId);
+      console.log('🔍 Bid debug info:', data);
+      setDebugInfo(prev => ({ ...prev, bidDebug: data }));
     } catch (error) {
       console.error('❌ Error loading bid debug info:', error);
     }
@@ -547,27 +492,13 @@ const ContributionPage = () => {
       // Check if user is project owner by making a backend call
       try {
         console.log('🔍 Checking backend access...');
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/workspace/${projectId}/check-access`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('📡 Backend response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('📋 Backend response data:', data);
-          if (data.hasAccess) {
-            console.log('✅ User has access via backend check');
-            return true;
-          } else {
-            console.log('❌ Backend denied access:', data.message);
-          }
+        const data = await projectTaskApi.checkWorkspaceAccess(projectId);
+        console.log('📋 Backend response data:', data);
+        if (data.hasAccess) {
+          console.log('✅ User has access via backend check');
+          return true;
         } else {
-          console.log('❌ Backend request failed with status:', response.status);
+          console.log('❌ Backend denied access:', data.message);
         }
       } catch (error) {
         console.log('❌ Backend access check failed:', error.message);
@@ -609,30 +540,17 @@ const ContributionPage = () => {
       setUpdatingTaskStatus(true);
       setError(null);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
+      await projectTaskApi.updateTask(projectId, taskId, { status: newStatus });
+      notificationService.success(`Task status updated to ${newStatus}`);
       
-      if (response.ok) {
-        notificationService.success(`Task status updated to ${newStatus}`);
-        
-        // Update local state
-        setTasks(prevTasks => 
-          prevTasks.map(task => 
-            task._id === taskId 
-              ? { ...task, status: newStatus }
-              : task
-          )
-        );
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update task status');
-      }
+      // Update local state
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task._id === taskId 
+            ? { ...task, status: newStatus }
+            : task
+        )
+      );
     } catch (err) {
       setError(err.message || 'Failed to update task status');
       notificationService.error(err.message || 'Failed to update task status');
@@ -647,40 +565,26 @@ const ContributionPage = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks/${taskId}/complete`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ completionNotes })
-      });
+      await projectTaskApi.completeTask(projectId, taskId, { completionNotes });
+      notificationService.success('Task completed successfully!');
       
-             if (response.ok) {
-         await response.json();
-         notificationService.success('Task completed successfully!');
+      // Update local state
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task._id === taskId 
+            ? { ...task, status: 'completed', completionNotes, completedAt: new Date() }
+            : task
+        )
+      );
         
-        // Update local state
-        setTasks(prevTasks => 
-          prevTasks.map(task => 
-            task._id === taskId 
-              ? { ...task, status: 'completed', completionNotes, completedAt: new Date() }
-              : task
-          )
-        );
-        
-        // Check if all tasks are completed
-        const updatedTasks = tasks.map(task => 
-          task._id === taskId ? { ...task, status: 'completed' } : task
-        );
-        
-        const allTasksCompleted = updatedTasks.every(task => task.status === 'completed');
-        if (allTasksCompleted && escrowWallet) {
-          notificationService.info('🎯 All tasks completed! Project owner will review and release escrow funds.');
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to complete task');
+      // Check if all tasks are completed
+      const updatedTasks = tasks.map(task => 
+        task._id === taskId ? { ...task, status: 'completed' } : task
+      );
+      
+      const allTasksCompleted = updatedTasks.every(task => task.status === 'completed');
+      if (allTasksCompleted && escrowWallet) {
+        notificationService.info('🎯 All tasks completed! Project owner will review and release escrow funds.');
       }
     } catch (err) {
       setError(err.message || 'Failed to complete task');

@@ -18,6 +18,7 @@ import {
   FaBell
 } from 'react-icons/fa';
 import { notificationService } from '../services/notificationService';
+import { projectTaskApi } from '../services/projectTaskApi';
 
 // Firebase imports for real-time updates
 import { db } from "../Config/firebase";
@@ -117,19 +118,8 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(data.tasks || []);
-      } else {
-        throw new Error('Failed to load tasks');
-      }
+      const data = await projectTaskApi.getProjectTasks(projectId);
+      setTasks(data.tasks || []);
     } catch (error) {
       console.error('Failed to load tasks:', error);
       setError(error.message);
@@ -156,30 +146,17 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setUpdatingTask(true);
       setError(null);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(taskForm)
+      await projectTaskApi.createTask(projectId, taskForm);
+      notificationService.success('Task created successfully!');
+      setShowAddModal(false);
+      setTaskForm({
+        title: '',
+        description: '',
+        priority: 'medium',
+        dueDate: '',
+        assignedTo: '',
+        estimatedHours: 0
       });
-      
-      if (response.ok) {
-        notificationService.success('Task created successfully!');
-        setShowAddModal(false);
-        setTaskForm({
-          title: '',
-          description: '',
-          priority: 'medium',
-          dueDate: '',
-          assignedTo: '',
-          estimatedHours: 0
-        });
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create task');
-      }
     } catch (err) {
       setError(err.message || 'Failed to create task');
       notificationService.error(err.message || 'Failed to create task');
@@ -194,21 +171,8 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setUpdatingTask(true);
       setError(null);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-      
-      if (response.ok) {
-        notificationService.success(`Task status updated to ${newStatus}`);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update task status');
-      }
+      await projectTaskApi.updateTask(projectId, taskId, { status: newStatus });
+      notificationService.success(`Task status updated to ${newStatus}`);
     } catch (err) {
       setError(err.message || 'Failed to update task status');
       notificationService.error(err.message || 'Failed to update task status');
@@ -223,23 +187,10 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setUpdatingTask(true);
       setError(null);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks/${selectedTask.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(taskForm)
-      });
-      
-      if (response.ok) {
-        notificationService.success('Task updated successfully!');
-        setShowEditModal(false);
-        setSelectedTask(null);
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update task');
-      }
+      await projectTaskApi.updateTask(projectId, selectedTask.id, taskForm);
+      notificationService.success('Task updated successfully!');
+      setShowEditModal(false);
+      setSelectedTask(null);
     } catch (err) {
       setError(err.message || 'Failed to update task');
       notificationService.error(err.message || 'Failed to update task');
@@ -258,20 +209,8 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setUpdatingTask(true);
       setError(null);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks/${taskId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        notificationService.success('Task deleted successfully!');
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete task');
-      }
+      await projectTaskApi.deleteTask(projectId, taskId);
+      notificationService.success('Task deleted successfully!');
     } catch (err) {
       setError(err.message || 'Failed to delete task');
       notificationService.error(err.message || 'Failed to delete task');

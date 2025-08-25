@@ -89,6 +89,12 @@ export const API_ENDPOINTS = {
   GET_USER_TASKS: `${API_BASE_URL}/api/project-tasks/user/tasks`,
   GET_PROJECT_STATISTICS: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/statistics`,
   GET_PROJECT_TASKS: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/get-tasks`,
+  GET_PROJECT_CHUNKS: (projectId) => `${API_BASE_URL}/api/project-tasks/chunks/${projectId}`,
+  CREATE_FIREBASE_ACCESS: (projectId) => `${API_BASE_URL}/api/project-tasks/firebase-access/${projectId}`,
+  GET_PROJECT_TEAM_MEMBERS: (projectId) => `${API_BASE_URL}/api/project-tasks/team/${projectId}`,
+  CHECK_WORKSPACE_ACCESS: (projectId) => `${API_BASE_URL}/api/project-tasks/workspace/${projectId}/check-access`,
+  DEBUG_PROJECT_ACCESS: (projectId) => `${API_BASE_URL}/api/project-tasks/debug/${projectId}`,
+  DEBUG_PROJECT_BIDS: (projectId) => `${API_BASE_URL}/api/project-tasks/debug/${projectId}/bids`,
   
   // Project Resource Management endpoints
   UPLOAD_PROJECT_RESOURCE: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/resources`,

@@ -19,7 +19,9 @@ import {
   uploadProjectResource,
   getProjectResources,
   deleteProjectResource,
-  updateProjectResource
+  updateProjectResource,
+  getProjectChunks,
+  createFirebaseAccess
 } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 import upload from '../Middleware/upload.js';
@@ -74,5 +76,9 @@ projectTaskRoutes.get('/:projectId/team', authMiddleware, getTeamMembers);
 // Debug endpoints
 projectTaskRoutes.get('/debug/:projectId', authMiddleware, debugProjectAccess);
 projectTaskRoutes.get('/debug/:projectId/bids', authMiddleware, debugProjectBids);
+
+// Missing endpoints that frontend expects
+projectTaskRoutes.get('/chunks/:projectId', authMiddleware, getProjectChunks);
+projectTaskRoutes.post('/firebase-access/:projectId', authMiddleware, createFirebaseAccess);
 
 export default projectTaskRoutes;

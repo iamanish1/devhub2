@@ -308,6 +308,90 @@ export const projectTaskApi = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  /**
+   * Get project chunks
+   */
+  getProjectChunks: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_PROJECT_CHUNKS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Create Firebase access
+   */
+  createFirebaseAccess: async (projectId) => {
+    try {
+      const response = await createAuthInstance().post(
+        API_ENDPOINTS.CREATE_FIREBASE_ACCESS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get project team members
+   */
+  getProjectTeamMembers: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_PROJECT_TEAM_MEMBERS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Check workspace access
+   */
+  checkWorkspaceAccess: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.CHECK_WORKSPACE_ACCESS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Debug project access
+   */
+  debugProjectAccess: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.DEBUG_PROJECT_ACCESS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Debug project bids
+   */
+  debugProjectBids: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.DEBUG_PROJECT_BIDS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 
