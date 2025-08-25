@@ -138,8 +138,7 @@ const ContributionPage = () => {
   // Resources and files
   const [resources, setResources] = useState([]);
 
-  // Statistics and progress
-  const [statistics, setStatistics] = useState(null);
+
 
   // Team collaboration
   const [teamMembers, setTeamMembers] = useState([]);
@@ -162,7 +161,6 @@ const ContributionPage = () => {
     { id: "team", label: "Team", icon: Users2, color: "indigo" },
     { id: "chat", label: "Chat", icon: MessageCircle, color: "yellow" },
     { id: "resources", label: "Resources", icon: FolderOpen, color: "orange" },
-    { id: "progress", label: "Progress", icon: BarChart3, color: "pink" },
     { id: "earnings", label: "Earnings", icon: DollarSign, color: "emerald" },
     { id: "how-to-work", label: "How to Work", icon: FileText, color: "cyan" },
   ];
@@ -473,13 +471,7 @@ const ContributionPage = () => {
         setResources(data.workspace.resources);
       }
 
-      // Load statistics
-      try {
-        const statsData = await projectTaskApi.getProjectStatistics(projectId);
-        setStatistics(statsData.statistics);
-      } catch (statsError) {
-        console.error("Failed to load statistics:", statsError);
-      }
+
     } catch (err) {
       if (err.message?.includes("not found")) {
         setError(
@@ -2142,79 +2134,7 @@ const ContributionPage = () => {
               </div>
             )}
 
-            {/* Progress Tab */}
-            {activeTab === "progress" && (
-              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
-                <h2 className="text-xl font-semibold text-white mb-6">
-                  Project Progress
-                </h2>
 
-                {statistics ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-[#1A1A1A] border border-[#00A8E8]/20 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <CheckSquare className="w-8 h-8 text-[#00A8E8] mr-3" />
-                        <div>
-                          <p className="text-sm font-medium text-[#00A8E8]">
-                            Total Tasks
-                          </p>
-                          <p className="text-2xl font-bold text-white">
-                            {statistics.totalTasks}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#1A1A1A] border border-green-500/20 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <CheckCircle className="w-8 h-8 text-green-400 mr-3" />
-                        <div>
-                          <p className="text-sm font-medium text-green-400">
-                            Completed
-                          </p>
-                          <p className="text-2xl font-bold text-white">
-                            {statistics.completedTasks}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#1A1A1A] border border-yellow-500/20 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <Clock className="w-8 h-8 text-yellow-400 mr-3" />
-                        <div>
-                          <p className="text-sm font-medium text-yellow-400">
-                            In Progress
-                          </p>
-                          <p className="text-2xl font-bold text-white">
-                            {statistics.inProgressTasks}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-[#1A1A1A] border border-purple-500/20 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <Users className="w-8 h-8 text-purple-400 mr-3" />
-                        <div>
-                          <p className="text-sm font-medium text-purple-400">
-                            Team Members
-                          </p>
-                          <p className="text-2xl font-bold text-white">
-                            {workspace?.teamMembers?.length || 0}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <BarChart3 className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                    <p className="text-gray-400">No progress data available.</p>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Chat Tab */}
             {activeTab === "chat" && (
