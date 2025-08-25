@@ -102,7 +102,11 @@ const ContributionPage = () => {
   const filteredTasks = tasks.filter(task => {
     const matchesStatus = taskFilters.status === 'all' || task.status === taskFilters.status;
     const matchesPriority = taskFilters.priority === 'all' || task.priority === taskFilters.priority;
-    const matchesAssignedTo = taskFilters.assignedTo === 'all' || task.assignedTo === taskFilters.assignedTo;
+    
+    // Handle assignedTo filter - task.assignedTo can be an object or string
+    const taskAssignedToId = typeof task.assignedTo === 'object' ? task.assignedTo._id : task.assignedTo;
+    const matchesAssignedTo = taskFilters.assignedTo === 'all' || taskAssignedToId === taskFilters.assignedTo;
+    
     const matchesSearch = taskFilters.search === '' || 
       task.title.toLowerCase().includes(taskFilters.search.toLowerCase()) ||
       task.description.toLowerCase().includes(taskFilters.search.toLowerCase());
@@ -110,8 +114,18 @@ const ContributionPage = () => {
     return matchesStatus && matchesPriority && matchesAssignedTo && matchesSearch;
   });
 
+  // Debug logging for tasks
+  useEffect(() => {
+    console.log('🔍 Tasks state updated:', tasks);
+    console.log('🔍 Filtered tasks:', filteredTasks);
+    console.log('🔍 Task filters:', taskFilters);
+  }, [tasks, filteredTasks, taskFilters]);
+
   // Get tasks assigned to current user
-  const myTasks = tasks.filter(task => task.assignedTo === user?._id);
+  const myTasks = tasks.filter(task => {
+    const taskAssignedToId = typeof task.assignedTo === 'object' ? task.assignedTo._id : task.assignedTo;
+    return taskAssignedToId === user?._id;
+  });
   
   // Project chunks/sections
   const [projectChunks, setProjectChunks] = useState([]);
@@ -165,8 +179,14 @@ const ContributionPage = () => {
   // Load tasks with real-time updates
   useEffect(() => {
     if (projectId && user?._id) {
+      // Load tasks from API first
       loadTasks();
-      setupTaskRealtimeListener();
+      // Then setup Firebase listener for real-time updates
+      const timer = setTimeout(() => {
+        setupTaskRealtimeListener();
+      }, 1000); // Small delay to ensure API loads first
+      
+      return () => clearTimeout(timer);
     }
   }, [projectId, user?._id]);
 
@@ -183,31 +203,39 @@ const ContributionPage = () => {
 
       const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
         console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
-        const updatedTasks = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          console.log('🔍 Firebase task data:', data);
-          updatedTasks.push({
-            _id: data.id,
-            title: data.title,
-            description: data.description,
-            status: data.status,
-            priority: data.priority,
-            assignedTo: data.assignedTo,
-            createdBy: data.createdBy,
-            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-            dueDate: data.dueDate?.toDate?.() || data.dueDate,
-            estimatedHours: data.estimatedHours || 0,
-            actualHours: data.actualHours || 0,
-            completionNotes: data.completionNotes,
-            completedAt: data.completedAt?.toDate?.() || data.completedAt,
-            progress: data.progress || 0
+        
+        // Only update tasks from Firebase if we have data and it's different from current tasks
+        if (snapshot.size > 0) {
+          const updatedTasks = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            console.log('🔍 Firebase task data:', data);
+            updatedTasks.push({
+              _id: data.id,
+              title: data.title,
+              description: data.description,
+              status: data.status,
+              priority: data.priority,
+              assignedTo: data.assignedTo,
+              createdBy: data.createdBy,
+              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+              dueDate: data.dueDate?.toDate?.() || data.dueDate,
+              estimatedHours: data.estimatedHours || 0,
+              actualHours: data.actualHours || 0,
+              completionNotes: data.completionNotes,
+              completedAt: data.completedAt?.toDate?.() || data.completedAt,
+              progress: data.progress || 0
+            });
           });
-        });
-        console.log('🔍 Setting tasks from Firebase:', updatedTasks);
-        setTasks(updatedTasks);
+          console.log('🔍 Setting tasks from Firebase:', updatedTasks);
+          setTasks(updatedTasks);
+        } else {
+          console.log('🔍 Firebase returned empty snapshot, keeping API tasks');
+          // Don't override tasks if Firebase is empty
+        }
       }, (error) => {
         console.error('🔍 Firebase task listener error:', error);
+        // On error, don't override the API tasks
       });
 
       return unsubscribe;
@@ -1206,7 +1234,18 @@ const ContributionPage = () => {
 
                   {/* Debug Information */}
                   <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
-                    <h4 className="text-yellow-400 font-semibold mb-2">Debug Information</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-yellow-400 font-semibold">Debug Information</h4>
+                      <button
+                        onClick={() => {
+                          console.log('🔍 Manually reloading tasks...');
+                          loadTasks();
+                        }}
+                        className="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
+                      >
+                        Reload Tasks
+                      </button>
+                    </div>
                     <div className="text-sm text-yellow-300 space-y-1">
                       <p>Project ID: {projectId}</p>
                       <p>User ID: {user?._id}</p>
@@ -1214,6 +1253,7 @@ const ContributionPage = () => {
                       <p>Filtered Tasks: {filteredTasks.length}</p>
                       <p>My Tasks: {myTasks.length}</p>
                       <p>Active Tab: {activeTab}</p>
+                      <p>Task Filters: {JSON.stringify(taskFilters)}</p>
                     </div>
                   </div>
 
@@ -1335,7 +1375,7 @@ const ContributionPage = () => {
                             <h3 className="text-lg font-semibold text-white">{task.title}</h3>
                             {getStatusBadge(task.status)}
                             {getPriorityBadge(task.priority)}
-                            {task.assignedTo === user?._id && (
+                            {(typeof task.assignedTo === 'object' ? task.assignedTo._id : task.assignedTo) === user?._id && (
                               <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full border border-blue-500/30">
                                 ASSIGNED TO ME
                               </span>
@@ -1348,7 +1388,7 @@ const ContributionPage = () => {
                             {task.assignedTo && (
                               <div className="flex items-center">
                                 <User className="w-4 h-4 mr-2" />
-                                <span>Assigned to: {task.assignedTo === user?._id ? 'You' : 'Team Member'}</span>
+                                <span>Assigned to: {(typeof task.assignedTo === 'object' ? task.assignedTo._id : task.assignedTo) === user?._id ? 'You' : (typeof task.assignedTo === 'object' ? task.assignedTo.username : 'Team Member')}</span>
                               </div>
                             )}
                             
@@ -1413,7 +1453,7 @@ const ContributionPage = () => {
                           </button>
                           
                           {/* Status Update Buttons */}
-                          {(userAccess?.isProjectOwner || task.assignedTo === user?._id) && (
+                          {(userAccess?.isProjectOwner || (typeof task.assignedTo === 'object' ? task.assignedTo._id : task.assignedTo) === user?._id) && (
                             <div className="flex items-center space-x-1">
                               {task.status === 'pending' && (
                                 <button
@@ -1459,6 +1499,20 @@ const ContributionPage = () => {
                       <CheckSquare className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                       <p className="text-gray-400 text-lg mb-2">No tasks found</p>
                       <p className="text-gray-500 mb-4">Try adjusting your filters or create a new task</p>
+                      
+                      {/* Debug Information */}
+                      <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg text-left">
+                        <p className="text-blue-300 text-sm mb-2">
+                          <strong>Debug Information:</strong>
+                        </p>
+                        <div className="text-blue-300 text-xs space-y-1">
+                          <p>Total tasks from API: {tasks.length}</p>
+                          <p>Filtered tasks: {filteredTasks.length}</p>
+                          <p>Current filters: {JSON.stringify(taskFilters)}</p>
+                          <p>User ID: {user?._id}</p>
+                          <p>Project ID: {projectId}</p>
+                        </div>
+                      </div>
                       
                       {tasks.length === 0 && (
                         <div className="mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
@@ -2135,7 +2189,7 @@ const ContributionPage = () => {
               )}
               
               {/* Action Buttons */}
-              {(userAccess?.isProjectOwner || selectedTask.assignedTo === user?._id) && (
+              {(userAccess?.isProjectOwner || (typeof selectedTask.assignedTo === 'object' ? selectedTask.assignedTo._id : selectedTask.assignedTo) === user?._id) && (
                 <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-700">
                   {selectedTask.status === 'pending' && (
                     <button
