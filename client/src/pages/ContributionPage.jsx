@@ -38,7 +38,8 @@ import {
   Users2,
   MessageCircle,
   Settings,
-  Bell
+  Bell,
+  X
 } from 'lucide-react';
 
 // Firebase imports for workspace access and real-time updates
@@ -46,7 +47,10 @@ import { db } from "../Config/firebase";
 import { 
   doc, 
   getDoc,
-  onSnapshot
+  onSnapshot,
+  collection,
+  query,
+  where
 } from "firebase/firestore";
 
 
@@ -71,6 +75,8 @@ const ContributionPage = () => {
   // Task management
   const [tasks, setTasks] = useState([]);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [taskForm, setTaskForm] = useState({
     title: '',
     description: '',
@@ -80,6 +86,32 @@ const ContributionPage = () => {
     estimatedHours: 0,
     chunk: 'general'
   });
+  
+  // Task filtering and search
+  const [taskFilters, setTaskFilters] = useState({
+    status: 'all',
+    priority: 'all',
+    assignedTo: 'all',
+    search: ''
+  });
+  
+  // Task status update
+  const [updatingTaskStatus, setUpdatingTaskStatus] = useState(false);
+  
+  // Task filtering and computed values
+  const filteredTasks = tasks.filter(task => {
+    const matchesStatus = taskFilters.status === 'all' || task.status === taskFilters.status;
+    const matchesPriority = taskFilters.priority === 'all' || task.priority === taskFilters.priority;
+    const matchesAssignedTo = taskFilters.assignedTo === 'all' || task.assignedTo === taskFilters.assignedTo;
+    const matchesSearch = taskFilters.search === '' || 
+      task.title.toLowerCase().includes(taskFilters.search.toLowerCase()) ||
+      task.description.toLowerCase().includes(taskFilters.search.toLowerCase());
+    
+    return matchesStatus && matchesPriority && matchesAssignedTo && matchesSearch;
+  });
+
+  // Get tasks assigned to current user
+  const myTasks = tasks.filter(task => task.assignedTo === user?._id);
   
   // Project chunks/sections
   const [projectChunks, setProjectChunks] = useState([]);
@@ -129,6 +161,74 @@ const ContributionPage = () => {
       loadTeamMembers();
     }
   }, [projectId]);
+
+  // Load tasks with real-time updates
+  useEffect(() => {
+    if (projectId && user?._id) {
+      loadTasks();
+      setupTaskRealtimeListener();
+    }
+  }, [projectId, user?._id]);
+
+  // Setup real-time task listener
+  const setupTaskRealtimeListener = () => {
+    try {
+      const tasksQuery = query(
+        collection(db, 'project_tasks'),
+        where('projectId', '==', projectId),
+        where('deleted', '!=', true)
+      );
+
+      const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+        const updatedTasks = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          updatedTasks.push({
+            _id: data.id,
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            priority: data.priority,
+            assignedTo: data.assignedTo,
+            createdBy: data.createdBy,
+            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+            dueDate: data.dueDate?.toDate?.() || data.dueDate,
+            estimatedHours: data.estimatedHours || 0,
+            actualHours: data.actualHours || 0,
+            completionNotes: data.completionNotes,
+            completedAt: data.completedAt?.toDate?.() || data.completedAt,
+            progress: data.progress || 0
+          });
+        });
+        setTasks(updatedTasks);
+      }, (error) => {
+        console.error('Firebase task listener error:', error);
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error setting up task listener:', error);
+    }
+  };
+
+  // Load tasks from API
+  const loadTasks = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const responseData = await response.json();
+        setTasks(responseData.tasks || []);
+      }
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    }
+  };
 
   // Real-time escrow updates
   useEffect(() => {
@@ -503,26 +603,88 @@ const ContributionPage = () => {
     }
   };
 
-  // Complete task
-  const handleCompleteTask = async (taskId) => {
+  // Update task status
+  const handleUpdateTaskStatus = async (taskId, newStatus) => {
+    try {
+      setUpdatingTaskStatus(true);
+      setError(null);
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      if (response.ok) {
+        notificationService.success(`Task status updated to ${newStatus}`);
+        
+        // Update local state
+        setTasks(prevTasks => 
+          prevTasks.map(task => 
+            task._id === taskId 
+              ? { ...task, status: newStatus }
+              : task
+          )
+        );
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update task status');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update task status');
+      notificationService.error(err.message || 'Failed to update task status');
+    } finally {
+      setUpdatingTaskStatus(false);
+    }
+  };
+
+  // Complete task with notes
+  const handleCompleteTask = async (taskId, completionNotes = '') => {
     try {
       setLoading(true);
       setError(null);
       
-      await projectTaskApi.completeTask(projectId, taskId, {});
-      await loadWorkspace();
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks/${taskId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ completionNotes })
+      });
       
-      // Check if all tasks are completed and update escrow status if needed
-      const updatedTasks = tasks.map(task => 
-        task._id === taskId ? { ...task, status: 'completed' } : task
-      );
-      
-      const allTasksCompleted = updatedTasks.every(task => task.status === 'completed');
-      if (allTasksCompleted && escrowWallet) {
-        notificationService.info('🎯 All tasks completed! Project owner will review and release escrow funds.');
+             if (response.ok) {
+         await response.json();
+         notificationService.success('Task completed successfully!');
+        
+        // Update local state
+        setTasks(prevTasks => 
+          prevTasks.map(task => 
+            task._id === taskId 
+              ? { ...task, status: 'completed', completionNotes, completedAt: new Date() }
+              : task
+          )
+        );
+        
+        // Check if all tasks are completed
+        const updatedTasks = tasks.map(task => 
+          task._id === taskId ? { ...task, status: 'completed' } : task
+        );
+        
+        const allTasksCompleted = updatedTasks.every(task => task.status === 'completed');
+        if (allTasksCompleted && escrowWallet) {
+          notificationService.info('🎯 All tasks completed! Project owner will review and release escrow funds.');
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to complete task');
       }
     } catch (err) {
       setError(err.message || 'Failed to complete task');
+      notificationService.error(err.message || 'Failed to complete task');
     } finally {
       setLoading(false);
     }
@@ -560,7 +722,8 @@ const ContributionPage = () => {
   const getStatusBadge = (status) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30', icon: Clock },
-      in_progress: { color: 'bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30', icon: Clock },
+      in_progress: { color: 'bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30', icon: Loader2 },
+      review: { color: 'bg-purple-500/20 text-purple-400 border border-purple-500/30', icon: Eye },
       completed: { color: 'bg-green-500/20 text-green-400 border border-green-500/30', icon: CheckCircle },
       cancelled: { color: 'bg-red-500/20 text-red-400 border border-red-500/30', icon: AlertCircle }
     };
@@ -1118,10 +1281,14 @@ const ContributionPage = () => {
 
             {/* Tasks Tab */}
             {activeTab === 'tasks' && (
-              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20">
-                <div className="p-6 border-b border-gray-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-white">Project Tasks</h2>
+              <div className="space-y-6">
+                {/* Task Management Header */}
+                <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">Project Tasks</h2>
+                      <p className="text-gray-400 mt-1">Manage and track project tasks with real-time updates</p>
+                    </div>
                     {(userAccess?.isProjectOwner || userAccess?.userRole === 'admin') && (
                       <button
                         onClick={() => setShowTaskModal(true)}
@@ -1133,66 +1300,250 @@ const ContributionPage = () => {
                     )}
                   </div>
 
-                  {/* Tasks List */}
-                  <div className="space-y-4">
-                    {tasks.map(task => (
-                      <div key={task._id} className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <h3 className="font-medium text-white">{task.title}</h3>
-                              {getStatusBadge(task.status)}
-                              {getPriorityBadge(task.priority)}
-                            </div>
-                            
-                            <p className="text-sm text-gray-400 mb-3">{task.description}</p>
-                            
-                            <div className="flex items-center space-x-4 text-sm text-gray-400">
-                              {task.assignedTo && (
-                                <span className="flex items-center">
-                                  <User className="w-4 h-4 mr-1" />
-                                  {task.assignedTo}
-                                </span>
-                              )}
-                              
-                              {task.dueDate && (
-                                <span className="flex items-center">
-                                  <Calendar className="w-4 h-4 mr-1" />
-                                  {new Date(task.dueDate).toLocaleDateString()}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => console.log('Task selected:', task)}
-                              className="p-2 text-gray-400 hover:text-white transition-colors"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            
-                            {(userAccess?.isProjectOwner || task.assignedTo === user?.username) && (
-                              <button
-                                onClick={() => handleCompleteTask(task._id)}
-                                disabled={task.status === 'completed'}
-                                className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
+                  {/* Task Statistics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <CheckSquare className="w-6 h-6 text-[#00A8E8] mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-[#00A8E8]">Total Tasks</p>
+                          <p className="text-xl font-bold text-white">{tasks.length}</p>
                         </div>
                       </div>
-                    ))}
+                    </div>
                     
-                    {tasks.length === 0 && (
-                      <div className="text-center py-8">
-                        <CheckSquare className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                        <p className="text-gray-400">No tasks found.</p>
+                    <div className="bg-[#1A1A1A] border border-green-500/20 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <CheckCircle className="w-6 h-6 text-green-400 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-green-400">Completed</p>
+                          <p className="text-xl font-bold text-white">
+                            {tasks.filter(t => t.status === 'completed').length}
+                          </p>
+                        </div>
                       </div>
-                    )}
+                    </div>
+                    
+                    <div className="bg-[#1A1A1A] border border-yellow-500/20 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <Loader2 className="w-6 h-6 text-yellow-400 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-yellow-400">In Progress</p>
+                          <p className="text-xl font-bold text-white">
+                            {tasks.filter(t => t.status === 'in_progress').length}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-[#1A1A1A] border border-purple-500/20 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <User className="w-6 h-6 text-purple-400 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-purple-400">My Tasks</p>
+                          <p className="text-xl font-bold text-white">{myTasks.length}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Task Filters */}
+                  <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
+                        <select
+                          value={taskFilters.status}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, status: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00A8E8]"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="pending">Pending</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="review">Review</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Priority</label>
+                        <select
+                          value={taskFilters.priority}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, priority: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00A8E8]"
+                        >
+                          <option value="all">All Priority</option>
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                          <option value="urgent">Urgent</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Assigned To</label>
+                        <select
+                          value={taskFilters.assignedTo}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, assignedTo: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-[#00A8E8]"
+                        >
+                          <option value="all">All Users</option>
+                          <option value={user?._id}>My Tasks</option>
+                          <option value="">Unassigned</option>
+                        </select>
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Search</label>
+                        <input
+                          type="text"
+                          placeholder="Search tasks..."
+                          value={taskFilters.search}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, search: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00A8E8]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tasks List */}
+                <div className="space-y-4">
+                  {filteredTasks.map(task => (
+                    <div key={task._id} className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] border border-gray-700 rounded-lg p-6 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <h3 className="text-lg font-semibold text-white">{task.title}</h3>
+                            {getStatusBadge(task.status)}
+                            {getPriorityBadge(task.priority)}
+                            {task.assignedTo === user?._id && (
+                              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full border border-blue-500/30">
+                                ASSIGNED TO ME
+                              </span>
+                            )}
+                          </div>
+                          
+                          <p className="text-gray-400 mb-4 leading-relaxed">{task.description}</p>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-400 mb-4">
+                            {task.assignedTo && (
+                              <div className="flex items-center">
+                                <User className="w-4 h-4 mr-2" />
+                                <span>Assigned to: {task.assignedTo === user?._id ? 'You' : 'Team Member'}</span>
+                              </div>
+                            )}
+                            
+                            {task.dueDate && (
+                              <div className="flex items-center">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            
+                            {task.estimatedHours > 0 && (
+                              <div className="flex items-center">
+                                <Clock className="w-4 h-4 mr-2" />
+                                <span>Est: {task.estimatedHours}h</span>
+                              </div>
+                            )}
+                            
+                            {task.actualHours > 0 && (
+                              <div className="flex items-center">
+                                <BarChart3 className="w-4 h-4 mr-2" />
+                                <span>Actual: {task.actualHours}h</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Progress Bar */}
+                          {task.progress > 0 && (
+                            <div className="mb-4">
+                              <div className="flex justify-between text-sm text-gray-400 mb-1">
+                                <span>Progress</span>
+                                <span>{task.progress}%</span>
+                              </div>
+                              <div className="w-full bg-gray-700 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-[#00A8E8] to-[#0062E6] h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${task.progress}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Completion Notes */}
+                          {task.completionNotes && (
+                            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 mb-4">
+                              <p className="text-sm text-green-300">
+                                <strong>Completion Notes:</strong> {task.completionNotes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center space-x-2 ml-4">
+                          <button
+                            onClick={() => {
+                              setSelectedTask(task);
+                              setShowTaskDetailModal(true);
+                            }}
+                            className="p-2 text-gray-400 hover:text-white transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Status Update Buttons */}
+                          {(userAccess?.isProjectOwner || task.assignedTo === user?._id) && (
+                            <div className="flex items-center space-x-1">
+                              {task.status === 'pending' && (
+                                <button
+                                  onClick={() => handleUpdateTaskStatus(task._id, 'in_progress')}
+                                  disabled={updatingTaskStatus}
+                                  className="p-2 text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
+                                  title="Start Task"
+                                >
+                                  <Loader2 className="w-4 h-4" />
+                                </button>
+                              )}
+                              
+                              {task.status === 'in_progress' && (
+                                <button
+                                  onClick={() => handleUpdateTaskStatus(task._id, 'review')}
+                                  disabled={updatingTaskStatus}
+                                  className="p-2 text-purple-400 hover:text-purple-300 disabled:opacity-50 transition-colors"
+                                  title="Mark for Review"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              )}
+                              
+                              {task.status !== 'completed' && (
+                                <button
+                                  onClick={() => handleCompleteTask(task._id)}
+                                  disabled={updatingTaskStatus || task.status === 'completed'}
+                                  className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
+                                  title="Complete Task"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {filteredTasks.length === 0 && (
+                    <div className="text-center py-12">
+                      <CheckSquare className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                      <p className="text-gray-400 text-lg mb-2">No tasks found</p>
+                      <p className="text-gray-500">Try adjusting your filters or create a new task</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1755,6 +2106,144 @@ const ContributionPage = () => {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Detail Modal */}
+      {showTaskDetailModal && selectedTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[#1E1E1E] rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-white">Task Details</h3>
+              <button
+                onClick={() => setShowTaskDetailModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Task Header */}
+              <div className="bg-[#2A2A2A] border border-gray-700 rounded-lg p-4">
+                <div className="flex items-center space-x-3 mb-3">
+                  <h4 className="text-lg font-semibold text-white">{selectedTask.title}</h4>
+                  {getStatusBadge(selectedTask.status)}
+                  {getPriorityBadge(selectedTask.priority)}
+                </div>
+                <p className="text-gray-400">{selectedTask.description}</p>
+              </div>
+              
+              {/* Task Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-[#2A2A2A] border border-gray-700 rounded-lg p-4">
+                  <h5 className="text-sm font-medium text-gray-300 mb-2">Task Information</h5>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Status:</span>
+                      <span className="text-white">{selectedTask.status}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Priority:</span>
+                      <span className="text-white">{selectedTask.priority}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Created:</span>
+                      <span className="text-white">
+                        {new Date(selectedTask.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {selectedTask.dueDate && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Due Date:</span>
+                        <span className="text-white">
+                          {new Date(selectedTask.dueDate).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="bg-[#2A2A2A] border border-gray-700 rounded-lg p-4">
+                  <h5 className="text-sm font-medium text-gray-300 mb-2">Time Tracking</h5>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Estimated Hours:</span>
+                      <span className="text-white">{selectedTask.estimatedHours || 0}h</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Actual Hours:</span>
+                      <span className="text-white">{selectedTask.actualHours || 0}h</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Progress:</span>
+                      <span className="text-white">{selectedTask.progress || 0}%</span>
+                    </div>
+                    {selectedTask.completedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Completed:</span>
+                        <span className="text-white">
+                          {new Date(selectedTask.completedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Completion Notes */}
+              {selectedTask.completionNotes && (
+                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                  <h5 className="text-sm font-medium text-green-300 mb-2">Completion Notes</h5>
+                  <p className="text-green-200">{selectedTask.completionNotes}</p>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              {(userAccess?.isProjectOwner || selectedTask.assignedTo === user?._id) && (
+                <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-700">
+                  {selectedTask.status === 'pending' && (
+                    <button
+                      onClick={() => {
+                        handleUpdateTaskStatus(selectedTask._id, 'in_progress');
+                        setShowTaskDetailModal(false);
+                      }}
+                      disabled={updatingTaskStatus}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      Start Task
+                    </button>
+                  )}
+                  
+                  {selectedTask.status === 'in_progress' && (
+                    <button
+                      onClick={() => {
+                        handleUpdateTaskStatus(selectedTask._id, 'review');
+                        setShowTaskDetailModal(false);
+                      }}
+                      disabled={updatingTaskStatus}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                    >
+                      Mark for Review
+                    </button>
+                  )}
+                  
+                  {selectedTask.status !== 'completed' && (
+                    <button
+                      onClick={() => {
+                        handleCompleteTask(selectedTask._id);
+                        setShowTaskDetailModal(false);
+                      }}
+                      disabled={updatingTaskStatus}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    >
+                      Complete Task
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

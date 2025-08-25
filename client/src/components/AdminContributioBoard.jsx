@@ -1445,54 +1445,157 @@ const AdminContributionBoard = ({
               {activeTab === 'tasks' && (
                 <div>
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-white">Project Tasks</h2>
-                    <button
-                      onClick={openAddModal}
-                      className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <FaPlus />
-                      Add Task
-                    </button>
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Project Tasks</h2>
+                      <p className="text-gray-400 mt-1">Real-time task management and progress tracking</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-green-400">Live Updates</span>
+                      </div>
+                      <button
+                        onClick={openAddModal}
+                        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <FaPlus />
+                        Add Task
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Task Statistics */}
-                  <div className="grid grid-cols-4 gap-4 mb-6">
+                  {/* Enhanced Task Statistics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="bg-[#181b23] rounded-lg p-4 border border-blue-500/20 text-center">
                       <div className="text-2xl font-bold text-blue-400">{tasks.length}</div>
                       <div className="text-sm text-gray-400">Total Tasks</div>
                     </div>
                     <div className="bg-[#181b23] rounded-lg p-4 border border-yellow-500/20 text-center">
                       <div className="text-2xl font-bold text-yellow-400">
-                        {tasks.filter(t => t.task_status === 'todo' || t.status === 'pending').length}
+                        {tasks.filter(t => t.status === 'pending').length}
                       </div>
                       <div className="text-sm text-gray-400">Pending</div>
                     </div>
                     <div className="bg-[#181b23] rounded-lg p-4 border border-purple-500/20 text-center">
                       <div className="text-2xl font-bold text-purple-400">
-                        {tasks.filter(t => t.task_status === 'inprogress' || t.status === 'in_progress').length}
+                        {tasks.filter(t => t.status === 'in_progress').length}
                       </div>
                       <div className="text-sm text-gray-400">In Progress</div>
                     </div>
                     <div className="bg-[#181b23] rounded-lg p-4 border border-green-500/20 text-center">
                       <div className="text-2xl font-bold text-green-400">
-                        {tasks.filter(t => t.task_status === 'done' || t.status === 'completed').length}
+                        {tasks.filter(t => t.status === 'completed').length}
                       </div>
                       <div className="text-sm text-gray-400">Completed</div>
                     </div>
                   </div>
 
-                  {/* Tasks Grid */}
+                  {/* Task Progress Overview */}
+                  <div className="bg-[#181b23] rounded-lg p-4 border border-blue-500/20 mb-6">
+                    <h3 className="text-lg font-semibold text-white mb-3">Project Progress</h3>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex justify-between text-sm text-gray-400 mb-1">
+                          <span>Overall Progress</span>
+                          <span>{tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0}%</span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-3">
+                          <div 
+                            className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                            style={{ 
+                              width: `${tasks.length > 0 ? (tasks.filter(t => t.status === 'completed').length / tasks.length) * 100 : 0}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-gray-400">Tasks Completed</div>
+                        <div className="text-lg font-bold text-white">
+                          {tasks.filter(t => t.status === 'completed').length} / {tasks.length}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Task Filters */}
+                  <div className="bg-[#181b23] rounded-lg p-4 border border-gray-600 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
+                        <select
+                          value={taskFilters?.status || 'all'}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, status: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="all">All Status</option>
+                          <option value="pending">Pending</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="review">Review</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Priority</label>
+                        <select
+                          value={taskFilters?.priority || 'all'}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, priority: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="all">All Priority</option>
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                          <option value="urgent">Urgent</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Assigned To</label>
+                        <select
+                          value={taskFilters?.assignedTo || 'all'}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, assignedTo: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="all">All Users</option>
+                          {teamMembers.map(member => (
+                            <option key={member.id} value={member.id}>{member.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Search</label>
+                        <input
+                          type="text"
+                          placeholder="Search tasks..."
+                          value={taskFilters?.search || ''}
+                          onChange={(e) => setTaskFilters(prev => ({ ...prev, search: e.target.value }))}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Tasks Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {tasks.map((task) => (
-                      <TaskCard key={task.id} task={task} />
+                    {filteredTasks.map((task) => (
+                      <EnhancedTaskCard 
+                        key={task.id} 
+                        task={task} 
+                        onStatusUpdate={handleTaskStatusUpdate}
+                        onEdit={handleEditTask}
+                        onDelete={handleDeleteTask}
+                        teamMembers={teamMembers}
+                      />
                     ))}
                   </div>
 
-                  {tasks.length === 0 && (
+                  {filteredTasks.length === 0 && (
                     <div className="text-center py-8 text-gray-400">
                       <FaRegStickyNote className="text-4xl mx-auto mb-4" />
-                      <p>No tasks found for this project.</p>
-                      <p className="text-sm">Create your first task to get started.</p>
+                      <p>No tasks found matching your filters.</p>
+                      <p className="text-sm">Try adjusting your search criteria or create a new task.</p>
                     </div>
                   )}
                 </div>

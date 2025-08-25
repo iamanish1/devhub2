@@ -765,6 +765,49 @@ export const updateProjectResource = async (req, res) => {
 };
 
 /**
+ * Get project tasks
+ */
+export const getProjectTasks = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[ProjectTask] Getting tasks for project ${projectId}`);
+
+    // Check if user has access
+    const project = await ProjectListing.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isProjectOwner = project.user.toString() === userId.toString();
+    const selection = await ProjectSelection.findOne({ projectId });
+    const isSelectedContributor = selection && selection.selectedUsers && 
+      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+
+    if (!isProjectOwner && !isSelectedContributor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Get tasks from database
+    const tasks = await ProjectTask.find({ projectId })
+      .populate('assignedTo', 'username email')
+      .populate('createdBy', 'username email')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ 
+      success: true,
+      tasks,
+      total: tasks.length
+    });
+
+  } catch (error) {
+    logger.error(`[ProjectTask] Error getting project tasks: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
  * Get user's tasks
  */
 export const getUserTasks = async (req, res) => {

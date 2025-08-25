@@ -11,6 +11,7 @@ import {
   addTaskComment,
   uploadTaskFile,
   getUserTasks,
+  getProjectTasks,
   getProjectStatistics,
   getTeamMembers,
   createWorkspace,
@@ -52,6 +53,7 @@ projectTaskRoutes.put('/workspace/:projectId', authMiddleware, updateWorkspace);
 projectTaskRoutes.get('/workspace/:projectId/check-access', authMiddleware, checkWorkspaceAccess);
 
 // Task management
+projectTaskRoutes.get('/:projectId/tasks', authMiddleware, getProjectTasks);
 projectTaskRoutes.post('/:projectId/tasks', authMiddleware, createTask);
 projectTaskRoutes.put('/:projectId/tasks/:taskId', authMiddleware, updateTask);
 projectTaskRoutes.delete('/:projectId/tasks/:taskId', authMiddleware, deleteTask);
