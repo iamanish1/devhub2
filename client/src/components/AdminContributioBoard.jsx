@@ -63,11 +63,9 @@ const Socket_URl =
 
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
-  chat: initialChat = [],
   team = [],
   notes: initialNotes = "",
   onTaskStatusChange,
-  onSendMessage,
   onNotesChange,
   onTaskAdd,
   onTaskEdit,
@@ -659,25 +657,7 @@ const AdminContributionBoard = ({
     }
   };
 
-  // Real-time chat with Firebase
-  const sendMessage = async () => {
-    if (message.trim() && selectedProjectId && user?._id) {
-      try {
-        await addDoc(collection(db, "project_chats"), {
-          projectId: selectedProjectId,
-          senderId: user._id,
-          senderName: user.username || user.name,
-          content: message,
-          timestamp: serverTimestamp()
-        });
 
-        setMessage("");
-      } catch (error) {
-        console.error("Error sending message:", error);
-        notificationService.error('Failed to send message');
-      }
-    }
-  };
 
   // Enhanced Tab Configuration
   const tabs = [
@@ -917,10 +897,7 @@ const AdminContributionBoard = ({
     if (projects.length === 0) setSelectedProjectId("");
   }, [projects, selectedProjectId]);
 
-  // Scroll chat to bottom
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+
 
   // Add/Edit Task
   const handleTaskFormSubmit = async (e) => {
