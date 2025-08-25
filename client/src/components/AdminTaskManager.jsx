@@ -165,22 +165,6 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
     }
   };
 
-  // Update task status
-  const handleUpdateTaskStatus = async (taskId, newStatus) => {
-    try {
-      setUpdatingTask(true);
-      setError(null);
-      
-      await projectTaskApi.updateTask(projectId, taskId, { status: newStatus });
-      notificationService.success(`Task status updated to ${newStatus}`);
-    } catch (err) {
-      setError(err.message || 'Failed to update task status');
-      notificationService.error(err.message || 'Failed to update task status');
-    } finally {
-      setUpdatingTask(false);
-    }
-  };
-
   // Review task (Admin only)
   const handleReviewTask = async (taskId, reviewNotes = "", approved = true) => {
     try {
@@ -188,7 +172,10 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setError(null);
       
       await projectTaskApi.reviewTask(projectId, taskId, { reviewNotes, approved });
-      notificationService.success('Task reviewed successfully!');
+      notificationService.success("Task reviewed successfully!");
+      
+      // Refresh tasks
+      await loadTasks();
     } catch (err) {
       setError(err.message || 'Failed to review task');
       notificationService.error(err.message || 'Failed to review task');
@@ -240,18 +227,17 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30', icon: FaClock },
       in_progress: { color: 'bg-blue-500/20 text-blue-400 border border-blue-500/30', icon: FaSync },
-      review: { color: 'bg-purple-500/20 text-purple-400 border border-purple-500/30', icon: FaEye },
       completed: { color: 'bg-green-500/20 text-green-400 border border-green-500/30', icon: FaCheckCircle },
       reviewed: { color: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', icon: FaCheckCircle },
       cancelled: { color: 'bg-red-500/20 text-red-400 border border-red-500/30', icon: FaExclamationTriangle }
     };
     
     const config = statusConfig[status] || statusConfig.pending;
-    const Icon = config.icon;
+    const IconComponent = config.icon;
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        <Icon className="w-3 h-3 mr-1" />
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+        <IconComponent className="w-3 h-3" />
         {status.replace('_', ' ').toUpperCase()}
       </span>
     );
@@ -276,7 +262,7 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
   };
 
   // Enhanced Task Card Component
-  const EnhancedTaskCard = ({ task, onStatusUpdate, onDelete }) => {
+  const EnhancedTaskCard = ({ task, onDelete }) => {
     const assignedMember = teamMembers.find(member => member.id === task.assignedTo);
     
     return (
@@ -379,40 +365,7 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
           </div>
           
           <div className="flex items-center space-x-1">
-            {task.status === 'pending' && (
-              <button
-                onClick={() => onStatusUpdate(task.id, 'in_progress')}
-                disabled={updatingTask}
-                className="p-2 text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
-                title="Start Task"
-              >
-                <FaSync className="w-3 h-3" />
-              </button>
-            )}
-            
-            {task.status === 'in_progress' && (
-              <button
-                onClick={() => onStatusUpdate(task.id, 'review')}
-                disabled={updatingTask}
-                className="p-2 text-purple-400 hover:text-purple-300 disabled:opacity-50 transition-colors"
-                title="Mark for Review"
-              >
-                <FaEye className="w-3 h-3" />
-              </button>
-            )}
-            
-            {task.status !== 'completed' && task.status !== 'reviewed' && (
-              <button
-                onClick={() => onStatusUpdate(task.id, 'completed')}
-                disabled={updatingTask}
-                className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
-                title="Complete Task"
-              >
-                <FaCheckCircle className="w-3 h-3" />
-              </button>
-            )}
-
-            {/* Admin can review completed tasks */}
+            {/* Admin can only review completed tasks */}
             {task.status === 'completed' && (
               <button
                 onClick={() => handleReviewTask(task.id)}
@@ -423,6 +376,14 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
                 <FaCheckCircle className="w-3 h-3" />
               </button>
             )}
+            
+            {/* Show current status info */}
+            <span className="text-xs text-gray-400">
+              {task.status === 'pending' && 'Waiting for user to start'}
+              {task.status === 'in_progress' && 'User is working on this task'}
+              {task.status === 'completed' && 'User has completed the task'}
+              {task.status === 'reviewed' && 'Task has been reviewed'}
+            </span>
           </div>
         </div>
       </div>
@@ -478,7 +439,7 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       </div>
 
       {/* Task Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-[#181b23] rounded-lg p-4 border border-blue-500/20 text-center">
           <div className="text-2xl font-bold text-blue-400">{tasks.length}</div>
           <div className="text-sm text-gray-400">Total Tasks</div>
@@ -553,7 +514,6 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
-              <option value="review">Review</option>
               <option value="completed">Completed</option>
               <option value="reviewed">Reviewed</option>
             </select>
@@ -610,8 +570,6 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
           <EnhancedTaskCard 
             key={task.id} 
             task={task} 
-            onStatusUpdate={handleUpdateTaskStatus}
-            onEdit={handleEditTask}
             onDelete={handleDeleteTask}
             teamMembers={teamMembers}
           />

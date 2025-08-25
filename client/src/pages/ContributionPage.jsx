@@ -143,11 +143,6 @@ const ContributionPage = () => {
 
   // Team collaboration
   const [teamMembers, setTeamMembers] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState([]);
-
-  // Notifications
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   // Debug state
   const [debugInfo, setDebugInfo] = useState(null);
@@ -723,10 +718,6 @@ const ContributionPage = () => {
         color: "bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30",
         icon: Loader2,
       },
-      review: {
-        color: "bg-purple-500/20 text-purple-400 border border-purple-500/30",
-        icon: Eye,
-      },
       completed: {
         color: "bg-green-500/20 text-green-400 border border-green-500/30",
         icon: CheckCircle,
@@ -942,11 +933,6 @@ const ContributionPage = () => {
             <div className="flex items-center space-x-4">
               <button className="relative p-2 text-gray-300 hover:text-white transition-colors">
                 <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
               </button>
 
               <button className="p-2 text-gray-300 hover:text-white transition-colors">
@@ -1575,8 +1561,8 @@ const ContributionPage = () => {
                           <option value="all">All Status</option>
                           <option value="pending">Pending</option>
                           <option value="in_progress">In Progress</option>
-                          <option value="review">Review</option>
                           <option value="completed">Completed</option>
+                          <option value="reviewed">Reviewed</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
                       </div>
@@ -1758,51 +1744,54 @@ const ContributionPage = () => {
                             (typeof task.assignedTo === "object"
                               ? task.assignedTo._id
                               : task.assignedTo) === user?._id) && (
-                            <div className="flex items-center space-x-1">
+                            <div className="flex items-center space-x-2">
                               {/* User can start pending tasks */}
                               {task.status === "pending" && (
-                                <button
-                                  onClick={() =>
-                                    handleUpdateTaskStatus(
-                                      task._id,
-                                      "in_progress"
-                                    )
-                                  }
-                                  disabled={updatingTaskStatus}
-                                  className="p-2 text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
-                                  title="Start Task"
-                                >
-                                  <Loader2 className="w-4 h-4" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      handleUpdateTaskStatus(
+                                        task._id,
+                                        "in_progress"
+                                      )
+                                    }
+                                    disabled={updatingTaskStatus}
+                                    className="flex items-center px-3 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-md hover:bg-blue-500/30 disabled:opacity-50 transition-colors text-sm"
+                                    title="Start Task"
+                                  >
+                                    <Loader2 className="w-3 h-3 mr-1" />
+                                    Start
+                                  </button>
+                                  <button
+                                    onClick={() => handleCompleteTask(task._id)}
+                                    disabled={updatingTaskStatus}
+                                    className="flex items-center px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-md hover:bg-green-500/30 disabled:opacity-50 transition-colors text-sm"
+                                    title="Complete Task"
+                                  >
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Complete
+                                  </button>
+                                </>
                               )}
 
-                              {/* User can mark in-progress tasks for review */}
+                              {/* User can complete in-progress tasks */}
                               {task.status === "in_progress" && (
                                 <button
-                                  onClick={() =>
-                                    handleUpdateTaskStatus(task._id, "review")
-                                  }
+                                  onClick={() => handleCompleteTask(task._id)}
                                   disabled={updatingTaskStatus}
-                                  className="p-2 text-purple-400 hover:text-purple-300 disabled:opacity-50 transition-colors"
-                                  title="Mark for Review"
+                                  className="flex items-center px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-md hover:bg-green-500/30 disabled:opacity-50 transition-colors text-sm"
+                                  title="Complete Task"
                                 >
-                                  <Eye className="w-4 h-4" />
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Complete
                                 </button>
                               )}
 
-                              {/* User can complete tasks from any status except completed/reviewed */}
-                              {task.status !== "completed" && task.status !== "reviewed" && (
-                                <button
-                                  onClick={() => handleCompleteTask(task._id)}
-                                  disabled={
-                                    updatingTaskStatus ||
-                                    task.status === "completed"
-                                  }
-                                  className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
-                                  title="Complete Task"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </button>
+                              {/* Show status info for completed/reviewed tasks */}
+                              {(task.status === "completed" || task.status === "reviewed") && (
+                                <span className="text-xs text-gray-400 px-2 py-1 bg-gray-500/20 border border-gray-500/30 rounded-md">
+                                  {task.status === "completed" ? "Waiting for review" : "Task reviewed"}
+                                </span>
                               )}
                             </div>
                           )}
@@ -2738,32 +2727,31 @@ const ContributionPage = () => {
                   : selectedTask.assignedTo) === user?._id) && (
                 <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-700">
                   {selectedTask.status === "pending" && (
-                    <button
-                      onClick={() => {
-                        handleUpdateTaskStatus(selectedTask._id, "in_progress");
-                        setShowTaskDetailModal(false);
-                      }}
-                      disabled={updatingTaskStatus}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                    >
-                      Start Task
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          handleUpdateTaskStatus(selectedTask._id, "in_progress");
+                          setShowTaskDetailModal(false);
+                        }}
+                        disabled={updatingTaskStatus}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        Start Task
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleCompleteTask(selectedTask._id);
+                          setShowTaskDetailModal(false);
+                        }}
+                        disabled={updatingTaskStatus}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      >
+                        Complete Task
+                      </button>
+                    </>
                   )}
                 
                   {selectedTask.status === "in_progress" && (
-                    <button
-                      onClick={() => {
-                        handleUpdateTaskStatus(selectedTask._id, "review");
-                        setShowTaskDetailModal(false);
-                      }}
-                      disabled={updatingTaskStatus}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
-                    >
-                      Mark for Review
-                    </button>
-                  )}
-
-                  {selectedTask.status !== "completed" && (
                     <button
                       onClick={() => {
                         handleCompleteTask(selectedTask._id);
@@ -2774,6 +2762,12 @@ const ContributionPage = () => {
                     >
                       Complete Task
                     </button>
+                  )}
+
+                  {(selectedTask.status === "completed" || selectedTask.status === "reviewed") && (
+                    <span className="text-sm text-gray-400 px-3 py-2 bg-gray-500/20 border border-gray-500/30 rounded-md">
+                      {selectedTask.status === "completed" ? "Waiting for admin review" : "Task has been reviewed"}
+                    </span>
                   )}
                 </div>
               )}
