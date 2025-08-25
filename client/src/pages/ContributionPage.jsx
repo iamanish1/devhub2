@@ -47,10 +47,10 @@ import { db } from "../Config/firebase";
 import { 
   doc, 
   getDoc,
-  onSnapshot,
-  collection,
-  query,
-  where
+  onSnapshot, // eslint-disable-line no-unused-vars
+  collection, // eslint-disable-line no-unused-vars
+  query, // eslint-disable-line no-unused-vars
+  where // eslint-disable-line no-unused-vars
 } from "firebase/firestore";
 
 
@@ -171,73 +171,74 @@ const ContributionPage = () => {
     }
   }, [projectId]);
 
-  // Load tasks with real-time updates
+  // Load tasks from API only (Firebase temporarily disabled)
   useEffect(() => {
     if (projectId && user?._id) {
-      // Load tasks from API first
+      // Load tasks from API
       loadTasks();
-      // Then setup Firebase listener for real-time updates
-      const timer = setTimeout(() => {
-        setupTaskRealtimeListener();
-      }, 1000); // Small delay to ensure API loads first
+      // Firebase listener temporarily disabled to prevent overriding API data
+      // const timer = setTimeout(() => {
+      //   setupTaskRealtimeListener();
+      // }, 1000);
       
-      return () => clearTimeout(timer);
+      // return () => clearTimeout(timer);
     }
   }, [projectId, user?._id]);
 
-  // Setup real-time task listener
-  const setupTaskRealtimeListener = () => {
-    try {
-      console.log('🔍 Setting up Firebase task listener for project:', projectId);
+  // Setup real-time task listener (temporarily disabled)
+  // const setupTaskRealtimeListener = () => {
+  //   try {
+  //     console.log('🔍 Setting up Firebase task listener for project:', projectId);
       
-      const tasksQuery = query(
-        collection(db, 'project_tasks'),
-        where('projectId', '==', projectId),
-        where('deleted', '!=', true)
-      );
+  //     const tasksQuery = query(
+  //       collection(db, 'project_tasks'),
+  //       where('projectId', '==', projectId),
+  //       where('deleted', '!=', true)
+  //     );
 
-      const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-        console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
+  //     const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+  //       console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
         
-        // Only update tasks from Firebase if we have data and it's different from current tasks
-        if (snapshot.size > 0) {
-          const updatedTasks = [];
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            console.log('🔍 Firebase task data:', data);
-            updatedTasks.push({
-              _id: data.id,
-              title: data.title,
-              description: data.description,
-              status: data.status,
-              priority: data.priority,
-              assignedTo: data.assignedTo,
-              createdBy: data.createdBy,
-              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-              dueDate: data.dueDate?.toDate?.() || data.dueDate,
-              estimatedHours: data.estimatedHours || 0,
-              actualHours: data.actualHours || 0,
-              completionNotes: data.completionNotes,
-              completedAt: data.completedAt?.toDate?.() || data.completedAt,
-              progress: data.progress || 0
-            });
-          });
-          console.log('🔍 Setting tasks from Firebase:', updatedTasks);
-          setTasks(updatedTasks);
-        } else {
-          console.log('🔍 Firebase returned empty snapshot, keeping API tasks');
-          // Don't override tasks if Firebase is empty
-        }
-      }, (error) => {
-        console.error('🔍 Firebase task listener error:', error);
-        // On error, don't override the API tasks
-      });
+  //       // Only update tasks from Firebase if we have data AND current tasks are empty
+  //       // This prevents Firebase from overriding API data when API has tasks but Firebase doesn't
+  //       if (snapshot.size > 0) {
+  //         const updatedTasks = [];
+  //         snapshot.forEach((doc) => {
+  //           const data = doc.data();
+  //           console.log('🔍 Firebase task data:', data);
+  //           updatedTasks.push({
+  //               _id: data.id,
+  //               title: data.title,
+  //               description: data.description,
+  //               status: data.status,
+  //               priority: data.priority,
+  //               assignedTo: data.assignedTo,
+  //               createdBy: data.createdBy,
+  //               createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+  //               dueDate: data.dueDate?.toDate?.() || data.dueDate,
+  //               estimatedHours: data.estimatedHours || 0,
+  //               actualHours: data.actualHours || 0,
+  //               completionNotes: data.completionNotes,
+  //               completedAt: data.completedAt?.toDate?.() || data.completedAt,
+  //               progress: data.progress || 0
+  //             });
+  //           });
+  //           console.log('🔍 Setting tasks from Firebase:', updatedTasks);
+  //           setTasks(updatedTasks);
+  //         } else {
+  //           console.log('🔍 Firebase returned empty snapshot, keeping API tasks');
+  //           // Don't override tasks if Firebase is empty - this prevents API data from being cleared
+  //         }
+  //       }, (error) => {
+  //         console.error('🔍 Firebase task listener error:', error);
+  //         // On error, don't override the API tasks
+  //       });
 
-      return unsubscribe;
-    } catch (error) {
-      console.error('🔍 Error setting up task listener:', error);
-    }
-  };
+  //       return unsubscribe;
+  //     } catch (error) {
+  //       console.error('🔍 Error setting up task listener:', error);
+  //     }
+  //   };
 
   // Load tasks from API
   const loadTasks = async () => {
