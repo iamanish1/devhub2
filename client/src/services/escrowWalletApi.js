@@ -134,6 +134,49 @@ export const escrowWalletApi = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  /**
+   * Get user's escrow wallet for a specific project
+   */
+  getUserEscrowWallet: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_USER_ESCROW(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get user's escrow status for a specific project
+   */
+  getUserEscrowStatus: async (projectId) => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_USER_ESCROW_STATUS(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Request withdrawal of user's escrow funds
+   */
+  requestUserWithdrawal: async (projectId, withdrawalData) => {
+    try {
+      const response = await createAuthInstance().post(
+        API_ENDPOINTS.REQUEST_USER_WITHDRAWAL(projectId),
+        withdrawalData
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 

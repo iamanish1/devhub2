@@ -3,6 +3,7 @@ import Navbar from "../components/NavBar";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { projectTaskApi } from "../services/projectTaskApi";
+import { escrowWalletApi } from "../services/escrowWalletApi";
 import { notificationService } from "../services/notificationService";
 import ProjectChat from "../components/ProjectChat";
 import { 
@@ -40,11 +41,12 @@ import {
   Bell
 } from 'lucide-react';
 
-// Firebase imports for workspace access
+// Firebase imports for workspace access and real-time updates
 import { db } from "../Config/firebase";
 import { 
   doc, 
-  getDoc
+  getDoc,
+  onSnapshot
 } from "firebase/firestore";
 
 
@@ -128,6 +130,61 @@ const ContributionPage = () => {
     }
   }, [projectId]);
 
+  // Real-time escrow updates
+  useEffect(() => {
+    if (escrowWallet?.id) {
+      const escrowRef = doc(db, 'escrow_wallets', escrowWallet.id);
+      const unsubscribe = onSnapshot(escrowRef, (doc) => {
+        if (doc.exists()) {
+          const updatedWallet = { id: doc.id, ...doc.data() };
+          const previousWallet = escrowWallet;
+          setEscrowWallet(updatedWallet);
+          
+          // Update user earnings if user data is available
+          if (user?._id) {
+            const userFunds = updatedWallet.lockedFunds?.find(fund => 
+              fund.userId === user._id
+            );
+            const previousUserFunds = previousWallet?.lockedFunds?.find(fund => 
+              fund.userId === user._id
+            );
+            
+            if (userFunds) {
+              const newUserEarnings = {
+                bidAmount: userFunds.bidAmount,
+                bonusAmount: userFunds.bonusAmount,
+                totalAmount: userFunds.totalAmount,
+                status: userFunds.lockStatus,
+                lockedAt: userFunds.lockedAt,
+                releasedAt: userFunds.releasedAt,
+                refundedAt: userFunds.refundedAt,
+                releaseReason: userFunds.releaseReason,
+                releaseNotes: userFunds.releaseNotes
+              };
+              
+              setUserEarnings(newUserEarnings);
+              
+              // Show notifications for status changes
+              if (previousUserFunds && userFunds.lockStatus !== previousUserFunds.lockStatus) {
+                if (userFunds.lockStatus === 'released') {
+                  notificationService.success('🎉 Your funds have been released! You can now withdraw your earnings.');
+                } else if (userFunds.lockStatus === 'locked') {
+                  notificationService.info('🔒 Your funds have been locked in escrow. They will be released upon project completion.');
+                } else if (userFunds.lockStatus === 'withdrawn') {
+                  notificationService.success('✅ Your withdrawal has been processed successfully!');
+                }
+              }
+            }
+          }
+        }
+      }, (error) => {
+        console.error('Firebase escrow listener error:', error);
+      });
+      
+      return () => unsubscribe();
+    }
+  }, [escrowWallet?.id, user?._id]);
+
   // Load project overview and financial data
   const loadProjectOverview = async () => {
     try {
@@ -155,34 +212,14 @@ const ContributionPage = () => {
   // Load escrow wallet data
   const loadEscrowWalletData = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/escrow-wallet/project/${projectId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setEscrowWallet(data.escrowWallet);
-        
-        // Calculate user earnings
-        if (data.escrowWallet && user?._id) {
-          const userFunds = data.escrowWallet.lockedFunds.find(
-            fund => fund.userId === user._id
-          );
-          if (userFunds) {
-            setUserEarnings({
-              bidAmount: userFunds.bidAmount,
-              bonusAmount: userFunds.bonusAmount,
-              totalAmount: userFunds.totalAmount,
-              status: userFunds.lockStatus
-            });
-          }
-        }
-      }
+      const data = await escrowWalletApi.getUserEscrowWallet(projectId);
+      setEscrowWallet(data.escrowWallet);
+      setUserEarnings(data.userEarnings);
     } catch (error) {
       console.error('Failed to load escrow wallet data:', error);
+      // Set default values if escrow wallet doesn't exist yet
+      setEscrowWallet(null);
+      setUserEarnings(null);
     }
   };
 
@@ -474,8 +511,44 @@ const ContributionPage = () => {
       
       await projectTaskApi.completeTask(projectId, taskId, {});
       await loadWorkspace();
+      
+      // Check if all tasks are completed and update escrow status if needed
+      const updatedTasks = tasks.map(task => 
+        task._id === taskId ? { ...task, status: 'completed' } : task
+      );
+      
+      const allTasksCompleted = updatedTasks.every(task => task.status === 'completed');
+      if (allTasksCompleted && escrowWallet) {
+        notificationService.info('🎯 All tasks completed! Project owner will review and release escrow funds.');
+      }
     } catch (err) {
       setError(err.message || 'Failed to complete task');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle withdrawal request
+  const handleWithdrawalRequest = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const withdrawalData = {
+        withdrawalMethod: 'razorpay',
+        accountDetails: {
+          // Add account details if needed
+        }
+      };
+      
+      const result = await escrowWalletApi.requestUserWithdrawal(projectId, withdrawalData);
+      notificationService.success(result.message || 'Withdrawal request processed successfully');
+      
+      // Refresh escrow data
+      await loadEscrowWalletData();
+    } catch (err) {
+      setError(err.message || 'Failed to process withdrawal request');
+      notificationService.error(err.message || 'Failed to process withdrawal request');
     } finally {
       setLoading(false);
     }
@@ -1318,10 +1391,16 @@ const ContributionPage = () => {
                   </div>
                   
                   <button 
-                    disabled={userEarnings?.status !== 'released'}
+                    onClick={handleWithdrawalRequest}
+                    disabled={userEarnings?.status !== 'released' || loading}
                     className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
                   >
-                    {userEarnings?.status === 'released' 
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Processing...
+                      </div>
+                    ) : userEarnings?.status === 'released' 
                       ? 'Withdraw to Wallet'
                       : 'Payment Locked - Complete Project First'
                     }

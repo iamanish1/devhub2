@@ -71,6 +71,10 @@ export const API_ENDPOINTS = {
   COMPLETE_PROJECT: (projectId) => `${API_BASE_URL}/api/escrow/${projectId}/complete`,
   GET_PROJECT_OWNER_ESCROWS: `${API_BASE_URL}/api/escrow/owner/escrows`,
   GET_ESCROW_STATS: `${API_BASE_URL}/api/escrow/owner/stats`,
+  // User Escrow endpoints for contribution panel
+  GET_USER_ESCROW: (projectId) => `${API_BASE_URL}/api/escrow/user/${projectId}`,
+  GET_USER_ESCROW_STATUS: (projectId) => `${API_BASE_URL}/api/escrow/user/${projectId}/status`,
+  REQUEST_USER_WITHDRAWAL: (projectId) => `${API_BASE_URL}/api/escrow/user/${projectId}/withdraw`,
 
   // Project Task System endpoints
   PROJECT_TASKS_BASE: `${API_BASE_URL}/api/project-tasks`,

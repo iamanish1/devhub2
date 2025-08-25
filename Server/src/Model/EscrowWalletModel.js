@@ -69,7 +69,7 @@ const EscrowWalletSchema = new mongoose.Schema({
     },
     lockStatus: {
       type: String,
-      enum: ['pending', 'locked', 'released', 'refunded'],
+      enum: ['pending', 'locked', 'released', 'refunded', 'withdrawn'],
       default: 'pending'
     },
     lockedAt: Date,
@@ -85,7 +85,11 @@ const EscrowWalletSchema = new mongoose.Schema({
       enum: ['project_completion', 'manual_release', 'refund', 'cancellation'],
       default: 'project_completion'
     },
-    releaseNotes: String
+    releaseNotes: String,
+    // Withdrawal details
+    withdrawnAt: Date,
+    withdrawalMethod: String,
+    accountDetails: Object
   }],
   // Bonus pool distribution
   bonusPoolDistribution: {

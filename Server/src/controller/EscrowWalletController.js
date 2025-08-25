@@ -576,3 +576,197 @@ export const getEscrowStats = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
+
+/**
+ * Get user's escrow wallet for a specific project
+ */
+export const getUserEscrowWallet = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[EscrowWallet] Getting user escrow wallet for project ${projectId}, user ${userId}`);
+
+    // Get escrow wallet
+    const escrowWallet = await EscrowWallet.findOne({ projectId });
+    if (!escrowWallet) {
+      return res.status(404).json({ message: 'Escrow wallet not found for this project' });
+    }
+
+    // Find user's locked funds
+    const userFunds = escrowWallet.lockedFunds.find(fund => 
+      fund.userId.toString() === userId.toString()
+    );
+
+    if (!userFunds) {
+      return res.status(404).json({ message: 'No escrow funds found for this user' });
+    }
+
+    // Calculate user's earnings
+    const userEarnings = {
+      bidAmount: userFunds.bidAmount,
+      bonusAmount: userFunds.bonusAmount,
+      totalAmount: userFunds.totalAmount,
+      status: userFunds.lockStatus,
+      lockedAt: userFunds.lockedAt,
+      releasedAt: userFunds.releasedAt,
+      refundedAt: userFunds.refundedAt,
+      releaseReason: userFunds.releaseReason,
+      releaseNotes: userFunds.releaseNotes
+    };
+
+    res.status(200).json({
+      escrowWallet: {
+        id: escrowWallet._id,
+        projectId: escrowWallet.projectId,
+        status: escrowWallet.status,
+        totalEscrowAmount: escrowWallet.totalEscrowAmount,
+        totalBonusPool: escrowWallet.totalBonusPool,
+        projectCompletion: escrowWallet.projectCompletion
+      },
+      userEarnings
+    });
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in getUserEscrowWallet: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+/**
+ * Get user's escrow status for a specific project
+ */
+export const getUserEscrowStatus = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+
+    logger.info(`[EscrowWallet] Getting user escrow status for project ${projectId}, user ${userId}`);
+
+    // Get escrow wallet
+    const escrowWallet = await EscrowWallet.findOne({ projectId });
+    if (!escrowWallet) {
+      return res.status(404).json({ message: 'Escrow wallet not found for this project' });
+    }
+
+    // Find user's locked funds
+    const userFunds = escrowWallet.lockedFunds.find(fund => 
+      fund.userId.toString() === userId.toString()
+    );
+
+    if (!userFunds) {
+      return res.status(404).json({ message: 'No escrow funds found for this user' });
+    }
+
+    // Get project details
+    const project = await ProjectListing.findById(projectId);
+    const projectTitle = project ? project.project_Title : 'Unknown Project';
+
+    const status = {
+      projectId,
+      projectTitle,
+      userId,
+      bidAmount: userFunds.bidAmount,
+      bonusAmount: userFunds.bonusAmount,
+      totalAmount: userFunds.totalAmount,
+      status: userFunds.lockStatus,
+      escrowWalletStatus: escrowWallet.status,
+      projectCompleted: escrowWallet.projectCompletion?.isCompleted || false,
+      canWithdraw: userFunds.lockStatus === 'released',
+      lockedAt: userFunds.lockedAt,
+      releasedAt: userFunds.releasedAt,
+      releaseReason: userFunds.releaseReason
+    };
+
+    res.status(200).json({
+      status
+    });
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in getUserEscrowStatus: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+/**
+ * Request withdrawal of user's escrow funds
+ */
+export const requestUserWithdrawal = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+    const { withdrawalMethod = 'razorpay', accountDetails } = req.body;
+
+    logger.info(`[EscrowWallet] User ${userId} requesting withdrawal for project ${projectId}`);
+
+    // Get escrow wallet
+    const escrowWallet = await EscrowWallet.findOne({ projectId });
+    if (!escrowWallet) {
+      return res.status(404).json({ message: 'Escrow wallet not found for this project' });
+    }
+
+    // Find user's locked funds
+    const userFunds = escrowWallet.lockedFunds.find(fund => 
+      fund.userId.toString() === userId.toString()
+    );
+
+    if (!userFunds) {
+      return res.status(404).json({ message: 'No escrow funds found for this user' });
+    }
+
+    // Check if funds can be withdrawn
+    if (userFunds.lockStatus !== 'released') {
+      return res.status(400).json({ 
+        message: 'Funds cannot be withdrawn yet. They will be available after project completion.' 
+      });
+    }
+
+    // Process withdrawal via Razorpay
+    try {
+      const payout = await processPaymentToUser(userId, userFunds.totalAmount, projectId, userFunds.bidId);
+      
+      // Update fund status to withdrawn
+      userFunds.lockStatus = 'withdrawn';
+      userFunds.withdrawnAt = new Date();
+      userFunds.withdrawalMethod = withdrawalMethod;
+      userFunds.accountDetails = accountDetails;
+      
+      await escrowWallet.save();
+
+      // Add audit log
+      escrowWallet.addAuditLog(
+        'withdrawal',
+        userFunds.totalAmount,
+        userId,
+        `User withdrawal processed via ${withdrawalMethod}`,
+        req.ip,
+        req.get('User-Agent')
+      );
+
+      await escrowWallet.save();
+
+      logger.info(`[EscrowWallet] Withdrawal processed for user ${userId}, amount: ${userFunds.totalAmount}`);
+
+      res.status(200).json({
+        message: 'Withdrawal request processed successfully',
+        withdrawal: {
+          amount: userFunds.totalAmount,
+          method: withdrawalMethod,
+          payoutId: payout.id,
+          status: payout.status
+        }
+      });
+
+    } catch (paymentError) {
+      logger.error(`[EscrowWallet] Payment processing failed: ${paymentError.message}`);
+      res.status(500).json({ 
+        message: 'Withdrawal processing failed. Please try again later.',
+        error: paymentError.message 
+      });
+    }
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in requestUserWithdrawal: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};

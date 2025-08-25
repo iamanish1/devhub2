@@ -331,6 +331,8 @@ const AdminPage = () => {
           
           // Set up Firebase real-time listeners for escrow updates
           setupEscrowFirebaseListeners(escrowsRes.escrowWallets || []);
+          // Set up Firebase real-time listeners for task updates
+          setupTaskFirebaseListeners(escrowsRes.escrowWallets || []);
         })
         .catch((error) => {
           console.error("Error fetching escrow data:", error);
@@ -356,6 +358,49 @@ const AdminPage = () => {
       // Store unsubscribe function for cleanup
       setFirebaseListeners(prev => [...prev, unsubscribe]);
     });
+  };
+
+  // Setup Firebase listeners for task updates
+  const setupTaskFirebaseListeners = (escrowWallets) => {
+    escrowWallets.forEach(wallet => {
+      // Listen for task updates in the project
+      const taskQuery = query(
+        collection(db, 'project_tasks'),
+        where('projectId', '==', wallet.projectId)
+      );
+      
+      const taskUnsubscribe = onSnapshot(taskQuery, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'modified' || change.type === 'added') {
+            const taskData = change.doc.data();
+            console.log(`🔄 Task update for project ${wallet.projectId}:`, taskData);
+            
+            // Update escrow stats if needed
+            if (taskData.status === 'completed') {
+              // Refresh escrow data to get updated statistics
+              loadEscrowData();
+            }
+          }
+        });
+      });
+      
+      // Store unsubscribe function for cleanup
+      setFirebaseListeners(prev => [...prev, taskUnsubscribe]);
+    });
+  };
+
+  // Load escrow data function
+  const loadEscrowData = async () => {
+    try {
+      const [escrowsRes, statsRes] = await Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ]);
+      setEscrowWallets(escrowsRes.escrowWallets || []);
+      setEscrowStats(statsRes.stats || {});
+    } catch (error) {
+      console.error("Error loading escrow data:", error);
+    }
   };
 
   // Handle escrow wallet creation
@@ -1761,6 +1806,63 @@ const AdminPage = () => {
                   </div>
                 </div>
 
+                {/* Integration Status */}
+                <div className="bg-[#232a34] rounded-2xl p-6 border border-green-500/10">
+                  <h2 className="text-2xl font-bold mb-4 text-green-400">Integration Status</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-[#181b23] rounded-xl p-4 border border-green-500/20">
+                      <h3 className="text-lg font-semibold text-green-400 mb-3">Admin Panel Features</h3>
+                      <ul className="space-y-2 text-sm text-gray-300">
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Escrow wallet creation and management
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Real-time fund locking and releasing
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Project completion with quality scoring
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Individual fund management
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Contribution panel access
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="bg-[#181b23] rounded-xl p-4 border border-blue-500/20">
+                      <h3 className="text-lg font-semibold text-blue-400 mb-3">Contribution Panel Features</h3>
+                      <ul className="space-y-2 text-sm text-gray-300">
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Real-time escrow status updates
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Task management and completion
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Earnings tracking and withdrawal
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Automatic workspace access
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <FaCheckCircle className="text-green-400" />
+                          Status change notifications
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Escrow Wallets List */}
                 <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
                   <h2 className="text-2xl font-bold mb-4 text-blue-400">Active Escrow Wallets</h2>
@@ -1871,6 +1973,11 @@ const AdminPage = () => {
                             <Link to={`/escrow-wallet/${wallet.projectId}`}>
                               <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition text-xs">
                                 Detailed View
+                              </button>
+                            </Link>
+                            <Link to={`/contribution/${wallet.projectId}`} target="_blank">
+                              <button className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg transition text-xs">
+                                View Contribution Panel
                               </button>
                             </Link>
                             {wallet.status === 'active' && (
