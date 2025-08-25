@@ -27,8 +27,6 @@ import WithdrawalPage from "../pages/WithdrawalPage";
 import ProjectSelectionManager from "../components/ProjectSelectionManager";
 // Escrow Wallet System
 import EscrowWalletManager from "../components/EscrowWalletManager";
-// Enhanced Contribution System
-import EnhancedContributionPage from "../pages/EnhancedContributionPage";
 
 const AppRoutes = () => {
   return (
@@ -63,9 +61,6 @@ const AppRoutes = () => {
         
         {/* Escrow Wallet System Routes */}
         <Route path="/escrow-wallet/:projectId" element={<EscrowWalletManager />} />
-        
-        {/* Enhanced Contribution System Routes */}
-        <Route path="/enhanced-contribution/:projectId" element={<EnhancedContributionPage />} />
         
         {/* Payment Routes */}
         <Route path="/payments" element={<PaymentPage />} />

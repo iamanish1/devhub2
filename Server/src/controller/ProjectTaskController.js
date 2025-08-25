@@ -1249,13 +1249,42 @@ export const getWorkspace = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
+    // Get tasks from database
+    const tasks = await ProjectTask.find({ projectId })
+      .populate('assignedTo', 'username email')
+      .populate('createdBy', 'username email')
+      .sort({ createdAt: -1 });
+
+    // Get resources from Firebase
+    let resources = [];
+    try {
+      const resourcesQuery = query(
+        collection(db, 'project_resources'),
+        where('projectId', '==', projectId),
+        orderBy('uploadedAt', 'desc')
+      );
+      const resourcesSnapshot = await getDocs(resourcesQuery);
+      
+      resourcesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        resources.push({
+          id: doc.id,
+          ...data,
+          uploadedAt: data.uploadedAt?.toDate?.() || new Date(data.uploadedAt)
+        });
+      });
+    } catch (firebaseError) {
+      logger.error(`[ProjectTask] Error getting resources from Firebase: ${firebaseError.message}`);
+      // Continue with empty resources array
+    }
+
     // Return workspace data
     const workspace = {
       projectId,
       projectTitle: project.project_Title,
       projectDescription: project.Project_Description,
-      tasks: [], // You can populate this with actual tasks
-      resources: [], // You can populate this with actual resources
+      tasks: tasks,
+      resources: resources,
       contributors: selection?.selectedUsers || [],
       userAccess: {
         isProjectOwner,
