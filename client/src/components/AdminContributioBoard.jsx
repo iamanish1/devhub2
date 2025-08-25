@@ -140,6 +140,14 @@ const AdminContributionBoard = ({
   ]);
   const [notifications, setNotifications] = useState([]);
 
+  // Task filters state
+  const [taskFilters, setTaskFilters] = useState({
+    status: 'all',
+    priority: 'all',
+    assignedTo: 'all',
+    search: ''
+  });
+
   // Time tracking state
   const [activeTimeTracking, setActiveTimeTracking] = useState({});
   const [timeTrackingData, setTimeTrackingData] = useState({});
@@ -1055,6 +1063,179 @@ const AdminContributionBoard = ({
     setEditTask(null);
     setTaskForm({ title: "", desc: "", priority: "medium", dueDate: "", assignedTo: "", estimatedHours: 0 });
     setShowTaskModal(true);
+  };
+
+  // Filter tasks based on current filters
+  const filteredTasks = tasks.filter(task => {
+    const matchesStatus = taskFilters.status === 'all' || task.status === taskFilters.status || task.task_status === taskFilters.status;
+    const matchesPriority = taskFilters.priority === 'all' || task.priority === taskFilters.priority;
+    const matchesAssignedTo = taskFilters.assignedTo === 'all' || task.assignedTo === taskFilters.assignedTo;
+    const matchesSearch = taskFilters.search === '' || 
+      (task.title || task.task_title || '').toLowerCase().includes(taskFilters.search.toLowerCase()) ||
+      (task.description || task.task_description || '').toLowerCase().includes(taskFilters.search.toLowerCase());
+    
+    return matchesStatus && matchesPriority && matchesAssignedTo && matchesSearch;
+  });
+
+  // Task status update handler
+  const handleTaskStatusUpdate = async (taskId, newStatus) => {
+    try {
+      const result = await projectTaskApi.updateTask(selectedProjectId, taskId, { status: newStatus });
+      if (result.success) {
+        notificationService.success(`Task status updated to ${newStatus}`);
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+      notificationService.error('Failed to update task status');
+    }
+  };
+
+  // Task edit handler
+  const handleEditTask = async (taskId, updatedData) => {
+    try {
+      const result = await projectTaskApi.updateTask(selectedProjectId, taskId, updatedData);
+      if (result.success) {
+        notificationService.success('Task updated successfully!');
+      }
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      notificationService.error('Failed to update task');
+    }
+  };
+
+  // Task delete handler
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) {
+      return;
+    }
+    try {
+      const result = await projectTaskApi.deleteTask(selectedProjectId, taskId);
+      if (result.success) {
+        notificationService.success('Task deleted successfully!');
+      }
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      notificationService.error('Failed to delete task');
+    }
+  };
+
+  // Enhanced Task Card Component for the new task management interface
+  const EnhancedTaskCard = ({ task, onStatusUpdate, onDelete }) => {
+    const assignedMember = teamMembers.find(member => member.id === task.assignedTo);
+    
+    return (
+      <div className="bg-[#181b23] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-blue-500/30 transition-all">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-2">
+              <h3 className="font-semibold text-white text-lg">{task.title || task.task_title}</h3>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                task.status === 'pending' || task.task_status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                task.status === 'in_progress' || task.task_status === 'inprogress' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                task.status === 'review' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                task.status === 'completed' || task.task_status === 'done' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+              }`}>
+                {(task.status || task.task_status || 'pending').replace('_', ' ').toUpperCase()}
+              </span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                task.priority === 'low' ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30' :
+                task.priority === 'medium' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                task.priority === 'high' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                task.priority === 'urgent' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+              }`}>
+                {(task.priority || 'medium').toUpperCase()}
+              </span>
+            </div>
+            
+            <p className="text-gray-400 text-sm mb-3 line-clamp-2">{task.description || task.task_description}</p>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
+              {assignedMember && (
+                <div className="flex items-center">
+                  <FaUser className="w-3 h-3 mr-1" />
+                  <span>{assignedMember.name || assignedMember.username}</span>
+                </div>
+              )}
+              
+              {task.dueDate && (
+                <div className="flex items-center">
+                  <FaCalendar className="w-3 h-3 mr-1" />
+                  <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                </div>
+              )}
+              
+              {task.estimatedHours > 0 && (
+                <div className="flex items-center">
+                  <FaClock className="w-3 h-3 mr-1" />
+                  <span>Est: {task.estimatedHours}h</span>
+                </div>
+              )}
+              
+              {task.actualHours > 0 && (
+                <div className="flex items-center">
+                  <FaChartBar className="w-3 h-3 mr-1" />
+                  <span>Actual: {task.actualHours}h</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between pt-3 border-t border-gray-700">
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => openEditModal(task)}
+              className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
+              title="Edit Task"
+            >
+              <FaEdit className="w-3 h-3" />
+            </button>
+            
+            <button
+              onClick={() => onDelete(task.id)}
+              className="p-2 text-red-400 hover:text-red-300 transition-colors"
+              title="Delete Task"
+            >
+              <FaTrash className="w-3 h-3" />
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-1">
+            {(task.status === 'pending' || task.task_status === 'pending') && (
+              <button
+                onClick={() => onStatusUpdate(task.id, 'in_progress')}
+                className="p-2 text-blue-400 hover:text-blue-300 disabled:opacity-50 transition-colors"
+                title="Start Task"
+              >
+                <FaSync className="w-3 h-3" />
+              </button>
+            )}
+            
+            {(task.status === 'in_progress' || task.task_status === 'inprogress') && (
+              <button
+                onClick={() => onStatusUpdate(task.id, 'review')}
+                className="p-2 text-purple-400 hover:text-purple-300 disabled:opacity-50 transition-colors"
+                title="Mark for Review"
+              >
+                <FaEye className="w-3 h-3" />
+              </button>
+            )}
+            
+            {(task.status !== 'completed' && task.task_status !== 'done') && (
+              <button
+                onClick={() => onStatusUpdate(task.id, 'completed')}
+                className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
+                title="Complete Task"
+              >
+                <FaCheckCircle className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Notes

@@ -17,19 +17,16 @@ import {
   FaUsers,
   FaBell
 } from 'react-icons/fa';
-import { projectTaskApi } from '../services/projectTaskApi';
 import { notificationService } from '../services/notificationService';
 
 // Firebase imports for real-time updates
 import { db } from "../Config/firebase";
 import { 
   collection, 
-  doc, 
   onSnapshot, 
   query, 
   where,
-  orderBy,
-  serverTimestamp 
+  orderBy
 } from "firebase/firestore";
 
 const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
@@ -323,7 +320,7 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
   };
 
   // Enhanced Task Card Component
-  const EnhancedTaskCard = ({ task, onStatusUpdate, onEdit, onDelete }) => {
+  const EnhancedTaskCard = ({ task, onStatusUpdate, onDelete }) => {
     const assignedMember = teamMembers.find(member => member.id === task.assignedTo);
     
     return (
