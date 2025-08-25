@@ -734,8 +734,7 @@ const AdminContributionBoard = ({
       
       // Load statistics
       try {
-        const statsData = await projectTaskApi.getProjectStatistics(selectedProjectId);
-        setStatistics(statsData.statistics);
+        await loadEnhancedStatistics();
       } catch (statsError) {
         console.error('Failed to load statistics:', statsError);
         // Set default statistics if API fails
@@ -806,6 +805,91 @@ const AdminContributionBoard = ({
       }
     } catch (error) {
       console.error('❌ Failed to load statistics from API:', error);
+      // Set default statistics if API fails
+      setStatistics({
+        project: { id: selectedProjectId, title: 'Project', description: '' },
+        tasks: { total: tasks.length, completed: tasks.filter(t => t.status === 'completed').length, inProgress: tasks.filter(t => t.status === 'in_progress').length, pending: tasks.filter(t => t.status === 'pending').length, progressPercentage: tasks.length > 0 ? (tasks.filter(t => t.status === 'completed').length / tasks.length) * 100 : 0 },
+        team: { totalMembers: teamMembers.length, activeContributors: teamMembers.length },
+        time: { totalEstimatedHours: tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0), totalActualHours: tasks.reduce((sum, t) => sum + (t.actualHours || 0), 0), efficiency: 0 }
+      });
+      notificationService.error('Failed to load statistics: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  // Enhanced statistics loading with real-time updates
+  const loadEnhancedStatistics = async () => {
+    if (!selectedProjectId) return;
+    
+    try {
+      console.log('🔄 Loading enhanced statistics for project:', selectedProjectId);
+      
+      // Load from API
+      const response = await projectTaskApi.getProjectStatistics(selectedProjectId);
+      
+      if (response.statistics) {
+        // Enhance statistics with real-time data
+        const enhancedStats = {
+          ...response.statistics,
+          tasks: {
+            ...response.statistics.tasks,
+            // Add real-time task counts from local state
+            total: tasks.length,
+            completed: tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length,
+            inProgress: tasks.filter(t => t.status === 'in_progress' || t.task_status === 'inprogress').length,
+            pending: tasks.filter(t => t.status === 'pending' || t.task_status === 'todo').length,
+            progressPercentage: tasks.length > 0 ? 
+              (tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length / tasks.length) * 100 : 0
+          },
+          team: {
+            ...response.statistics.team,
+            totalMembers: teamMembers.length,
+            activeContributors: teamMembers.length,
+            onlineUsers: onlineUsers.length
+          },
+          realTime: {
+            lastUpdated: new Date(),
+            onlineUsers: onlineUsers.length,
+            recentNotifications: notifications.length,
+            activeTimeTracking: Object.keys(activeTimeTracking).length
+          }
+        };
+        
+        setStatistics(enhancedStats);
+        console.log('✅ Enhanced statistics loaded:', enhancedStats);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load enhanced statistics:', error);
+      // Fallback to local data
+      const fallbackStats = {
+        project: { id: selectedProjectId, title: 'Project', description: '' },
+        tasks: {
+          total: tasks.length,
+          completed: tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length,
+          inProgress: tasks.filter(t => t.status === 'in_progress' || t.task_status === 'inprogress').length,
+          pending: tasks.filter(t => t.status === 'pending' || t.task_status === 'todo').length,
+          progressPercentage: tasks.length > 0 ? 
+            (tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length / tasks.length) * 100 : 0
+        },
+        team: {
+          totalMembers: teamMembers.length,
+          activeContributors: teamMembers.length,
+          onlineUsers: onlineUsers.length
+        },
+        time: {
+          totalEstimatedHours: tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0),
+          totalActualHours: tasks.reduce((sum, t) => sum + (t.actualHours || 0), 0),
+          efficiency: 0
+        },
+        realTime: {
+          lastUpdated: new Date(),
+          onlineUsers: onlineUsers.length,
+          recentNotifications: notifications.length,
+          activeTimeTracking: Object.keys(activeTimeTracking).length
+        }
+      };
+      
+      setStatistics(fallbackStats);
+      notificationService.warning('Using local data for statistics (API unavailable)');
     }
   };
 
@@ -816,6 +900,40 @@ const AdminContributionBoard = ({
       loadTeamMembers(); // Load team members when project changes
     }
   }, [selectedProjectId]);
+
+  // Real-time statistics updates
+  useEffect(() => {
+    if (selectedProjectId && activeTab === 'progress') {
+      // Update statistics when tasks, team members, or online users change
+      const updateStats = () => {
+        const updatedStats = {
+          ...statistics,
+          tasks: {
+            total: tasks.length,
+            completed: tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length,
+            inProgress: tasks.filter(t => t.status === 'in_progress' || t.task_status === 'inprogress').length,
+            pending: tasks.filter(t => t.status === 'pending' || t.task_status === 'todo').length,
+            progressPercentage: tasks.length > 0 ? 
+              (tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length / tasks.length) * 100 : 0
+          },
+          team: {
+            totalMembers: teamMembers.length,
+            activeContributors: teamMembers.length,
+            onlineUsers: onlineUsers.length
+          },
+          realTime: {
+            lastUpdated: new Date(),
+            onlineUsers: onlineUsers.length,
+            recentNotifications: notifications.length,
+            activeTimeTracking: Object.keys(activeTimeTracking).length
+          }
+        };
+        setStatistics(updatedStats);
+      };
+
+      updateStats();
+    }
+  }, [selectedProjectId, activeTab, tasks, teamMembers, onlineUsers, notifications, activeTimeTracking]);
 
   // Update selected project if projects change
   useEffect(() => {
@@ -1793,13 +1911,22 @@ const AdminContributionBoard = ({
                 <div>
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-white">Progress Analytics</h2>
-                    <div className="flex items-center gap-2">
-                      <FaSync className="text-blue-400" />
-                      <span className="text-sm text-gray-400">Auto-updating</span>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={loadEnhancedStatistics}
+                        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition-colors text-sm"
+                      >
+                        <FaSync className="text-xs" />
+                        Refresh Data
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-green-400">Live Updates</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Progress Overview */}
+                  {/* Progress Overview Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <div className="bg-gradient-to-br from-blue-900/60 to-blue-700/40 rounded-2xl p-6 border border-blue-500/10">
                       <div className="flex items-center justify-between mb-4">
@@ -1809,12 +1936,15 @@ const AdminContributionBoard = ({
                         </span>
                       </div>
                       <h3 className="text-lg font-semibold text-white mb-2">Overall Progress</h3>
-                      <div className="w-full bg-blue-900/40 rounded-full h-2">
+                      <div className="w-full bg-blue-900/40 rounded-full h-2 mb-2">
                         <div 
                           className="bg-blue-400 h-2 rounded-full transition-all duration-500"
                           style={{ width: `${statistics?.tasks?.progressPercentage || 0}%` }}
                         ></div>
                       </div>
+                      <p className="text-gray-300 text-sm">
+                        {statistics?.tasks?.completed || 0} of {statistics?.tasks?.total || 0} tasks completed
+                      </p>
                     </div>
 
                     <div className="bg-gradient-to-br from-green-900/60 to-green-700/40 rounded-2xl p-6 border border-green-500/10">
@@ -1828,6 +1958,12 @@ const AdminContributionBoard = ({
                       <p className="text-gray-300 text-sm">
                         {statistics?.tasks?.total || 0} total tasks
                       </p>
+                      <div className="mt-2 text-xs text-green-300">
+                        {statistics?.tasks?.total > 0 ? 
+                          `${Math.round((statistics.tasks.completed / statistics.tasks.total) * 100)}% completion rate` : 
+                          'No tasks yet'
+                        }
+                      </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-yellow-900/60 to-yellow-700/40 rounded-2xl p-6 border border-yellow-500/10">
@@ -1841,6 +1977,12 @@ const AdminContributionBoard = ({
                       <p className="text-gray-300 text-sm">
                         {statistics?.time?.totalEstimatedHours || 0}h estimated
                       </p>
+                      <div className="mt-2 text-xs text-yellow-300">
+                        {statistics?.time?.efficiency !== undefined ? 
+                          `${Math.round(statistics.time.efficiency)}% efficiency` : 
+                          'No time data'
+                        }
+                      </div>
                     </div>
 
                     <div className="bg-gradient-to-br from-purple-900/60 to-purple-700/40 rounded-2xl p-6 border border-purple-500/10">
@@ -1854,10 +1996,13 @@ const AdminContributionBoard = ({
                       <p className="text-gray-300 text-sm">
                         {statistics?.team?.totalMembers || 0} total members
                       </p>
+                      <div className="mt-2 text-xs text-purple-300">
+                        {onlineUsers.length} currently online
+                      </div>
                     </div>
                   </div>
 
-                  {/* Detailed Progress Charts */}
+                  {/* Detailed Analytics Grid */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     {/* Task Status Distribution */}
                     <div className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10">
@@ -1868,34 +2013,72 @@ const AdminContributionBoard = ({
                             <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
                             <span className="text-gray-300">Pending</span>
                           </div>
-                          <span className="text-white font-semibold">
-                            {statistics?.tasks?.pending || 0}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-semibold">
+                              {statistics?.tasks?.pending || 0}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {statistics?.tasks?.total > 0 ? 
+                                `${Math.round((statistics.tasks.pending / statistics.tasks.total) * 100)}%` : 
+                                '0%'
+                              }
+                            </span>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
                             <span className="text-gray-300">In Progress</span>
                           </div>
-                          <span className="text-white font-semibold">
-                            {statistics?.tasks?.inProgress || 0}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-semibold">
+                              {statistics?.tasks?.inProgress || 0}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {statistics?.tasks?.total > 0 ? 
+                                `${Math.round((statistics.tasks.inProgress / statistics.tasks.total) * 100)}%` : 
+                                '0%'
+                              }
+                            </span>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-green-400 rounded-full"></div>
                             <span className="text-gray-300">Completed</span>
                           </div>
-                          <span className="text-white font-semibold">
-                            {statistics?.tasks?.completed || 0}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-semibold">
+                              {statistics?.tasks?.completed || 0}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {statistics?.tasks?.total > 0 ? 
+                                `${Math.round((statistics.tasks.completed / statistics.tasks.total) * 100)}%` : 
+                                '0%'
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="mt-6">
+                        <div className="flex justify-between text-xs text-gray-400 mb-2">
+                          <span>Progress</span>
+                          <span>{statistics?.tasks?.progressPercentage || 0}%</span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-3">
+                          <div 
+                            className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                            style={{ width: `${statistics?.tasks?.progressPercentage || 0}%` }}
+                          ></div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Time Efficiency */}
+                    {/* Time Efficiency Analysis */}
                     <div className="bg-[#181b23] rounded-xl p-6 border border-green-500/10">
-                      <h3 className="text-lg font-semibold text-white mb-4">Time Efficiency</h3>
+                      <h3 className="text-lg font-semibold text-white mb-4">Time Efficiency Analysis</h3>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-300">Estimated Hours</span>
@@ -1912,39 +2095,435 @@ const AdminContributionBoard = ({
                         <div className="flex items-center justify-between">
                           <span className="text-gray-300">Efficiency</span>
                           <span className={`font-semibold ${
-                            (statistics?.time?.efficiency || 0) > 100 ? 'text-green-400' : 'text-yellow-400'
+                            (statistics?.time?.efficiency || 0) > 100 ? 'text-green-400' : 
+                            (statistics?.time?.efficiency || 0) > 80 ? 'text-yellow-400' : 'text-red-400'
                           }`}>
-                            {statistics?.time?.efficiency || 0}%
+                            {statistics?.time?.efficiency !== undefined ? 
+                              `${Math.round(statistics.time.efficiency)}%` : 
+                              'N/A'
+                            }
                           </span>
+                        </div>
+                        
+                        {/* Efficiency Bar */}
+                        <div className="mt-6">
+                          <div className="flex justify-between text-xs text-gray-400 mb-2">
+                            <span>Efficiency</span>
+                            <span>{statistics?.time?.efficiency !== undefined ? 
+                              `${Math.round(statistics.time.efficiency)}%` : 'N/A'
+                            }</span>
+                          </div>
+                          <div className="w-full bg-gray-700 rounded-full h-3">
+                            <div 
+                              className={`h-3 rounded-full transition-all duration-500 ${
+                                (statistics?.time?.efficiency || 0) > 100 ? 'bg-green-500' : 
+                                (statistics?.time?.efficiency || 0) > 80 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ 
+                                width: `${Math.min(Math.max(statistics?.time?.efficiency || 0, 0), 100)}%` 
+                              }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Recent Activity */}
-                  <div className="bg-[#181b23] rounded-xl p-6 border border-purple-500/10">
-                    <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
-                    <div className="space-y-3">
-                      {notifications.slice(0, 5).map((notification, index) => (
-                        <div key={index} className="flex items-center gap-3 p-3 bg-[#232a34] rounded-lg">
-                          <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                          <div className="flex-1">
-                            <p className="text-white text-sm">{notification.message}</p>
-                            <p className="text-gray-400 text-xs">
-                              {notification.createdAt?.toDate?.() ? 
-                                new Date(notification.createdAt.toDate()).toLocaleString() :
-                                new Date(notification.createdAt).toLocaleString()
-                              }
-                            </p>
+                  {/* Team Performance Metrics */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {/* Team Activity */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-purple-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Team Activity</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Total Team Members</span>
+                          <span className="text-white font-semibold">
+                            {statistics?.team?.totalMembers || 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Active Contributors</span>
+                          <span className="text-white font-semibold">
+                            {statistics?.team?.activeContributors || 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Currently Online</span>
+                          <span className="text-green-400 font-semibold">
+                            {onlineUsers.length}
+                          </span>
+                        </div>
+                        
+                        {/* Online Users */}
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium text-gray-300 mb-2">Online Team Members</h4>
+                          <div className="space-y-2">
+                            {onlineUsers.slice(0, 5).map((user, index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                <span className="text-sm text-white">{user.username}</span>
+                              </div>
+                            ))}
+                            {onlineUsers.length === 0 && (
+                              <span className="text-sm text-gray-400">No team members online</span>
+                            )}
+                            {onlineUsers.length > 5 && (
+                              <span className="text-sm text-gray-400">+{onlineUsers.length - 5} more</span>
+                            )}
                           </div>
                         </div>
-                      ))}
-                      {notifications.length === 0 && (
-                        <div className="text-center py-4 text-gray-400">
-                          <FaChartBar className="text-2xl mx-auto mb-2" />
-                          <p className="text-sm">No recent activity</p>
+                      </div>
+                    </div>
+
+                    {/* Task Priority Distribution */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-yellow-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Task Priority Distribution</h3>
+                      <div className="space-y-4">
+                        {(() => {
+                          const priorityStats = {
+                            urgent: tasks.filter(t => t.priority === 'urgent').length,
+                            high: tasks.filter(t => t.priority === 'high').length,
+                            medium: tasks.filter(t => t.priority === 'medium').length,
+                            low: tasks.filter(t => t.priority === 'low').length
+                          };
+                          
+                          return Object.entries(priorityStats).map(([priority, count]) => (
+                            <div key={priority} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${
+                                  priority === 'urgent' ? 'bg-red-400' :
+                                  priority === 'high' ? 'bg-orange-400' :
+                                  priority === 'medium' ? 'bg-yellow-400' : 'bg-blue-400'
+                                }`}></div>
+                                <span className="text-gray-300 capitalize">{priority}</span>
+                              </div>
+                              <span className="text-white font-semibold">{count}</span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Project Timeline and Activity */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {/* Recent Activity Timeline */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-purple-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Recent Activity Timeline</h3>
+                      <div className="space-y-4">
+                        {notifications.slice(0, 8).map((notification, index) => (
+                          <div key={index} className="flex items-start gap-4 p-4 bg-[#232a34] rounded-lg border border-purple-500/20">
+                            <div className="w-2 h-2 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-white">{notification.title}</span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                  notification.type === 'task_created' ? 'bg-green-900/40 text-green-400' :
+                                  notification.type === 'task_status_changed' ? 'bg-blue-900/40 text-blue-400' :
+                                  notification.type === 'task_completed' ? 'bg-purple-900/40 text-purple-400' :
+                                  'bg-gray-900/40 text-gray-400'
+                                }`}>
+                                  {notification.type?.replace('_', ' ').toUpperCase() || 'ACTIVITY'}
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm mb-2">{notification.message}</p>
+                              <div className="text-xs text-gray-500">
+                                {notification.createdAt?.toDate?.() ? 
+                                  new Date(notification.createdAt.toDate()).toLocaleString() :
+                                  new Date(notification.createdAt).toLocaleString()
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {notifications.length === 0 && (
+                          <div className="text-center py-8 text-gray-400">
+                            <FaChartBar className="text-3xl mx-auto mb-4" />
+                            <p className="text-lg font-medium mb-2">No Recent Activity</p>
+                            <p className="text-sm">Activity will appear here as team members work on tasks</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Project Milestones */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-yellow-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Project Milestones</h3>
+                      <div className="space-y-4">
+                        {/* Project Start */}
+                        <div className="flex items-center gap-4 p-4 bg-[#232a34] rounded-lg border border-green-500/20">
+                          <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-white">Project Started</span>
+                              <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-900/40 text-green-400">
+                                COMPLETED
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-sm">Project workspace created and team assembled</p>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {statistics?.realTime?.lastUpdated ? 
+                                new Date(statistics.realTime.lastUpdated).toLocaleDateString() : 
+                                'Recently'
+                              }
+                            </div>
+                          </div>
                         </div>
-                      )}
+
+                        {/* First Task Completed */}
+                        {statistics?.tasks?.completed > 0 && (
+                          <div className="flex items-center gap-4 p-4 bg-[#232a34] rounded-lg border border-green-500/20">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-white">First Task Completed</span>
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-900/40 text-green-400">
+                                  COMPLETED
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm">Project development officially began</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 25% Progress */}
+                        {statistics?.tasks?.progressPercentage >= 25 && (
+                          <div className="flex items-center gap-4 p-4 bg-[#232a34] rounded-lg border border-green-500/20">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-white">25% Progress Milestone</span>
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-900/40 text-green-400">
+                                  COMPLETED
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm">Quarter of the project completed</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 50% Progress */}
+                        {statistics?.tasks?.progressPercentage >= 50 && (
+                          <div className="flex items-center gap-4 p-4 bg-[#232a34] rounded-lg border border-green-500/20">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-white">50% Progress Milestone</span>
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-900/40 text-green-400">
+                                  COMPLETED
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm">Halfway through the project</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 75% Progress */}
+                        {statistics?.tasks?.progressPercentage >= 75 && (
+                          <div className="flex items-center gap-4 p-4 bg-[#232a34] rounded-lg border border-green-500/20">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-white">75% Progress Milestone</span>
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-900/40 text-green-400">
+                                  COMPLETED
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm">Project nearing completion</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 100% Progress */}
+                        {statistics?.tasks?.progressPercentage >= 100 && (
+                          <div className="flex items-center gap-4 p-4 bg-[#232a34] rounded-lg border border-green-500/20">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-white">Project Completed</span>
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-green-900/40 text-green-400">
+                                  COMPLETED
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm">All tasks finished successfully</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Next Milestone */}
+                        {statistics?.tasks?.progressPercentage < 100 && (
+                          <div className="flex items-center gap-4 p-4 bg-[#232a34] rounded-lg border border-yellow-500/20">
+                            <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium text-white">Next Milestone</span>
+                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-yellow-900/40 text-yellow-400">
+                                  IN PROGRESS
+                                </span>
+                              </div>
+                              <p className="text-gray-400 text-sm">
+                                {statistics?.tasks?.progressPercentage < 25 ? '25% Progress' :
+                                 statistics?.tasks?.progressPercentage < 50 ? '50% Progress' :
+                                 statistics?.tasks?.progressPercentage < 75 ? '75% Progress' : '100% Completion'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Performance Insights and Recommendations */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Quick Actions */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+                      <div className="space-y-3">
+                        <button
+                          onClick={openAddModal}
+                          className="w-full flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                          <FaPlus className="text-sm" />
+                          Create New Task
+                        </button>
+                        <button
+                          onClick={() => setShowResourceModal(true)}
+                          className="w-full flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                          <FaUpload className="text-sm" />
+                          Add Resource
+                        </button>
+                        <button
+                          onClick={loadEnhancedStatistics}
+                          className="w-full flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                          <FaSync className="text-sm" />
+                          Refresh Data
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Project Health */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-green-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">Project Health</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Overall Status</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            (statistics?.tasks?.progressPercentage || 0) >= 80 ? 'bg-green-900/40 text-green-400' :
+                            (statistics?.tasks?.progressPercentage || 0) >= 50 ? 'bg-yellow-900/40 text-yellow-400' :
+                            'bg-red-900/40 text-red-400'
+                          }`}>
+                            {statistics?.tasks?.progressPercentage >= 80 ? 'HEALTHY' :
+                             statistics?.tasks?.progressPercentage >= 50 ? 'MODERATE' : 'NEEDS ATTENTION'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Team Activity</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            onlineUsers.length > 0 ? 'bg-green-900/40 text-green-400' : 'bg-gray-900/40 text-gray-400'
+                          }`}>
+                            {onlineUsers.length > 0 ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300">Time Efficiency</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            (statistics?.time?.efficiency || 0) > 100 ? 'bg-green-900/40 text-green-400' :
+                            (statistics?.time?.efficiency || 0) > 80 ? 'bg-yellow-900/40 text-yellow-400' :
+                            'bg-red-900/40 text-red-400'
+                          }`}>
+                            {statistics?.time?.efficiency > 100 ? 'EXCELLENT' :
+                             statistics?.time?.efficiency > 80 ? 'GOOD' : 'NEEDS IMPROVEMENT'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI Insights & Recommendations */}
+                    <div className="bg-[#181b23] rounded-xl p-6 border border-purple-500/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">AI Insights</h3>
+                      <div className="space-y-3">
+                        {/* Progress Insights */}
+                        {statistics?.tasks?.progressPercentage < 30 && (
+                          <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FaExclamationTriangle className="text-yellow-400 text-sm" />
+                              <span className="text-sm font-medium text-yellow-400">Low Progress</span>
+                            </div>
+                            <p className="text-xs text-gray-300">Consider breaking down tasks into smaller, manageable pieces</p>
+                          </div>
+                        )}
+                        
+                        {statistics?.tasks?.progressPercentage > 70 && (
+                          <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FaCheckCircle className="text-green-400 text-sm" />
+                              <span className="text-sm font-medium text-green-400">Great Progress</span>
+                            </div>
+                            <p className="text-xs text-gray-300">Project is on track! Keep up the momentum</p>
+                          </div>
+                        )}
+
+                        {/* Team Insights */}
+                        {onlineUsers.length === 0 && (
+                          <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FaUsers className="text-blue-400 text-sm" />
+                              <span className="text-sm font-medium text-blue-400">Team Activity</span>
+                            </div>
+                            <p className="text-xs text-gray-300">No team members online. Consider scheduling team meetings</p>
+                          </div>
+                        )}
+
+                        {/* Time Management Insights */}
+                        {(statistics?.time?.efficiency || 0) < 80 && (
+                          <div className="p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FaClock className="text-red-400 text-sm" />
+                              <span className="text-sm font-medium text-red-400">Time Management</span>
+                            </div>
+                            <p className="text-xs text-gray-300">Tasks are taking longer than estimated. Review task complexity</p>
+                          </div>
+                        )}
+
+                        {/* General Recommendations */}
+                        <div className="p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FaRobot className="text-purple-400 text-sm" />
+                            <span className="text-sm font-medium text-purple-400">Recommendations</span>
+                          </div>
+                          <ul className="text-xs text-gray-300 space-y-1">
+                            <li>• Regular team check-ins improve collaboration</li>
+                            <li>• Break complex tasks into smaller subtasks</li>
+                            <li>• Set realistic deadlines for better time management</li>
+                            <li>• Use the chat feature for quick communication</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Real-time Status Footer */}
+                  <div className="mt-8 bg-[#181b23] rounded-xl p-4 border border-blue-500/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <span className="text-sm text-green-400">Live Updates Active</span>
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          Last updated: {statistics?.realTime?.lastUpdated ? 
+                            new Date(statistics.realTime.lastUpdated).toLocaleTimeString() : 
+                            'Just now'
+                          }
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        <span>{onlineUsers.length} team members online</span>
+                        <span>{notifications.length} total activities</span>
+                        <span>{Object.keys(activeTimeTracking).length} active timers</span>
+                      </div>
                     </div>
                   </div>
                 </div>
