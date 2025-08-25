@@ -119,12 +119,20 @@ export const projectTaskApi = {
    */
   completeTask: async (projectId, taskId, completionData) => {
     try {
+      console.log('🔍 Completing task:', taskId);
+      console.log('🔍 Project ID:', projectId);
+      console.log('🔍 Completion data:', completionData);
+      console.log('🔍 API endpoint:', API_ENDPOINTS.COMPLETE_TASK(projectId, taskId));
+      
       const response = await createAuthInstance().post(
         API_ENDPOINTS.COMPLETE_TASK(projectId, taskId),
         completionData
       );
+      console.log('✅ Task completed successfully:', response.data);
       return response.data;
     } catch (error) {
+      console.error('❌ Error completing task:', error);
+      console.error('❌ Error response:', error.response);
       throw error.response?.data || error.message;
     }
   },

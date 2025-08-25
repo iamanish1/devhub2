@@ -250,10 +250,16 @@ const ContributionPage = () => {
   // Load tasks from API
   const loadTasks = async () => {
     try {
+      console.log('🔍 Loading tasks for projectId:', projectId);
       const responseData = await projectTaskApi.getProjectTasks(projectId);
+      console.log('✅ Tasks loaded successfully:', responseData);
       setTasks(responseData.tasks || []);
     } catch (error) {
-      console.error("Failed to load tasks:", error);
+      console.error("❌ Failed to load tasks:", error);
+      console.error("❌ Error message:", error.message);
+      if (error.response) {
+        console.error("❌ Error response:", error.response.data);
+      }
       setTasks([]);
     }
   };
@@ -628,16 +634,31 @@ const ContributionPage = () => {
   // Complete task with notes
   const handleCompleteTask = async (taskId, completionNotes = "") => {
     try {
+      console.log('🔍 Starting handleCompleteTask for taskId:', taskId);
+      console.log('🔍 ProjectId:', projectId);
+      
       setLoading(true);
       setError(null);
 
+      console.log('🔍 Calling projectTaskApi.completeTask...');
       await projectTaskApi.completeTask(projectId, taskId, { completionNotes });
+      console.log('✅ Task completed successfully!');
+      
       notificationService.success("Task completed successfully!");
 
-      // Reload tasks to get updated state
+      console.log('🔍 Reloading tasks...');
       await loadTasks();
+      console.log('✅ Tasks reloaded successfully!');
 
     } catch (err) {
+      console.error('❌ Error in handleCompleteTask:', err);
+      console.error('❌ Error message:', err.message);
+      console.error('❌ Error stack:', err.stack);
+      if (err.response) {
+        console.error('❌ Error response:', err.response.data);
+        console.error('❌ Error status:', err.response.status);
+      }
+      
       setError(err.message || "Failed to complete task");
       notificationService.error(err.message || "Failed to complete task");
     } finally {

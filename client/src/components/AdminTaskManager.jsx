@@ -21,14 +21,14 @@ import { notificationService } from '../services/notificationService';
 import { projectTaskApi } from '../services/projectTaskApi';
 
 // Firebase imports for real-time updates
-import { db } from "../Config/firebase";
-import { 
-  collection, 
-  onSnapshot, 
-  query, 
-  where,
-  orderBy
-} from "firebase/firestore";
+// import { db } from "../Config/firebase";
+// import { 
+//   collection, 
+//   onSnapshot, 
+//   query, 
+//   where,
+//   orderBy
+// } from "firebase/firestore";
 
 const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
   const [tasks, setTasks] = useState([]);
@@ -61,56 +61,57 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
   useEffect(() => {
     if (projectId) {
       loadTasks();
-      setupRealtimeListener();
+      // Temporarily disable Firebase listener to use API data
+      // setupRealtimeListener();
     }
   }, [projectId]);
 
-  // Setup real-time task listener
-  const setupRealtimeListener = () => {
-    try {
-      const tasksQuery = query(
-        collection(db, 'project_tasks'),
-        where('projectId', '==', projectId),
-        where('deleted', '!=', true),
-        orderBy('createdAt', 'desc')
-      );
+  // Setup real-time task listener (temporarily disabled)
+  // const setupRealtimeListener = () => {
+  //   try {
+  //     const tasksQuery = query(
+  //       collection(db, 'project_tasks'),
+  //       where('projectId', '==', projectId),
+  //       where('deleted', '!=', true),
+  //       orderBy('createdAt', 'desc')
+  //     );
 
-      const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-        const updatedTasks = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          updatedTasks.push({
-            id: data.id,
-            title: data.title,
-            description: data.description,
-            status: data.status,
-            priority: data.priority,
-            assignedTo: data.assignedTo,
-            createdBy: data.createdBy,
-            createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-            dueDate: data.dueDate?.toDate?.() || data.dueDate,
-            estimatedHours: data.estimatedHours || 0,
-            actualHours: data.actualHours || 0,
-            completionNotes: data.completionNotes,
-            completedAt: data.completedAt?.toDate?.() || data.completedAt,
-            progress: data.progress || 0
-          });
-        });
-        setTasks(updatedTasks);
-        setLoading(false);
-      }, (error) => {
-        console.error('Firebase task listener error:', error);
-        setError('Failed to load real-time task updates');
-        setLoading(false);
-      });
+  //     const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+  //       const updatedTasks = [];
+  //       snapshot.forEach((doc) => {
+  //         const data = doc.data();
+  //         updatedTasks.push({
+  //           id: data.id,
+  //           title: data.title,
+  //           description: data.description,
+  //           status: data.status,
+  //           priority: data.priority,
+  //           assignedTo: data.assignedTo,
+  //           createdBy: data.createdBy,
+  //           createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+  //           dueDate: data.dueDate?.toDate?.() || data.dueDate,
+  //           estimatedHours: data.estimatedHours || 0,
+  //           actualHours: data.actualHours || 0,
+  //           completionNotes: data.completionNotes,
+  //           completedAt: data.completedAt?.toDate?.() || data.completedAt,
+  //           progress: data.progress || 0
+  //         });
+  //       });
+  //       setTasks(updatedTasks);
+  //       setLoading(false);
+  //     }, (error) => {
+  //       console.error('Firebase task listener error:', error);
+  //       setError('Failed to load real-time task updates');
+  //       setLoading(false);
+  //     });
 
-      return unsubscribe;
-    } catch (error) {
-      console.error('Error setting up task listener:', error);
-      setError('Failed to setup real-time updates');
-      setLoading(false);
-    }
-  };
+  //     return unsubscribe;
+  //   } catch (error) {
+  //     console.error('Error setting up task listener:', error);
+  //     setError('Failed to setup real-time updates');
+  //     setLoading(false);
+  //   }
+  // };
 
   // Load tasks from API
   const loadTasks = async () => {
@@ -118,10 +119,14 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setLoading(true);
       setError(null);
       
+      console.log('🔍 AdminTaskManager: Loading tasks for projectId:', projectId);
       const data = await projectTaskApi.getProjectTasks(projectId);
+      console.log('✅ AdminTaskManager: Tasks loaded successfully:', data);
+      console.log('✅ AdminTaskManager: Tasks array:', data.tasks);
+      
       setTasks(data.tasks || []);
     } catch (error) {
-      console.error('Failed to load tasks:', error);
+      console.error('❌ AdminTaskManager: Failed to load tasks:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -365,6 +370,11 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
           </div>
           
           <div className="flex items-center space-x-1">
+            {/* Debug Info - Temporary */}
+            <div className="text-xs text-red-400 bg-red-900/20 px-2 py-1 rounded border">
+              Status: "{task.status}" | Type: {typeof task.status}
+            </div>
+            
             {/* Admin can only review completed tasks */}
             {task.status === 'completed' && (
               <button
@@ -428,6 +438,14 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             <span className="text-sm text-green-400">Live Updates</span>
           </div>
+          <button
+            onClick={loadTasks}
+            className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-colors"
+            title="Refresh Tasks"
+          >
+            <FaSync className="w-4 h-4" />
+            Refresh
+          </button>
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
