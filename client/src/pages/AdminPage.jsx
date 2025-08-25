@@ -123,6 +123,7 @@ const AdminPage = () => {
   // Firebase real-time updates state
   const [realTimeUpdates, setRealTimeUpdates] = useState({});
   const [workspaceAccess, setWorkspaceAccess] = useState({});
+  const [firebaseListeners, setFirebaseListeners] = useState([]);
 
   // Escrow Wallet System State
   const [escrowWallets, setEscrowWallets] = useState([]);
@@ -131,6 +132,15 @@ const AdminPage = () => {
   const [selectedProjectForEscrow, setSelectedProjectForEscrow] = useState(null);
   const [showEscrowModal, setShowEscrowModal] = useState(false);
   const [escrowStats, setEscrowStats] = useState(null);
+  const [escrowForm, setEscrowForm] = useState({
+    projectId: '',
+    bonusPoolAmount: '',
+    completionNotes: '',
+    qualityScore: 10
+  });
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [selectedEscrowForCompletion, setSelectedEscrowForCompletion] = useState(null);
+  const [escrowActionLoading, setEscrowActionLoading] = useState(false);
 
   const handleAdminTaskStatusChange = (id, newStatus) => {
     setAdminTasks((prev) =>
@@ -196,8 +206,14 @@ const AdminPage = () => {
     return () => {
       // Cleanup function will be called when component unmounts
       console.log("Cleaning up Firebase listeners");
+      firebaseListeners.forEach(unsubscribe => {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        }
+      });
+      setFirebaseListeners([]);
     };
-  }, [view]);
+  }, [view, firebaseListeners]);
 
   // Firebase real-time listeners setup
   const setupFirebaseListeners = (groupedApplicants) => {
@@ -287,26 +303,178 @@ const AdminPage = () => {
 
 
 
-  // Fetch escrow wallets when "escrow" view is active
+  // Enhanced escrow wallet fetch with real-time updates
   useEffect(() => {
     if (view === "escrow") {
       setEscrowLoading(true);
+      setEscrowError(null);
+      
       Promise.all([
         escrowWalletApi.getProjectOwnerEscrows(),
         escrowWalletApi.getEscrowStats()
       ])
-        .then(([escrowData, statsData]) => {
-          setEscrowWallets(escrowData.escrowWallets || []);
-          setEscrowStats(statsData.statistics);
+        .then(([escrowsRes, statsRes]) => {
+          setEscrowWallets(escrowsRes.escrowWallets || []);
+          setEscrowStats(statsRes.stats || {});
           setEscrowError(null);
+          
+          // Set up Firebase real-time listeners for escrow updates
+          setupEscrowFirebaseListeners(escrowsRes.escrowWallets || []);
         })
         .catch((error) => {
-          setEscrowError("Failed to fetch escrow data");
           console.error("Error fetching escrow data:", error);
+          setEscrowError("Failed to fetch escrow wallet data");
         })
         .finally(() => setEscrowLoading(false));
     }
   }, [view]);
+
+  // Setup Firebase listeners for escrow real-time updates
+  const setupEscrowFirebaseListeners = (escrowWallets) => {
+    escrowWallets.forEach(wallet => {
+      const escrowRef = doc(db, 'escrow_wallets', wallet._id);
+      const unsubscribe = onSnapshot(escrowRef, (doc) => {
+        if (doc.exists()) {
+          const updatedWallet = { id: doc.id, ...doc.data() };
+          setEscrowWallets(prev => 
+            prev.map(w => w._id === wallet._id ? updatedWallet : w)
+          );
+        }
+      });
+      
+      // Store unsubscribe function for cleanup
+      setFirebaseListeners(prev => [...prev, unsubscribe]);
+    });
+  };
+
+  // Handle escrow wallet creation
+  const handleCreateEscrowWallet = async () => {
+    try {
+      setEscrowActionLoading(true);
+      const { projectId, bonusPoolAmount } = escrowForm;
+      
+      await escrowWalletApi.createEscrowWallet(projectId, parseFloat(bonusPoolAmount));
+      
+      notificationService.success("Escrow wallet created successfully");
+      setShowEscrowModal(false);
+      setEscrowForm({ projectId: '', bonusPoolAmount: '', completionNotes: '', qualityScore: 10 });
+      
+      // Refresh escrow data
+      const [escrowsRes, statsRes] = await Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ]);
+      setEscrowWallets(escrowsRes.escrowWallets || []);
+      setEscrowStats(statsRes.stats || {});
+      
+    } catch (error) {
+      console.error("Error creating escrow wallet:", error);
+      notificationService.error(error.message || "Failed to create escrow wallet");
+    } finally {
+      setEscrowActionLoading(false);
+    }
+  };
+
+  // Handle project completion and fund release
+  const handleCompleteProject = async (escrowWallet) => {
+    try {
+      setEscrowActionLoading(true);
+      const { completionNotes, qualityScore } = escrowForm;
+      
+      await escrowWalletApi.completeProject(
+        escrowWallet.projectId,
+        completionNotes,
+        qualityScore
+      );
+      
+      notificationService.success("Project completed and funds released successfully");
+      setShowCompletionModal(false);
+      setSelectedEscrowForCompletion(null);
+      setEscrowForm({ projectId: '', bonusPoolAmount: '', completionNotes: '', qualityScore: 10 });
+      
+      // Refresh escrow data
+      const [escrowsRes, statsRes] = await Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ]);
+      setEscrowWallets(escrowsRes.escrowWallets || []);
+      setEscrowStats(statsRes.stats || {});
+      
+    } catch (error) {
+      console.error("Error completing project:", error);
+      notificationService.error(error.message || "Failed to complete project");
+    } finally {
+      setEscrowActionLoading(false);
+    }
+  };
+
+  // Handle individual fund release
+  const handleReleaseUserFunds = async (escrowWallet, userId, bidId) => {
+    try {
+      setEscrowActionLoading(true);
+      
+      await escrowWalletApi.releaseUserFunds(escrowWallet.projectId, userId, bidId);
+      
+      notificationService.success("User funds released successfully");
+      
+      // Refresh escrow data
+      const [escrowsRes, statsRes] = await Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ]);
+      setEscrowWallets(escrowsRes.escrowWallets || []);
+      setEscrowStats(statsRes.stats || {});
+      
+    } catch (error) {
+      console.error("Error releasing user funds:", error);
+      notificationService.error(error.message || "Failed to release user funds");
+    } finally {
+      setEscrowActionLoading(false);
+    }
+  };
+
+  // Handle individual fund refund
+  const handleRefundUserFunds = async (escrowWallet, userId, bidId) => {
+    try {
+      setEscrowActionLoading(true);
+      
+      await escrowWalletApi.refundUserFunds(escrowWallet.projectId, userId, bidId);
+      
+      notificationService.success("User funds refunded successfully");
+      
+      // Refresh escrow data
+      const [escrowsRes, statsRes] = await Promise.all([
+        escrowWalletApi.getProjectOwnerEscrows(),
+        escrowWalletApi.getEscrowStats()
+      ]);
+      setEscrowWallets(escrowsRes.escrowWallets || []);
+      setEscrowStats(statsRes.stats || {});
+      
+    } catch (error) {
+      console.error("Error refunding user funds:", error);
+      notificationService.error(error.message || "Failed to refund user funds");
+    } finally {
+      setEscrowActionLoading(false);
+    }
+  };
+
+  // Get status badge component
+  const getEscrowStatusBadge = (status) => {
+    const statusConfig = {
+      active: { color: 'bg-blue-900/40 text-blue-400', text: 'ACTIVE' },
+      locked: { color: 'bg-yellow-900/40 text-yellow-400', text: 'LOCKED' },
+      released: { color: 'bg-green-900/40 text-green-400', text: 'RELEASED' },
+      refunded: { color: 'bg-red-900/40 text-red-400', text: 'REFUNDED' },
+      cancelled: { color: 'bg-gray-900/40 text-gray-400', text: 'CANCELLED' }
+    };
+    
+    const config = statusConfig[status] || statusConfig.active;
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-bold ${config.color}`}>
+        {config.text}
+      </span>
+    );
+  };
 
   // Fetch project for "My projects" section
 
@@ -689,39 +857,6 @@ const AdminPage = () => {
     }
   };
 
-  // Escrow Wallet Handlers
-  const handleCreateEscrow = async (projectId, bonusPoolAmount) => {
-    try {
-      await escrowWalletApi.createEscrowWallet(projectId, bonusPoolAmount);
-      notificationService.success("Escrow wallet created successfully");
-      // Refresh escrow data
-      const [escrowData, statsData] = await Promise.all([
-        escrowWalletApi.getProjectOwnerEscrows(),
-        escrowWalletApi.getEscrowStats()
-      ]);
-      setEscrowWallets(escrowData.escrowWallets || []);
-      setEscrowStats(statsData.statistics);
-    } catch (error) {
-      notificationService.error("Failed to create escrow wallet");
-    }
-  };
-
-  const handleCompleteProject = async (projectId) => {
-    try {
-      await escrowWalletApi.completeProject(projectId, "Project completed via admin panel", 8);
-      notificationService.success("Project completed and funds released");
-      // Refresh escrow data
-      const [escrowData, statsData] = await Promise.all([
-        escrowWalletApi.getProjectOwnerEscrows(),
-        escrowWalletApi.getEscrowStats()
-      ]);
-      setEscrowWallets(escrowData.escrowWallets || []);
-      setEscrowStats(statsData.statistics);
-    } catch (error) {
-      notificationService.error("Failed to complete project");
-    }
-  };
-
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e]">
       <Navbar />
@@ -799,7 +934,7 @@ const AdminPage = () => {
                 Welcome, Admin!
               </h1>
               <p className="text-gray-300 text-lg">
-                Here’s a quick overview of your DevHubs platform activity.
+                Here's a quick overview of your DevHubs platform activity.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
@@ -1625,52 +1760,117 @@ const AdminPage = () => {
                       <p className="text-sm">Create a new escrow wallet to get started.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-6">
                       {escrowWallets.map((wallet) => (
                         <div
                           key={wallet._id}
                           className="bg-[#181b23] rounded-xl p-6 border border-blue-500/10 hover:border-blue-400 transition"
                         >
                           <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-white">
-                              {wallet.projectId?.project_Title || "Untitled Project"}
-                            </h3>
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                              wallet.status === 'completed' ? 'bg-green-900/40 text-green-400' :
-                              wallet.status === 'active' ? 'bg-blue-900/40 text-blue-400' :
-                              'bg-yellow-900/40 text-yellow-400'
-                            }`}>
-                              {wallet.status?.toUpperCase() || 'ACTIVE'}
-                            </span>
+                            <div>
+                              <h3 className="text-lg font-semibold text-white">
+                                {wallet.projectId?.project_Title || "Untitled Project"}
+                              </h3>
+                              <p className="text-sm text-gray-400">Project ID: {wallet.projectId}</p>
+                            </div>
+                            {getEscrowStatusBadge(wallet.status)}
                           </div>
                           
-                          <div className="space-y-2 text-sm text-gray-300">
-                            <div>
-                              <span className="font-semibold">Bonus Pool:</span> ₹{wallet.totalBonusPool}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-blue-400">₹{wallet.totalBonusPool}</div>
+                              <div className="text-xs text-gray-400">Bonus Pool</div>
                             </div>
-                            <div>
-                              <span className="font-semibold">Locked Funds:</span> ₹{wallet.totalEscrowAmount || 0}
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-yellow-400">₹{wallet.totalEscrowAmount || 0}</div>
+                              <div className="text-xs text-gray-400">Locked Funds</div>
                             </div>
-                            <div>
-                              <span className="font-semibold">Contributors:</span> {wallet.bonusPoolDistribution?.totalContributors || 0}
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-green-400">{wallet.bonusPoolDistribution?.totalContributors || 0}</div>
+                              <div className="text-xs text-gray-400">Contributors</div>
                             </div>
-                            <div>
-                              <span className="font-semibold">Per Contributor:</span> ₹{wallet.bonusPoolDistribution?.amountPerContributor || 0}
+                            <div className="text-center">
+                              <div className="text-2xl font-bold text-purple-400">₹{wallet.bonusPoolDistribution?.amountPerContributor || 0}</div>
+                              <div className="text-xs text-gray-400">Per Contributor</div>
                             </div>
                           </div>
 
-                          <div className="flex gap-2 mt-4">
+                          {/* Locked Funds Details */}
+                          {wallet.lockedFunds && wallet.lockedFunds.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="text-sm font-semibold text-gray-300 mb-2">Locked Funds Details:</h4>
+                              <div className="space-y-2">
+                                {wallet.lockedFunds.map((fund, index) => (
+                                  <div key={index} className="flex items-center justify-between bg-[#232a34] rounded-lg p-3">
+                                    <div>
+                                      <div className="text-sm font-medium text-white">User: {fund.userId}</div>
+                                      <div className="text-xs text-gray-400">
+                                        Bid: ₹{fund.bidAmount} | Bonus: ₹{fund.bonusAmount} | Total: ₹{fund.totalAmount}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        Status: {fund.lockStatus} | Locked: {fund.lockedAt ? new Date(fund.lockedAt).toLocaleDateString() : 'N/A'}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      {fund.lockStatus === 'locked' && (
+                                        <>
+                                          <button
+                                            onClick={() => handleReleaseUserFunds(wallet, fund.userId, fund.bidId)}
+                                            disabled={escrowActionLoading}
+                                            className="bg-green-500 hover:bg-green-600 disabled:bg-green-700 text-white px-2 py-1 rounded text-xs transition"
+                                          >
+                                            Release
+                                          </button>
+                                          <button
+                                            onClick={() => handleRefundUserFunds(wallet, fund.userId, fund.bidId)}
+                                            disabled={escrowActionLoading}
+                                            className="bg-red-500 hover:bg-red-600 disabled:bg-red-700 text-white px-2 py-1 rounded text-xs transition"
+                                          >
+                                            Refund
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Project Completion Info */}
+                          {wallet.projectCompletion && (
+                            <div className="mb-4 p-3 bg-[#232a34] rounded-lg">
+                              <h4 className="text-sm font-semibold text-gray-300 mb-2">Project Completion:</h4>
+                              <div className="text-xs text-gray-400">
+                                <div>Status: {wallet.projectCompletion.isCompleted ? 'Completed' : 'In Progress'}</div>
+                                {wallet.projectCompletion.completedAt && (
+                                  <div>Completed: {new Date(wallet.projectCompletion.completedAt).toLocaleDateString()}</div>
+                                )}
+                                {wallet.projectCompletion.qualityScore && (
+                                  <div>Quality Score: {wallet.projectCompletion.qualityScore}/10</div>
+                                )}
+                                {wallet.projectCompletion.completionNotes && (
+                                  <div>Notes: {wallet.projectCompletion.completionNotes}</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2">
                             <Link to={`/escrow-wallet/${wallet.projectId}`}>
                               <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition text-xs">
-                                Manage
+                                Detailed View
                               </button>
                             </Link>
                             {wallet.status === 'active' && (
                               <button
-                                onClick={() => handleCompleteProject(wallet.projectId)}
+                                onClick={() => {
+                                  setSelectedEscrowForCompletion(wallet);
+                                  setShowCompletionModal(true);
+                                }}
                                 className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition text-xs"
                               >
-                                Complete
+                                Complete Project
                               </button>
                             )}
                           </div>
@@ -1850,10 +2050,12 @@ const AdminPage = () => {
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
-                const projectId = formData.get('projectId');
-                const bonusPoolAmount = parseFloat(formData.get('bonusPoolAmount'));
-                handleCreateEscrow(projectId, bonusPoolAmount);
-                setShowEscrowModal(false);
+                setEscrowForm({
+                  ...escrowForm,
+                  projectId: formData.get('projectId'),
+                  bonusPoolAmount: formData.get('bonusPoolAmount')
+                });
+                handleCreateEscrowWallet();
               }}>
                 <div className="space-y-4">
                   <div>
@@ -1886,13 +2088,82 @@ const AdminPage = () => {
                 <div className="flex gap-4 mt-6">
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
+                    disabled={escrowActionLoading}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
                   >
-                    Create Escrow
+                    {escrowActionLoading ? 'Creating...' : 'Create Escrow'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowEscrowModal(false)}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Project Completion Modal */}
+        {showCompletionModal && selectedEscrowForCompletion && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="bg-[#232a34] rounded-2xl p-8 w-full max-w-md border border-blue-500/20 shadow-2xl">
+              <h2 className="text-2xl font-bold mb-6 text-blue-400 text-center">
+                Complete Project & Release Funds
+              </h2>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                setEscrowForm({
+                  ...escrowForm,
+                  completionNotes: formData.get('completionNotes'),
+                  qualityScore: parseInt(formData.get('qualityScore'))
+                });
+                handleCompleteProject(selectedEscrowForCompletion);
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Completion Notes
+                    </label>
+                    <textarea
+                      name="completionNotes"
+                      rows="3"
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                      placeholder="Enter completion notes..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Quality Score (1-10)
+                    </label>
+                    <input
+                      type="number"
+                      name="qualityScore"
+                      required
+                      min="1"
+                      max="10"
+                      defaultValue="8"
+                      className="w-full bg-[#181b23] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-4 mt-6">
+                  <button
+                    type="submit"
+                    disabled={escrowActionLoading}
+                    className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-green-700 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    {escrowActionLoading ? 'Completing...' : 'Complete & Release'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCompletionModal(false);
+                      setSelectedEscrowForCompletion(null);
+                    }}
                     className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition"
                   >
                     Cancel
