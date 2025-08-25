@@ -60,18 +60,6 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
         const token = localStorage.getItem('token');
         await chatService.connect(token);
         
-        // Test database connection first
-        try {
-          console.log('🔍 Testing database connection...');
-          await chatService.testConnection();
-          console.log('✅ Database connection successful');
-        } catch (error) {
-          console.error('❌ Database connection failed:', error);
-          notificationService.error('Database connection failed: ' + error.message);
-          setLoading(false);
-          return;
-        }
-        
         // Join project room
         chatService.joinProject(projectId, user._id, user.username || user.name);
         

@@ -7,8 +7,10 @@ const onlineUsers = new Map(); // projectId -> Set of socketIds
 const userSockets = new Map(); // socketId -> { userId, projectId, username }
 
 const chatSocket = (io) => {
+  console.log('🔧 Socket.IO: Chat socket initialized');
+  
   io.on("connection", (socket) => {
-    console.log("New user connected: " + socket.id);
+    console.log("✅ Socket.IO: New user connected:", socket.id);
 
     // Test database connection
     socket.on("testConnection", async () => {
@@ -40,6 +42,9 @@ const chatSocket = (io) => {
 
         // Validate user and project
         console.log('🔍 Socket: Validating user and project...');
+        console.log('🔍 Socket: User ID type:', typeof userId, 'Value:', userId);
+        console.log('🔍 Socket: Project ID type:', typeof projectId, 'Value:', projectId);
+        
         const userDetails = await user.findById(userId);
         const project = await ProjectListing.findById(projectId);
         

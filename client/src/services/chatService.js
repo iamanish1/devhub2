@@ -69,6 +69,30 @@ class ChatService {
     this.socket.emit('joinRoom', { projectId, userId, username });
   }
 
+  // Test database connection
+  testConnection() {
+    if (!this.socket || !this.isConnected) {
+      throw new Error('Socket not connected');
+    }
+
+    return new Promise((resolve, reject) => {
+      this.socket.emit('testConnection');
+      
+      const timeout = setTimeout(() => {
+        reject(new Error('Connection test timeout'));
+      }, 5000);
+
+      this.socket.once('connectionTest', (result) => {
+        clearTimeout(timeout);
+        if (result.success) {
+          resolve(result);
+        } else {
+          reject(new Error(result.message));
+        }
+      });
+    });
+  }
+
   // Leave current project room
   leaveProject() {
     if (this.socket && this.currentProjectId) {
@@ -172,6 +196,18 @@ class ChatService {
     // Handle errors
     this.socket.on('error', (error) => {
       console.error('Socket error:', error);
+      // Emit error to any error handlers
+      if (this.errorHandler) {
+        this.errorHandler(error);
+      }
+    });
+
+    // Handle connection errors
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      if (this.errorHandler) {
+        this.errorHandler(error);
+      }
     });
   }
 
@@ -194,6 +230,11 @@ class ChatService {
     const id = Date.now() + Math.random();
     this.userHandlers.set(id, handler);
     return () => this.userHandlers.delete(id);
+  }
+
+  // Add error handler
+  onError(handler) {
+    this.errorHandler = handler;
   }
 
   // API Methods
