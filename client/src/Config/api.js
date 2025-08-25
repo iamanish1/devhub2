@@ -88,6 +88,7 @@ export const API_ENDPOINTS = {
   UPLOAD_TASK_FILE: (projectId, taskId) => `${API_BASE_URL}/api/project-tasks/${projectId}/tasks/${taskId}/files`,
   GET_USER_TASKS: `${API_BASE_URL}/api/project-tasks/user/tasks`,
   GET_PROJECT_STATISTICS: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/statistics`,
+  GET_PROJECT_TASKS: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/get-tasks`,
   
   // Project Resource Management endpoints
   UPLOAD_PROJECT_RESOURCE: (projectId) => `${API_BASE_URL}/api/project-tasks/${projectId}/resources`,

@@ -222,23 +222,9 @@ const ContributionPage = () => {
       console.log('🔍 Loading tasks for project:', projectId);
       console.log('🔍 User ID:', user?._id);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('🔍 API Response status:', response.status);
-      
-      if (response.ok) {
-        const responseData = await response.json();
-        console.log('🔍 API Response data:', responseData);
-        setTasks(responseData.tasks || []);
-      } else {
-        const errorData = await response.json();
-        console.error('🔍 API Error:', errorData);
-      }
+      const responseData = await projectTaskApi.getProjectTasks(projectId);
+      console.log('🔍 API Response data:', responseData);
+      setTasks(responseData.tasks || []);
     } catch (error) {
       console.error('🔍 Failed to load tasks:', error);
     }

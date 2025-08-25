@@ -172,6 +172,26 @@ export const projectTaskApi = {
   },
 
   /**
+   * Get project tasks
+   */
+  getProjectTasks: async (projectId) => {
+    try {
+      console.log('🔍 Getting tasks for project:', projectId);
+      console.log('🔍 API endpoint:', API_ENDPOINTS.GET_PROJECT_TASKS(projectId));
+      
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_PROJECT_TASKS(projectId)
+      );
+      console.log('✅ Project tasks retrieved successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error getting project tasks:', error);
+      console.error('❌ Error response:', error.response);
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
    * Get user's tasks
    */
   getUserTasks: async (filters = {}) => {
