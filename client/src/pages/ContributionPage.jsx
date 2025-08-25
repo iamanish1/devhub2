@@ -67,8 +67,14 @@ const ContributionPage = () => {
 
   // Project overview and financial data
   const [projectOverview, setProjectOverview] = useState(null);
+  const [bonusPool, setBonusPool] = useState({
+    totalAmount: 200,
+    distributedAmount: 0,
+    remainingAmount: 200,
+  });
+
+  // Escrow wallet data
   const [escrowWallet, setEscrowWallet] = useState(null);
-  const [bonusPool, setBonusPool] = useState(null);
   const [userEarnings, setUserEarnings] = useState(null);
 
   // Task management
@@ -132,9 +138,6 @@ const ContributionPage = () => {
     return taskAssignedToId === user?._id;
   });
 
-  // Project chunks/sections
-  const [projectChunks, setProjectChunks] = useState([]);
-
   // Resources and files
   const [resources, setResources] = useState([]);
   const [resourcesLoading, setResourcesLoading] = useState(false);
@@ -159,7 +162,6 @@ const ContributionPage = () => {
       color: "indigo",
     },
     { id: "tasks", label: "Tasks", icon: CheckSquare, color: "green" },
-    { id: "chunks", label: "Project Chunks", icon: GitBranch, color: "purple" },
     { id: "team", label: "Team", icon: Users2, color: "indigo" },
     { id: "chat", label: "Chat", icon: MessageCircle, color: "yellow" },
     { id: "resources", label: "Resources", icon: FolderOpen, color: "orange" },
@@ -175,7 +177,6 @@ const ContributionPage = () => {
       loadWorkspace();
       loadProjectOverview();
       loadEscrowWalletData();
-      loadProjectChunks();
       loadTeamMembers();
     }
   }, [projectId]);
@@ -397,31 +398,7 @@ const ContributionPage = () => {
     }
   };
 
-  // Load project chunks/sections
-  const loadProjectChunks = async () => {
-    try {
-      const data = await projectTaskApi.getProjectChunks(projectId);
-      setProjectChunks(
-        data.chunks || [
-          { id: "frontend", name: "Frontend Development", progress: 0 },
-          { id: "backend", name: "Backend Development", progress: 0 },
-          { id: "database", name: "Database Design", progress: 0 },
-          { id: "testing", name: "Testing & QA", progress: 0 },
-          { id: "deployment", name: "Deployment", progress: 0 },
-        ]
-      );
-    } catch (error) {
-      console.error("Failed to load project chunks:", error);
-      // Set default chunks if API fails
-      setProjectChunks([
-        { id: "frontend", name: "Frontend Development", progress: 0 },
-        { id: "backend", name: "Backend Development", progress: 0 },
-        { id: "database", name: "Database Design", progress: 0 },
-        { id: "testing", name: "Testing & QA", progress: 0 },
-        { id: "deployment", name: "Deployment", progress: 0 },
-      ]);
-    }
-  };
+
 
   // Load team members
   const loadTeamMembers = async () => {
@@ -1923,63 +1900,7 @@ const ContributionPage = () => {
               </div>
             )}
 
-            {/* Project Chunks Tab */}
-            {activeTab === "chunks" && (
-              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-white">
-                    Project Chunks
-                  </h2>
-                  <div className="flex items-center space-x-2">
-                    <GitBranch className="w-5 h-5 text-purple-400" />
-                    <span className="text-sm text-gray-400">
-                      Development Sections
-                    </span>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projectChunks.map((chunk) => (
-                    <div
-                      key={chunk.id}
-                      className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-white">
-                          {chunk.name}
-                        </h3>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                          <span className="text-xs text-gray-400">Active</span>
-                        </div>
-                      </div>
-
-                      <div className="mb-4">
-                        <div className="flex justify-between text-sm text-gray-400 mb-1">
-                          <span>Progress</span>
-                          <span>{chunk.progress}%</span>
-                        </div>
-                        <div className="w-full bg-gray-700 rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${chunk.progress}%` }}
-                          ></div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">
-                          Tasks: {chunk.tasks || 0}
-                        </span>
-                        <button className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Team Tab */}
             {activeTab === "team" && (
@@ -2408,7 +2329,7 @@ const ContributionPage = () => {
                       <div className="space-y-3 text-gray-300">
                         <p>
                           • Review the{" "}
-                          <strong className="text-white">Project Chunks</strong>{" "}
+                          <strong className="text-white">Tasks</strong>{" "}
                           tab to understand different development sections
                         </p>
                         <p>

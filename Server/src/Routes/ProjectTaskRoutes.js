@@ -21,7 +21,6 @@ import {
   getProjectResources,
   deleteProjectResource,
   updateProjectResource,
-  getProjectChunks,
   createFirebaseAccess
 } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
@@ -148,7 +147,6 @@ projectTaskRoutes.post('/test-task/:projectId', (req, res) => {
 projectTaskRoutes.get('/user/tasks', authMiddleware, getUserTasks);
 
 // Specific routes (must come before parameterized routes)
-projectTaskRoutes.get('/chunks/:projectId', authMiddleware, getProjectChunks);
 projectTaskRoutes.post('/firebase-access/:projectId', authMiddleware, createFirebaseAccess);
 
 // Workspace management

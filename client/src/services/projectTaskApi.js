@@ -333,19 +333,7 @@ export const projectTaskApi = {
     }
   },
 
-  /**
-   * Get project chunks
-   */
-  getProjectChunks: async (projectId) => {
-    try {
-      const response = await createAuthInstance().get(
-        API_ENDPOINTS.GET_PROJECT_CHUNKS(projectId)
-      );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
+
 
   /**
    * Create Firebase access
