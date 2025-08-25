@@ -10,6 +10,12 @@ import authMiddleware from "../Middleware/authenticateMiddelware.js";
 
 const chatRoutes = express.Router();
 
+// Test route to verify chat routes are working
+chatRoutes.get("/chat-test", (req, res) => {
+  console.log('✅ Chat test route accessed');
+  res.status(200).json({ message: "Chat routes are working!" });
+});
+
 // Get project messages
 chatRoutes.get("/chat/:projectId", authMiddleware, getProjectMessages);
 

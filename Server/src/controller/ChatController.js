@@ -5,6 +5,10 @@ import ProjectListing from "../Model/ProjectListingModel.js";
 // Get all messages for a specific project chat room with user details
 export const getProjectMessages = async (req, res) => {
   try {
+    console.log('🔍 Chat API: getProjectMessages called');
+    console.log('🔍 Project ID:', req.params.projectId);
+    console.log('🔍 User:', req.user?.username);
+    
     const { projectId } = req.params;
     const { page = 1, limit = 50 } = req.query;
     
@@ -18,6 +22,8 @@ export const getProjectMessages = async (req, res) => {
     
     const totalMessages = await Chat.countDocuments({ projectId });
     
+    console.log('✅ Chat API: Found', messages.length, 'messages for project', projectId);
+    
     res.status(200).json({
       messages: messages.reverse(), // Return in chronological order
       totalMessages,
@@ -26,7 +32,7 @@ export const getProjectMessages = async (req, res) => {
       hasMore: skip + messages.length < totalMessages
     });
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    console.error('❌ Chat API: Error fetching messages:', error);
     res.status(500).json({ error: "Failed to fetch messages" });
   }
 };

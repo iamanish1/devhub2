@@ -177,7 +177,8 @@ console.log("✅ Project Task routes registered at /api/project-tasks");
 
 // Project routes (must come after project-tasks to avoid conflicts)
 app.use("/api/project", projectRoutes) ; 
-app.use("/api/project",chatRoutes);
+app.use("/api", chatRoutes);
+console.log("✅ Chat routes registered at /api/chat");
 
 // Initialize chat socket
 chatSocket(io);
