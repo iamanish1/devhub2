@@ -247,6 +247,7 @@ const ContributionPage = () => {
       setTasks(responseData.tasks || []);
     } catch (error) {
       console.error('Failed to load tasks:', error);
+      setTasks([]);
     }
   };
 
