@@ -55,9 +55,12 @@ import {
 
 
 const ContributionPage = () => {
+  console.log('🔍 ContributionPage component rendering...');
   const { _id: projectId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  console.log('🔍 Component props - projectId:', projectId, 'user:', user);
   
   // Core state
   const [workspace, setWorkspace] = useState(null);
@@ -135,6 +138,11 @@ const ContributionPage = () => {
     console.log('🔍 Task filters:', taskFilters);
     console.log('🔍 Tasks length:', tasks.length);
     console.log('🔍 Filtered tasks length:', filteredTasks.length);
+    console.log('🔍 Tasks type:', typeof tasks);
+    console.log('🔍 Tasks is array:', Array.isArray(tasks));
+    if (Array.isArray(tasks) && tasks.length > 0) {
+      console.log('🔍 First task:', tasks[0]);
+    }
   }, [tasks, filteredTasks, taskFilters]);
 
   // Get tasks assigned to current user
@@ -194,7 +202,9 @@ const ContributionPage = () => {
 
   // Load tasks with real-time updates
   useEffect(() => {
+    console.log('🔍 useEffect triggered - projectId:', projectId, 'user?._id:', user?._id);
     if (projectId && user?._id) {
+      console.log('🔍 Conditions met, calling loadTasks...');
       // Load tasks from API first
       loadTasks();
       // Temporarily disable Firebase listener to test API data
@@ -203,6 +213,8 @@ const ContributionPage = () => {
       // }, 1000); // Small delay to ensure API loads first
       
       // return () => clearTimeout(timer);
+    } else {
+      console.log('🔍 Conditions not met - projectId:', projectId, 'user?._id:', user?._id);
     }
   }, [projectId, user?._id]);
 
@@ -266,6 +278,19 @@ const ContributionPage = () => {
       console.log('🔍 Loading tasks for project:', projectId);
       console.log('🔍 User ID:', user?._id);
       
+      // Test direct fetch first
+      console.log('🔍 Testing direct fetch...');
+      const directResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/get-tasks`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log('🔍 Direct fetch response status:', directResponse.status);
+      const directData = await directResponse.json();
+      console.log('🔍 Direct fetch data:', directData);
+      
+      // Now try the service
       const responseData = await projectTaskApi.getProjectTasks(projectId);
       console.log('🔍 API Response data:', responseData);
       console.log('🔍 Setting tasks from API:', responseData.tasks || []);
@@ -1229,6 +1254,7 @@ const ContributionPage = () => {
             )}
 
             {/* Tasks Tab */}
+            {console.log('🔍 Rendering tasks tab, activeTab:', activeTab)}
             {activeTab === 'tasks' && (
               <div className="space-y-6">
                 {/* Task Management Header */}
@@ -1271,6 +1297,9 @@ const ContributionPage = () => {
                       <p>My Tasks: {myTasks.length}</p>
                       <p>Active Tab: {activeTab}</p>
                       <p>Task Filters: {JSON.stringify(taskFilters)}</p>
+                      <p>Tasks Type: {typeof tasks}</p>
+                      <p>Tasks is Array: {Array.isArray(tasks).toString()}</p>
+                      <p>Raw Tasks Data: {JSON.stringify(tasks, null, 2)}</p>
                     </div>
                   </div>
 
@@ -1385,6 +1414,13 @@ const ContributionPage = () => {
                 {/* Tasks List */}
                 <div className="space-y-4">
                   {console.log('🔍 Rendering filtered tasks:', filteredTasks)}
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-4">
+                    <p className="text-red-300 text-sm">
+                      <strong>Debug - Tasks List:</strong><br/>
+                      Filtered Tasks Length: {filteredTasks.length}<br/>
+                      Raw Filtered Tasks: {JSON.stringify(filteredTasks, null, 2)}
+                    </p>
+                  </div>
                   {filteredTasks.map(task => (
                     <div key={task._id} className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] border border-gray-700 rounded-lg p-6 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
                       <div className="flex items-start justify-between">
