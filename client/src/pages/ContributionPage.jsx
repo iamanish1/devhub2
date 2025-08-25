@@ -179,6 +179,15 @@ const ContributionPage = () => {
     }
   }, [projectId]);
 
+  // Monitor resources state changes
+  useEffect(() => {
+    console.log('🔍 Resources state changed:', resources);
+    console.log('🔍 Resources length:', resources.length);
+    if (resources.length > 0) {
+      console.log('🔍 First resource:', resources[0]);
+    }
+  }, [resources]);
+
   // Load tasks from API only (Firebase temporarily disabled)
   useEffect(() => {
     if (projectId && user?._id) {
@@ -438,7 +447,16 @@ const ContributionPage = () => {
       setResourcesError(null);
       const data = await projectTaskApi.getProjectResources(projectId);
       console.log('✅ Project resources loaded:', data);
-      setResources(data.resources || []);
+      console.log('🔍 Resources array:', data.resources);
+      console.log('🔍 Resources length:', data.resources?.length || 0);
+      
+      if (data.resources && data.resources.length > 0) {
+        console.log('🔍 Setting resources:', data.resources);
+        setResources(data.resources);
+      } else {
+        console.log('🔍 No resources found, setting empty array');
+        setResources([]);
+      }
     } catch (error) {
       console.error("Failed to load project resources:", error);
       console.error("Error details:", {
@@ -511,11 +529,14 @@ const ContributionPage = () => {
         setTasks(data.workspace.tasks);
       }
 
-      // Load resources
-      if (data.workspace.resources) {
+      // Only load resources from workspace if no resources are currently loaded
+      // This prevents overwriting resources loaded by loadProjectResources
+      if (data.workspace.resources && resources.length === 0) {
+        console.log('🔍 Loading resources from workspace data:', data.workspace.resources);
         setResources(data.workspace.resources);
+      } else {
+        console.log('🔍 Skipping workspace resources - using dedicated resources API');
       }
-
 
     } catch (err) {
       if (err.message?.includes("not found")) {
@@ -2180,6 +2201,14 @@ const ContributionPage = () => {
                       Upload File
                     </button>
                   </div>
+                </div>
+
+                {/* Debug info */}
+                <div className="mb-4 p-3 bg-gray-800/50 rounded text-xs text-gray-300">
+                  <p>Debug: Resources length: {resources.length}</p>
+                  <p>Debug: Resources loading: {resourcesLoading ? 'true' : 'false'}</p>
+                  <p>Debug: Resources error: {resourcesError || 'none'}</p>
+                  <p>Debug: Active tab: {activeTab}</p>
                 </div>
 
                 {resourcesLoading ? (
