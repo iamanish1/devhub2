@@ -989,29 +989,46 @@ export const getTeamMembers = async (req, res) => {
     const userId = req.user._id;
 
     logger.info(`[ProjectTask] Getting team members for project ${projectId}`);
+    console.log('🔍 [ProjectTask] Getting team members for project:', projectId);
+    console.log('🔍 [ProjectTask] User ID:', userId);
+    console.log('🔍 [ProjectTask] Request params:', req.params);
+    console.log('🔍 [ProjectTask] Request user:', req.user);
 
     // Check if user has access
     const project = await ProjectListing.findById(projectId);
     if (!project) {
+      console.log('❌ [ProjectTask] Project not found:', projectId);
       return res.status(404).json({ message: 'Project not found' });
     }
+
+    console.log('✅ [ProjectTask] Project found:', project.project_Title);
 
     const isProjectOwner = project.user.toString() === userId.toString();
     const selection = await ProjectSelection.findOne({ projectId });
     const isSelectedContributor = selection && selection.selectedUsers && 
       selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
 
+    console.log('🔍 [ProjectTask] Access check:', {
+      isProjectOwner,
+      isSelectedContributor,
+      projectOwner: project.user.toString(),
+      userId: userId.toString()
+    });
+
     if (!isProjectOwner && !isSelectedContributor) {
+      console.log('❌ [ProjectTask] Access denied for user:', userId);
       return res.status(403).json({ message: 'Access denied' });
     }
 
     // Get project owner
     const ownerProfile = await UserProfile.findOne({ username: project.user }).lean();
+    console.log('🔍 [ProjectTask] Owner profile:', ownerProfile ? 'Found' : 'Not found');
 
     // Get selected contributors
     const teamMembers = [];
     
     if (selection && selection.selectedUsers) {
+      console.log('🔍 [ProjectTask] Found selection with', selection.selectedUsers.length, 'selected users');
       for (const selectedUser of selection.selectedUsers) {
         const userProfile = await UserProfile.findOne({ username: selectedUser.userId }).lean();
         if (userProfile) {
@@ -1026,6 +1043,8 @@ export const getTeamMembers = async (req, res) => {
           });
         }
       }
+    } else {
+      console.log('🔍 [ProjectTask] No selection found or no selected users');
     }
 
     // Add project owner
@@ -1041,6 +1060,8 @@ export const getTeamMembers = async (req, res) => {
       });
     }
 
+    console.log('✅ [ProjectTask] Returning', teamMembers.length, 'team members');
+
     res.status(200).json({ 
       success: true,
       teamMembers,
@@ -1049,6 +1070,7 @@ export const getTeamMembers = async (req, res) => {
 
   } catch (error) {
     logger.error(`[ProjectTask] Error getting team members: ${error.message}`, error);
+    console.error('❌ [ProjectTask] Error getting team members:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

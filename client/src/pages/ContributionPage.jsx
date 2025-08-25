@@ -407,6 +407,8 @@ const ContributionPage = () => {
   const loadTeamMembers = async () => {
     try {
       console.log('🔍 Loading team members for project:', projectId);
+      console.log('🔍 API endpoint:', `${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/team`);
+      console.log('🔍 Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       setTeamMembersLoading(true);
       setTeamMembersError(null);
       const data = await projectTaskApi.getProjectTeamMembers(projectId);
@@ -414,6 +416,12 @@ const ContributionPage = () => {
       setTeamMembers(data.teamMembers || []);
     } catch (error) {
       console.error("Failed to load team members:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
       setTeamMembersError(error.message || "Failed to load team members");
       setTeamMembers([]);
     } finally {

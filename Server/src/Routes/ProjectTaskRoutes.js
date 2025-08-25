@@ -34,6 +34,17 @@ projectTaskRoutes.get('/test', (req, res) => {
   res.json({ message: 'Project task routes are working' });
 });
 
+// Test endpoint for team route (without auth for debugging)
+projectTaskRoutes.get('/test-team/:projectId', (req, res) => {
+  console.log('🔍 Test team endpoint hit');
+  console.log('🔍 Project ID:', req.params.projectId);
+  res.json({ 
+    message: 'Test team endpoint working',
+    projectId: req.params.projectId,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Test endpoint for task creation (without auth for debugging)
 projectTaskRoutes.post('/test-task/:projectId', (req, res) => {
   console.log('🔍 Test task endpoint hit');
@@ -48,6 +59,10 @@ projectTaskRoutes.post('/test-task/:projectId', (req, res) => {
 
 // User-specific routes (must come before parameterized routes)
 projectTaskRoutes.get('/user/tasks', authMiddleware, getUserTasks);
+
+// Specific routes (must come before parameterized routes)
+projectTaskRoutes.get('/chunks/:projectId', authMiddleware, getProjectChunks);
+projectTaskRoutes.post('/firebase-access/:projectId', authMiddleware, createFirebaseAccess);
 
 // Workspace management
 projectTaskRoutes.post('/workspace/:projectId', authMiddleware, createWorkspace);
@@ -78,9 +93,5 @@ projectTaskRoutes.get('/:projectId/team', authMiddleware, getTeamMembers);
 // Debug endpoints
 projectTaskRoutes.get('/debug/:projectId', authMiddleware, debugProjectAccess);
 projectTaskRoutes.get('/debug/:projectId/bids', authMiddleware, debugProjectBids);
-
-// Missing endpoints that frontend expects
-projectTaskRoutes.get('/chunks/:projectId', authMiddleware, getProjectChunks);
-projectTaskRoutes.post('/firebase-access/:projectId', authMiddleware, createFirebaseAccess);
 
 export default projectTaskRoutes;
