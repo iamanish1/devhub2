@@ -608,30 +608,16 @@ const ContributionPage = () => {
   // Update task status
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
     try {
-      console.log('🔍 Starting handleUpdateTaskStatus for taskId:', taskId);
-      console.log('🔍 New status:', newStatus);
-      console.log('🔍 ProjectId:', projectId);
-      
       setUpdatingTaskStatus(true);
       setError(null);
 
-      console.log('🔍 Calling projectTaskApi.updateTask...');
-      const result = await projectTaskApi.updateTask(projectId, taskId, { status: newStatus });
-      console.log('✅ Task status updated successfully:', result);
-      
+      await projectTaskApi.updateTask(projectId, taskId, { status: newStatus });
       notificationService.success(`Task status updated to ${newStatus}`);
 
-      // Update local state
-      setTasks((prevTasks) =>
-        prevTasks.map((task) =>
-          task._id === taskId ? { ...task, status: newStatus } : task
-        )
-      );
-    } catch (err) {
-      console.error('❌ Error in handleUpdateTaskStatus:', err);
-      console.error('❌ Error message:', err.message);
-      console.error('❌ Error response:', err.response);
+      // Reload tasks to get updated state
+      await loadTasks();
       
+    } catch (err) {
       setError(err.message || "Failed to update task status");
       notificationService.error(err.message || "Failed to update task status");
     } finally {
@@ -642,51 +628,16 @@ const ContributionPage = () => {
   // Complete task with notes
   const handleCompleteTask = async (taskId, completionNotes = "") => {
     try {
-      console.log('🔍 Starting handleCompleteTask for taskId:', taskId);
-      console.log('🔍 ProjectId:', projectId);
-      console.log('🔍 Completion notes:', completionNotes);
-      
       setLoading(true);
       setError(null);
 
-      console.log('🔍 Calling projectTaskApi.completeTask...');
-      const result = await projectTaskApi.completeTask(projectId, taskId, { completionNotes });
-      console.log('✅ Task completed successfully:', result);
-      
+      await projectTaskApi.completeTask(projectId, taskId, { completionNotes });
       notificationService.success("Task completed successfully!");
 
-      // Update local state
-      setTasks((prevTasks) =>
-        prevTasks.map((task) =>
-          task._id === taskId
-            ? {
-                ...task,
-                status: "completed",
-                completionNotes,
-                completedAt: new Date(),
-              }
-            : task
-        )
-      );
+      // Reload tasks to get updated state
+      await loadTasks();
 
-      // Check if all tasks are completed
-      const updatedTasks = tasks.map((task) =>
-        task._id === taskId ? { ...task, status: "completed" } : task
-      );
-
-      const allTasksCompleted = updatedTasks.every(
-        (task) => task.status === "completed"
-      );
-      if (allTasksCompleted && escrowWallet) {
-        notificationService.info(
-          "🎯 All tasks completed! Project owner will review and release escrow funds."
-        );
-      }
     } catch (err) {
-      console.error('❌ Error in handleCompleteTask:', err);
-      console.error('❌ Error message:', err.message);
-      console.error('❌ Error response:', err.response);
-      
       setError(err.message || "Failed to complete task");
       notificationService.error(err.message || "Failed to complete task");
     } finally {
@@ -1763,11 +1714,6 @@ const ContributionPage = () => {
 
                           {/* Status Update Buttons */}
                           <div className="flex items-center space-x-2">
-                            {/* Debug Info - Temporary */}
-                            <div className="text-xs text-red-400 bg-red-900/20 px-2 py-1 rounded border">
-                              Status: "{task.status}" | Type: {typeof task.status}
-                            </div>
-                            
                             {/* User can start pending tasks */}
                             {task.status === "pending" && (
                               <>
