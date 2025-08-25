@@ -9,6 +9,25 @@ const userSockets = new Map(); // socketId -> { userId, projectId, username }
 const chatSocket = (io) => {
   console.log('🔧 Socket.IO: Chat socket initialized');
   
+  // Test database connection
+  const testDatabaseConnection = async () => {
+    try {
+      console.log('🔍 Socket.IO: Testing database connection...');
+      const testUser = await user.findOne().limit(1);
+      const testProject = await ProjectListing.findOne().limit(1);
+      console.log('✅ Socket.IO: Database connection successful');
+      console.log('🔍 Socket.IO: Test user found:', testUser ? 'Yes' : 'No');
+      console.log('🔍 Socket.IO: Test project found:', testProject ? 'Yes' : 'No');
+      return true;
+    } catch (error) {
+      console.error('❌ Socket.IO: Database connection failed:', error);
+      return false;
+    }
+  };
+  
+  // Test connection on initialization
+  testDatabaseConnection();
+  
   io.on("connection", (socket) => {
     console.log("✅ Socket.IO: New user connected:", socket.id);
 
@@ -45,6 +64,37 @@ const chatSocket = (io) => {
         console.log('🔍 Socket: User ID type:', typeof userId, 'Value:', userId);
         console.log('🔍 Socket: Project ID type:', typeof projectId, 'Value:', projectId);
         
+        try {
+          console.log('🔍 Socket: Attempting to find user with ID:', userId);
+          const userDetails = await user.findById(userId);
+          console.log('🔍 Socket: User query result:', userDetails ? 'Found' : 'Not found');
+          if (userDetails) {
+            console.log('🔍 Socket: User details:', {
+              _id: userDetails._id,
+              username: userDetails.username,
+              email: userDetails.email,
+              usertype: userDetails.usertype
+            });
+          }
+        } catch (userError) {
+          console.error('❌ Socket: Error finding user:', userError);
+        }
+        
+        try {
+          console.log('🔍 Socket: Attempting to find project with ID:', projectId);
+          const project = await ProjectListing.findById(projectId);
+          console.log('🔍 Socket: Project query result:', project ? 'Found' : 'Not found');
+          if (project) {
+            console.log('🔍 Socket: Project details:', {
+              _id: project._id,
+              title: project.project_Title,
+              user: project.user
+            });
+          }
+        } catch (projectError) {
+          console.error('❌ Socket: Error finding project:', projectError);
+        }
+        
         const userDetails = await user.findById(userId);
         const project = await ProjectListing.findById(projectId);
         
@@ -78,9 +128,9 @@ const chatSocket = (io) => {
         
         // Determine user role
         let userRole = 'contributor';
-        if (project.ownerId.toString() === userId.toString()) {
+        if (project.user.toString() === userId.toString()) {
           userRole = 'owner';
-        } else if (userDetails.role === 'admin') {
+        } else if (userDetails.usertype === 'Senior Developer') {
           userRole = 'admin';
         }
         
@@ -138,9 +188,9 @@ const chatSocket = (io) => {
         
         // Determine user role
         let senderRole = 'contributor';
-        if (project.ownerId.toString() === userId.toString()) {
+        if (project.user.toString() === userId.toString()) {
           senderRole = 'owner';
-        } else if (userDetails.role === 'admin') {
+        } else if (userDetails.usertype === 'Senior Developer') {
           senderRole = 'admin';
         }
         
@@ -237,7 +287,7 @@ const chatSocket = (io) => {
 
         // Check if user can delete this message
         const userDetails = await user.findById(userInfo.userId);
-        if (message.senderID.toString() !== userInfo.userId && userDetails.role !== 'admin') {
+        if (message.senderID.toString() !== userInfo.userId && userDetails.usertype !== 'Senior Developer') {
           socket.emit("error", { message: "You can only delete your own messages" });
           return;
         }
