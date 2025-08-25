@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { projectTaskApi } from "../services/projectTaskApi";
 import { notificationService } from "../services/notificationService";
+import ProjectChat from "../components/ProjectChat";
 import { 
   CheckSquare, 
   Users, 
@@ -134,7 +135,6 @@ const ContributionPage = () => {
       loadEscrowWalletData();
       loadProjectChunks();
       loadTeamMembers();
-      setupRealTimeChat();
     }
   }, [projectId]);
 
@@ -1504,71 +1504,12 @@ const ContributionPage = () => {
 
             {/* Chat Tab */}
             {activeTab === 'chat' && (
-              <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20">
-                <div className="p-6 border-b border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-white">Team Chat</h2>
-                    <div className="flex items-center space-x-2">
-                      <MessageCircle className="w-5 h-5 text-yellow-400" />
-                      <span className="text-sm text-gray-400">Real-time messaging</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="h-96 flex flex-col">
-                  <div className="flex-1 p-4 overflow-y-auto">
-                    {messages.length > 0 ? (
-                      messages.map((msg) => (
-                        <div key={msg.id} className="mb-4">
-                          <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-medium text-white">{msg.senderName || msg.sender}</span>
-                                <span className="text-xs text-gray-400">
-                                  {msg.timestamp ? new Date(msg.timestamp.toDate ? msg.timestamp.toDate() : msg.timestamp).toLocaleTimeString() : 'Now'}
-                                </span>
-                              </div>
-                              <p className="text-gray-300">{msg.content}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <MessageCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                        <p className="text-gray-400">No messages yet. Start the conversation!</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="p-4 border-t border-gray-700">
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        className="flex-1 px-3 py-2 bg-[#1A1A1A] border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00A8E8] text-white placeholder-gray-400"
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        disabled={chatLoading}
-                      />
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={chatLoading || !newMessage.trim()}
-                        className="px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center transition-colors"
-                      >
-                        {chatLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              <div className="h-96">
+                <ProjectChat
+                  projectId={projectId}
+                  projectTitle={projectOverview?.title || 'Project Chat'}
+                  onClose={() => setActiveTab('overview')}
+                />
               </div>
             )}
 

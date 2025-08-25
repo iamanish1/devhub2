@@ -1,6 +1,93 @@
 import fs from 'fs';
 import path from 'path';
 
+// Upload project files
+export const uploadFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        message: 'No file uploaded'
+      });
+    }
+
+    const fileInfo = {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      filename: req.file.filename,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      url: `/uploads/${req.file.filename}`
+    };
+
+    res.status(200).json({
+      message: 'File uploaded successfully',
+      file: fileInfo
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({
+      message: 'Error processing upload',
+      error: error.message
+    });
+  }
+};
+
+// Upload chat files
+export const uploadChatFile = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        message: 'No file uploaded'
+      });
+    }
+
+    // Validate file size (10MB limit for chat files)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (req.file.size > maxSize) {
+      // Delete the uploaded file
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        message: 'File size must be less than 10MB'
+      });
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/pdf', 'text/plain', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      // Delete the uploaded file
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        message: 'File type not allowed'
+      });
+    }
+
+    const fileInfo = {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      filename: req.file.filename,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      url: `/uploads/${req.file.filename}`
+    };
+
+    res.status(200).json({
+      message: 'Chat file uploaded successfully',
+      file: fileInfo
+    });
+  } catch (error) {
+    console.error('Chat upload error:', error);
+    res.status(500).json({
+      message: 'Error processing chat file upload',
+      error: error.message
+    });
+  }
+};
+
 // Controller to accept and process uploaded files
 export const acceptUpload = async (req, res) => {
   try {

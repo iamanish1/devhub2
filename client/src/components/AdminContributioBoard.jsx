@@ -53,11 +53,11 @@ import {
   limit 
 } from "firebase/firestore";
 import { db } from "../Config/firebase";
-import io from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
 import { projectTaskApi } from "../services/projectTaskApi";
 import { notificationService } from "../services/notificationService";
 import { projectSelectionApi } from "../services/projectSelectionApi";
+import ProjectChat from "./ProjectChat";
 const Socket_URl =
   import.meta.env.VITE_SOCKET_SERVER || `${import.meta.env.VITE_API_URL}`;
 
@@ -75,33 +75,6 @@ const AdminContributionBoard = ({
 }) => {
   // State
   const [tasks, setTasks] = useState(initialTasks);
-  const [chat, setChat] = useState([
-    {
-      sender: "admin",
-      senderName: "Admin User",
-      content: "Welcome to the project team chat! Let's collaborate effectively.",
-      timestamp: new Date(Date.now() - 3600000) // 1 hour ago
-    },
-    {
-      sender: "contributor1",
-      senderName: "John Developer",
-      content: "Thanks! I've started working on the frontend components.",
-      timestamp: new Date(Date.now() - 1800000) // 30 minutes ago
-    },
-    {
-      sender: "contributor2",
-      senderName: "Sarah Designer",
-      content: "I've uploaded the latest design mockups to the resources section.",
-      timestamp: new Date(Date.now() - 900000) // 15 minutes ago
-    },
-    {
-      sender: "admin",
-      senderName: "Admin User",
-      content: "Great work everyone! Let's keep up the momentum.",
-      timestamp: new Date(Date.now() - 300000) // 5 minutes ago
-    }
-  ]);
-  const [message, setMessage] = useState("");
   const [notes, setNotes] = useState(initialNotes);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showAiTaskModal, setShowAiTaskModal] = useState(false);
@@ -119,8 +92,6 @@ const AdminContributionBoard = ({
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
-  const chatEndRef = useRef(null);
-  const socket = useRef(null);
   const { user } = useAuth();
 
   // Enhanced Contribution State
@@ -2531,112 +2502,26 @@ const AdminContributionBoard = ({
 
               {/* Chat Tab */}
               {activeTab === 'chat' && (
-                <div className="flex flex-col h-[600px]">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold text-white">Team Chat</h2>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      <span className="text-sm text-green-400">Live</span>
+                <div className="h-[600px]">
+                  {selectedProjectId ? (
+                    <ProjectChat
+                      projectId={selectedProjectId}
+                      projectTitle={projects.find(p => p._id === selectedProjectId)?.title || 'Project Chat'}
+                      onClose={() => setActiveTab('tasks')}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <FaComments className="text-6xl text-gray-400 mb-4" />
+                      <h3 className="text-xl font-semibold text-white mb-2">No Project Selected</h3>
+                      <p className="text-gray-400 mb-4">Please select a project to start chatting with your team</p>
+                      <button
+                        onClick={() => setActiveTab('tasks')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Select Project
+                      </button>
                     </div>
-                  </div>
-
-                  {/* Online Users */}
-                  <div className="bg-[#181b23] rounded-xl p-4 border border-blue-500/10 mb-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FaUsers className="text-blue-400" />
-                      <span className="text-sm font-medium text-white">Online Team Members</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {onlineUsers.map((user, index) => (
-                        <div key={index} className="flex items-center gap-2 bg-[#232a34] rounded-lg px-3 py-1">
-                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                          <span className="text-sm text-white">{user.username}</span>
-                        </div>
-                      ))}
-                      {onlineUsers.length === 0 && (
-                        <span className="text-sm text-gray-400">No team members online</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Chat Messages */}
-                  <div className="flex-1 bg-[#181b23] rounded-xl border border-blue-500/10 overflow-hidden flex flex-col">
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                      {chat.map((msg, index) => (
-                        <div
-                          key={index}
-                          className={`flex ${msg.sender === user?.username || msg.senderId === user?._id ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                            msg.sender === user?.username || msg.senderId === user?._id
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-[#232a34] text-white border border-blue-500/20'
-                          }`}>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium opacity-75">
-                                {msg.senderName || msg.sender}
-                              </span>
-                              <span className="text-xs opacity-50">
-                                {msg.timestamp?.toDate?.() ? 
-                                  new Date(msg.timestamp.toDate()).toLocaleTimeString() :
-                                  new Date(msg.timestamp).toLocaleTimeString()
-                                }
-                              </span>
-                            </div>
-                            <p className="text-sm">{msg.content || msg.text}</p>
-                          </div>
-                        </div>
-                      ))}
-                      <div ref={chatEndRef} />
-                    </div>
-
-                    {/* Message Input */}
-                    <div className="p-4 border-t border-blue-500/10">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                          placeholder="Type your message..."
-                          className="flex-1 bg-[#232a34] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-                        />
-                        <button
-                          onClick={sendMessage}
-                          disabled={!message.trim()}
-                          className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-                        >
-                          <FaPaperPlane />
-                          Send
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Chat Features */}
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-[#181b23] rounded-xl p-4 border border-green-500/10">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FaFileAlt className="text-green-400" />
-                        <span className="text-sm font-medium text-white">File Sharing</span>
-                      </div>
-                      <p className="text-xs text-gray-400">Share files directly in chat</p>
-                    </div>
-                    <div className="bg-[#181b23] rounded-xl p-4 border border-purple-500/10">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FaBell className="text-purple-400" />
-                        <span className="text-sm font-medium text-white">Notifications</span>
-                      </div>
-                      <p className="text-xs text-gray-400">Real-time message alerts</p>
-                    </div>
-                    <div className="bg-[#181b23] rounded-xl p-4 border border-yellow-500/10">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FaHistory className="text-yellow-400" />
-                        <span className="text-sm font-medium text-white">Message History</span>
-                      </div>
-                      <p className="text-xs text-gray-400">Access previous conversations</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
