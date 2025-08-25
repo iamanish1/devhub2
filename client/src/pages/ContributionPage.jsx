@@ -472,6 +472,40 @@ const ContributionPage = () => {
     }
   };
 
+  // Add sample resources for testing
+  const addSampleResources = async () => {
+    try {
+      console.log('🔍 Adding sample resources for project:', projectId);
+      setResourcesLoading(true);
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/test-add-resources/${projectId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Sample resources added:', data);
+        notificationService.success('Sample resources added successfully!');
+        
+        // Reload resources to show the new ones
+        await loadProjectResources();
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Failed to add sample resources:', errorData);
+        notificationService.error('Failed to add sample resources');
+      }
+    } catch (error) {
+      console.error('❌ Error adding sample resources:', error);
+      notificationService.error('Error adding sample resources');
+    } finally {
+      setResourcesLoading(false);
+    }
+  };
+
   // Debug function
   const loadDebugInfo = async () => {
     try {
@@ -2195,6 +2229,13 @@ const ContributionPage = () => {
                     >
                       <Loader2 className={`w-3 h-3 mr-1 ${resourcesLoading ? 'animate-spin' : ''}`} />
                       Refresh
+                    </button>
+                    <button 
+                      onClick={addSampleResources}
+                      disabled={resourcesLoading}
+                      className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-md hover:bg-green-500/30 disabled:opacity-50 transition-colors text-sm flex items-center"
+                    >
+                      Add Sample Resources
                     </button>
                     <button className="px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] flex items-center transition-colors">
                       <Upload className="w-4 h-4 mr-2" />

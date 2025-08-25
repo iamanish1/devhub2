@@ -26,6 +26,8 @@ import {
 } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 import upload from '../Middleware/upload.js';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase.js';
 
 const projectTaskRoutes = express.Router();
 
@@ -54,6 +56,80 @@ projectTaskRoutes.get('/test-resources/:projectId', (req, res) => {
     projectId: req.params.projectId,
     timestamp: new Date().toISOString()
   });
+});
+
+// Test endpoint to add sample resources
+projectTaskRoutes.post('/test-add-resources/:projectId', authMiddleware, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const userId = req.user._id;
+    
+    console.log('🔍 Adding sample resources for project:', projectId);
+    
+    // Check if Firebase is available
+    if (!db) {
+      return res.status(500).json({ message: 'Firebase not configured' });
+    }
+    
+    // Sample resources to add
+    const sampleResources = [
+      {
+        projectId,
+        name: 'Project Requirements Document',
+        type: 'document',
+        description: 'Detailed project requirements and specifications',
+        url: 'https://example.com/requirements.pdf',
+        uploadedBy: userId.toString(),
+        uploadedAt: serverTimestamp()
+      },
+      {
+        projectId,
+        name: 'Design Mockups',
+        type: 'image',
+        description: 'UI/UX design mockups and wireframes',
+        url: 'https://example.com/mockups.zip',
+        uploadedBy: userId.toString(),
+        uploadedAt: serverTimestamp()
+      },
+      {
+        projectId,
+        name: 'API Documentation',
+        type: 'document',
+        description: 'API endpoints and integration guide',
+        url: 'https://example.com/api-docs.pdf',
+        uploadedBy: userId.toString(),
+        uploadedAt: serverTimestamp()
+      }
+    ];
+    
+    // Add resources to Firebase
+    const resourceRef = collection(db, 'project_resources');
+    const addedResources = [];
+    
+    for (const resource of sampleResources) {
+      const newResource = await addDoc(resourceRef, resource);
+      addedResources.push({
+        id: newResource.id,
+        ...resource
+      });
+    }
+    
+    console.log('✅ Sample resources added:', addedResources.length);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Sample resources added successfully',
+      resources: addedResources
+    });
+    
+  } catch (error) {
+    console.error('❌ Error adding sample resources:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add sample resources',
+      error: error.message
+    });
+  }
 });
 
 // Test endpoint for task creation (without auth for debugging)

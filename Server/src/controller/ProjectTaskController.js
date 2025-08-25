@@ -670,11 +670,10 @@ export const getProjectResources = async (req, res) => {
     }
 
     try {
-      // Get resources from Firebase
+      // Get resources from Firebase - remove orderBy to avoid index requirement
       const resourcesQuery = query(
         collection(db, 'project_resources'),
-        where('projectId', '==', projectId),
-        orderBy('uploadedAt', 'desc')
+        where('projectId', '==', projectId)
       );
 
       console.log('🔍 [ProjectTask] Firebase query created, executing...');
@@ -692,6 +691,13 @@ export const getProjectResources = async (req, res) => {
           ...data,
           uploadedAt: data.uploadedAt?.toDate?.() || new Date(data.uploadedAt)
         });
+      });
+
+      // Sort resources by uploadedAt in descending order (newest first)
+      resources.sort((a, b) => {
+        const dateA = new Date(a.uploadedAt);
+        const dateB = new Date(b.uploadedAt);
+        return dateB - dateA;
       });
 
       console.log('✅ [ProjectTask] Returning', resources.length, 'resources');
