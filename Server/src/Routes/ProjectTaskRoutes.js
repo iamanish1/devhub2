@@ -25,7 +25,7 @@ import {
   createFirebaseAccess
 } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
-import upload from '../Middleware/upload.js';
+import { uploadSingle } from '../Middleware/upload.js';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 
@@ -165,10 +165,10 @@ projectTaskRoutes.delete('/:projectId/tasks/:taskId', authMiddleware, deleteTask
 projectTaskRoutes.post('/:projectId/tasks/:taskId/complete', authMiddleware, completeTask);
 projectTaskRoutes.post('/:projectId/tasks/:taskId/review', authMiddleware, reviewTask);
 projectTaskRoutes.post('/:projectId/tasks/:taskId/comments', authMiddleware, addTaskComment);
-projectTaskRoutes.post('/:projectId/tasks/:taskId/files', authMiddleware, upload.single('file'), uploadTaskFile);
+projectTaskRoutes.post('/:projectId/tasks/:taskId/files', authMiddleware, uploadSingle('file'), uploadTaskFile);
 
 // Resource management
-projectTaskRoutes.post('/:projectId/resources', authMiddleware, upload.single('file'), uploadProjectResource);
+projectTaskRoutes.post('/:projectId/resources', authMiddleware, uploadSingle('file'), uploadProjectResource);
 projectTaskRoutes.get('/:projectId/resources', authMiddleware, getProjectResources);
 projectTaskRoutes.put('/:projectId/resources/:resourceId', authMiddleware, updateProjectResource);
 projectTaskRoutes.delete('/:projectId/resources/:resourceId', authMiddleware, deleteProjectResource);
