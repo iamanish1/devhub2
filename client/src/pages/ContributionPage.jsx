@@ -170,12 +170,13 @@ const ContributionPage = () => {
   // Load workspace data
   useEffect(() => {
     if (projectId) {
+      // Load resources first to ensure they're not overwritten
+      loadProjectResources();
       loadWorkspace();
       loadProjectOverview();
       loadEscrowWalletData();
       loadProjectChunks();
       loadTeamMembers();
-      loadProjectResources();
     }
   }, [projectId]);
 
@@ -187,6 +188,17 @@ const ContributionPage = () => {
       console.log('🔍 First resource:', resources[0]);
     }
   }, [resources]);
+
+  // Load resources when resources tab is selected
+  useEffect(() => {
+    if (activeTab === "resources" && projectId) {
+      console.log('🔍 Resources tab selected, ensuring resources are loaded');
+      if (resources.length === 0 && !resourcesLoading) {
+        console.log('🔍 No resources loaded, loading them now');
+        loadProjectResources();
+      }
+    }
+  }, [activeTab, projectId, resources.length, resourcesLoading]);
 
   // Load tasks from API only (Firebase temporarily disabled)
   useEffect(() => {
@@ -445,6 +457,10 @@ const ContributionPage = () => {
       console.log('🔍 Auth token:', localStorage.getItem('token') ? 'Present' : 'Missing');
       setResourcesLoading(true);
       setResourcesError(null);
+      
+      // Add a small delay to ensure proper loading
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const data = await projectTaskApi.getProjectResources(projectId);
       console.log('✅ Project resources loaded:', data);
       console.log('🔍 Resources array:', data.resources);
@@ -563,14 +579,8 @@ const ContributionPage = () => {
         setTasks(data.workspace.tasks);
       }
 
-      // Only load resources from workspace if no resources are currently loaded
-      // This prevents overwriting resources loaded by loadProjectResources
-      if (data.workspace.resources && resources.length === 0) {
-        console.log('🔍 Loading resources from workspace data:', data.workspace.resources);
-        setResources(data.workspace.resources);
-      } else {
-        console.log('🔍 Skipping workspace resources - using dedicated resources API');
-      }
+      // Skip loading resources from workspace - we use dedicated resources API instead
+      console.log('🔍 Skipping workspace resources - using dedicated resources API');
 
     } catch (err) {
       if (err.message?.includes("not found")) {
@@ -2242,14 +2252,6 @@ const ContributionPage = () => {
                       Upload File
                     </button>
                   </div>
-                </div>
-
-                {/* Debug info */}
-                <div className="mb-4 p-3 bg-gray-800/50 rounded text-xs text-gray-300">
-                  <p>Debug: Resources length: {resources.length}</p>
-                  <p>Debug: Resources loading: {resourcesLoading ? 'true' : 'false'}</p>
-                  <p>Debug: Resources error: {resourcesError || 'none'}</p>
-                  <p>Debug: Active tab: {activeTab}</p>
                 </div>
 
                 {resourcesLoading ? (
