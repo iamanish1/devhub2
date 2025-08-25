@@ -137,11 +137,14 @@ const ContributionPage = () => {
 
   // Resources and files
   const [resources, setResources] = useState([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
 
 
 
   // Team collaboration
   const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(false);
+  const [teamMembersError, setTeamMembersError] = useState(null);
 
   // Debug state
   const [debugInfo, setDebugInfo] = useState(null);
@@ -173,6 +176,7 @@ const ContributionPage = () => {
       loadEscrowWalletData();
       loadProjectChunks();
       loadTeamMembers();
+      loadProjectResources();
     }
   }, [projectId]);
 
@@ -402,10 +406,34 @@ const ContributionPage = () => {
   // Load team members
   const loadTeamMembers = async () => {
     try {
+      console.log('🔍 Loading team members for project:', projectId);
+      setTeamMembersLoading(true);
+      setTeamMembersError(null);
       const data = await projectTaskApi.getProjectTeamMembers(projectId);
+      console.log('✅ Team members loaded:', data);
       setTeamMembers(data.teamMembers || []);
     } catch (error) {
       console.error("Failed to load team members:", error);
+      setTeamMembersError(error.message || "Failed to load team members");
+      setTeamMembers([]);
+    } finally {
+      setTeamMembersLoading(false);
+    }
+  };
+
+  // Load project resources
+  const loadProjectResources = async () => {
+    try {
+      console.log('🔍 Loading project resources for project:', projectId);
+      setResourcesLoading(true);
+      const data = await projectTaskApi.getProjectResources(projectId);
+      console.log('✅ Project resources loaded:', data);
+      setResources(data.resources || []);
+    } catch (error) {
+      console.error("Failed to load project resources:", error);
+      setResources([]);
+    } finally {
+      setResourcesLoading(false);
     }
   };
 
@@ -1878,15 +1906,42 @@ const ContributionPage = () => {
                   <h2 className="text-xl font-semibold text-white">
                     Team Members
                   </h2>
-                  <div className="flex items-center space-x-2">
-                    <Users2 className="w-5 h-5 text-indigo-400" />
-                    <span className="text-sm text-gray-400">
-                      {teamMembers.length} Contributors
-                    </span>
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={loadTeamMembers}
+                      disabled={teamMembersLoading}
+                      className="px-3 py-1 bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30 rounded-md hover:bg-[#00A8E8]/30 disabled:opacity-50 transition-colors text-sm flex items-center"
+                    >
+                      <Loader2 className={`w-3 h-3 mr-1 ${teamMembersLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </button>
+                    <div className="flex items-center space-x-2">
+                      <Users2 className="w-5 h-5 text-indigo-400" />
+                      <span className="text-sm text-gray-400">
+                        {teamMembers.length} Contributors
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {teamMembers.length > 0 ? (
+                {teamMembersLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#00A8E8] mr-3" />
+                    <span className="text-gray-400">Loading team members...</span>
+                  </div>
+                ) : teamMembersError ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                    <p className="text-red-400 mb-2">Failed to load team members</p>
+                    <p className="text-sm text-gray-500">{teamMembersError}</p>
+                    <button
+                      onClick={loadTeamMembers}
+                      className="mt-4 px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] transition-colors"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : teamMembers.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {teamMembers.map((member) => (
                       <div
@@ -1894,32 +1949,36 @@ const ContributionPage = () => {
                         className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all"
                       >
                         <div className="flex items-center space-x-3 mb-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            member.role === 'owner' 
+                              ? 'bg-gradient-to-br from-yellow-500 to-orange-600' 
+                              : 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                          }`}>
                             <User className="w-5 h-5 text-white" />
                           </div>
                           <div>
                             <h3 className="font-medium text-white">
                               {member.username || member.userId}
                             </h3>
-                            <p className="text-sm text-gray-400">
-                              {member.role || "Contributor"}
+                            <p className={`text-sm ${
+                              member.role === 'owner' 
+                                ? 'text-yellow-400' 
+                                : 'text-gray-400'
+                            }`}>
+                              {member.role === 'owner' ? 'Project Owner' : 'Contributor'}
                             </p>
                           </div>
                         </div>
 
                         <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Status:</span>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                member.isActive
-                                  ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
-                              }`}
-                            >
-                              {member.isActive ? "Active" : "Inactive"}
-                            </span>
-                          </div>
+                          {member.email && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Email:</span>
+                              <span className="text-white truncate ml-2">
+                                {member.email}
+                              </span>
+                            </div>
+                          )}
 
                           {member.joinedAt && (
                             <div className="flex justify-between">
@@ -1930,12 +1989,19 @@ const ContributionPage = () => {
                             </div>
                           )}
 
+                          {member.selectionReason && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Role:</span>
+                              <span className="text-white">
+                                {member.selectionReason}
+                              </span>
+                            </div>
+                          )}
+
                           <div className="flex justify-between">
-                            <span className="text-gray-400">
-                              Tasks Completed:
-                            </span>
-                            <span className="font-medium text-white">
-                              {member.completedTasks || 0}
+                            <span className="text-gray-400">Status:</span>
+                            <span className="px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+                              Active
                             </span>
                           </div>
                         </div>
@@ -1946,6 +2012,9 @@ const ContributionPage = () => {
                   <div className="text-center py-8">
                     <Users2 className="w-12 h-12 text-gray-500 mx-auto mb-4" />
                     <p className="text-gray-400">No team members found.</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Team members will appear here once selected for the project.
+                    </p>
                   </div>
                 )}
               </div>
@@ -2080,17 +2149,32 @@ const ContributionPage = () => {
                   <h2 className="text-xl font-semibold text-white">
                     Project Resources
                   </h2>
-                  <button className="px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] flex items-center transition-colors">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload File
-                  </button>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={loadProjectResources}
+                      disabled={resourcesLoading}
+                      className="px-3 py-1 bg-[#00A8E8]/20 text-[#00A8E8] border border-[#00A8E8]/30 rounded-md hover:bg-[#00A8E8]/30 disabled:opacity-50 transition-colors text-sm flex items-center"
+                    >
+                      <Loader2 className={`w-3 h-3 mr-1 ${resourcesLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </button>
+                    <button className="px-4 py-2 bg-[#00A8E8] text-white rounded-md hover:bg-[#0062E6] flex items-center transition-colors">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload File
+                    </button>
+                  </div>
                 </div>
 
-                {resources && resources.length > 0 ? (
+                {resourcesLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#00A8E8] mr-3" />
+                    <span className="text-gray-400">Loading resources...</span>
+                  </div>
+                ) : resources && resources.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {resources.map((resource) => (
                       <div
-                        key={resource._id}
+                        key={resource.id || resource._id}
                         className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all"
                       >
                         <div className="flex items-center space-x-3 mb-3">
@@ -2099,27 +2183,37 @@ const ContributionPage = () => {
                           </div>
                           <div className="flex-1">
                             <h3 className="font-medium text-white">
-                              {resource.title}
+                              {resource.name || resource.title}
                             </h3>
                             <p className="text-sm text-gray-400">
-                              {resource.type}
+                              {resource.type || 'File'}
                             </p>
                           </div>
                         </div>
 
-                        <p className="text-sm text-gray-400 mb-3">
-                          {resource.description}
-                        </p>
+                        {resource.description && (
+                          <p className="text-sm text-gray-400 mb-3">
+                            {resource.description}
+                          </p>
+                        )}
 
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            <button className="p-1 text-gray-400 hover:text-blue-400 transition-colors">
-                              <Download className="w-4 h-4" />
-                            </button>
+                            {resource.url && (
+                              <a
+                                href={resource.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+                                title="Download/View"
+                              >
+                                <Download className="w-4 h-4" />
+                              </a>
+                            )}
                           </div>
 
                           <span className="text-xs text-gray-500">
-                            {new Date(resource.uploadedAt).toLocaleDateString()}
+                            {resource.uploadedAt ? new Date(resource.uploadedAt).toLocaleDateString() : 'Unknown date'}
                           </span>
                         </div>
                       </div>
@@ -2129,6 +2223,9 @@ const ContributionPage = () => {
                   <div className="text-center py-8">
                     <FolderOpen className="w-12 h-12 text-gray-500 mx-auto mb-4" />
                     <p className="text-gray-400">No resources uploaded yet.</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Project resources will appear here once uploaded by the admin.
+                    </p>
                   </div>
                 )}
               </div>
