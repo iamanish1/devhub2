@@ -10,19 +10,56 @@ const chatSocket = (io) => {
   io.on("connection", (socket) => {
     console.log("New user connected: " + socket.id);
 
+    // Test database connection
+    socket.on("testConnection", async () => {
+      try {
+        console.log('🔍 Socket: Testing database connection...');
+        const testUser = await user.findOne().limit(1);
+        const testProject = await ProjectListing.findOne().limit(1);
+        console.log('✅ Socket: Database connection successful');
+        console.log('🔍 Socket: Test user found:', testUser ? 'Yes' : 'No');
+        console.log('🔍 Socket: Test project found:', testProject ? 'Yes' : 'No');
+        socket.emit("connectionTest", { success: true, message: "Database connection working" });
+      } catch (error) {
+        console.error('❌ Socket: Database connection failed:', error);
+        socket.emit("connectionTest", { success: false, message: error.message });
+      }
+    });
+
     // Join project room and track user
     socket.on("joinRoom", async ({ projectId, userId, username }) => {
       try {
+        console.log('🔍 Socket: joinRoom called with:', { projectId, userId, username });
+        
+        // Validate input parameters
+        if (!projectId || !userId || !username) {
+          console.error('❌ Socket: Missing required parameters:', { projectId, userId, username });
+          socket.emit("error", { message: "Missing required parameters" });
+          return;
+        }
+
         // Validate user and project
+        console.log('🔍 Socket: Validating user and project...');
         const userDetails = await user.findById(userId);
         const project = await ProjectListing.findById(projectId);
         
-        if (!userDetails || !project) {
-          socket.emit("error", { message: "Invalid user or project" });
+        console.log('🔍 Socket: User details:', userDetails ? 'Found' : 'Not found');
+        console.log('🔍 Socket: Project details:', project ? 'Found' : 'Not found');
+        
+        if (!userDetails) {
+          console.error('❌ Socket: User not found:', userId);
+          socket.emit("error", { message: "User not found" });
+          return;
+        }
+        
+        if (!project) {
+          console.error('❌ Socket: Project not found:', projectId);
+          socket.emit("error", { message: "Project not found" });
           return;
         }
 
         // Join the room
+        console.log('🔍 Socket: Joining room:', projectId);
         socket.join(projectId);
         
         // Store user socket info
@@ -42,6 +79,8 @@ const chatSocket = (io) => {
           userRole = 'admin';
         }
         
+        console.log('🔍 Socket: User role determined:', userRole);
+        
         // Emit user joined event
         io.to(projectId).emit("userJoined", {
           userId,
@@ -58,9 +97,16 @@ const chatSocket = (io) => {
         
         socket.emit("onlineUsers", projectOnlineUsers);
         
-        console.log(`User ${username} (${userId}) joined room: ${projectId}`);
+        console.log(`✅ Socket: User ${username} (${userId}) successfully joined room: ${projectId}`);
       } catch (error) {
-        console.error("Error joining room:", error);
+        console.error("❌ Socket: Error joining room:", error);
+        console.error("❌ Socket: Error details:", {
+          message: error.message,
+          stack: error.stack,
+          projectId,
+          userId,
+          username
+        });
         socket.emit("error", { message: "Failed to join room" });
       }
     });
