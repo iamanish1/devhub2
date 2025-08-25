@@ -119,14 +119,9 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 AdminTaskManager: Loading tasks for projectId:', projectId);
       const data = await projectTaskApi.getProjectTasks(projectId);
-      console.log('✅ AdminTaskManager: Tasks loaded successfully:', data);
-      console.log('✅ AdminTaskManager: Tasks array:', data.tasks);
-      
       setTasks(data.tasks || []);
     } catch (error) {
-      console.error('❌ AdminTaskManager: Failed to load tasks:', error);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -370,20 +365,16 @@ const AdminTaskManager = ({ projectId, teamMembers = [] }) => {
           </div>
           
           <div className="flex items-center space-x-1">
-            {/* Debug Info - Temporary */}
-            <div className="text-xs text-red-400 bg-red-900/20 px-2 py-1 rounded border">
-              Status: "{task.status}" | Type: {typeof task.status}
-            </div>
-            
             {/* Admin can only review completed tasks */}
             {task.status === 'completed' && (
               <button
                 onClick={() => handleReviewTask(task.id)}
                 disabled={updatingTask}
-                className="p-2 text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
+                className="flex items-center px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md hover:bg-emerald-500/30 disabled:opacity-50 transition-colors text-sm"
                 title="Review Task"
               >
-                <FaCheckCircle className="w-3 h-3" />
+                <FaCheckCircle className="w-3 h-3 mr-1" />
+                Review Task
               </button>
             )}
             
