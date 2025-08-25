@@ -173,6 +173,8 @@ const ContributionPage = () => {
   // Setup real-time task listener
   const setupTaskRealtimeListener = () => {
     try {
+      console.log('🔍 Setting up Firebase task listener for project:', projectId);
+      
       const tasksQuery = query(
         collection(db, 'project_tasks'),
         where('projectId', '==', projectId),
@@ -180,9 +182,11 @@ const ContributionPage = () => {
       );
 
       const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+        console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
         const updatedTasks = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          console.log('🔍 Firebase task data:', data);
           updatedTasks.push({
             _id: data.id,
             title: data.title,
@@ -200,20 +204,24 @@ const ContributionPage = () => {
             progress: data.progress || 0
           });
         });
+        console.log('🔍 Setting tasks from Firebase:', updatedTasks);
         setTasks(updatedTasks);
       }, (error) => {
-        console.error('Firebase task listener error:', error);
+        console.error('🔍 Firebase task listener error:', error);
       });
 
       return unsubscribe;
     } catch (error) {
-      console.error('Error setting up task listener:', error);
+      console.error('🔍 Error setting up task listener:', error);
     }
   };
 
   // Load tasks from API
   const loadTasks = async () => {
     try {
+      console.log('🔍 Loading tasks for project:', projectId);
+      console.log('🔍 User ID:', user?._id);
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/tasks`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -221,12 +229,18 @@ const ContributionPage = () => {
         }
       });
       
+      console.log('🔍 API Response status:', response.status);
+      
       if (response.ok) {
         const responseData = await response.json();
+        console.log('🔍 API Response data:', responseData);
         setTasks(responseData.tasks || []);
+      } else {
+        const errorData = await response.json();
+        console.error('🔍 API Error:', errorData);
       }
     } catch (error) {
-      console.error('Failed to load tasks:', error);
+      console.error('🔍 Failed to load tasks:', error);
     }
   };
 
@@ -1300,6 +1314,19 @@ const ContributionPage = () => {
                     )}
                   </div>
 
+                  {/* Debug Information */}
+                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
+                    <h4 className="text-yellow-400 font-semibold mb-2">Debug Information</h4>
+                    <div className="text-sm text-yellow-300 space-y-1">
+                      <p>Project ID: {projectId}</p>
+                      <p>User ID: {user?._id}</p>
+                      <p>Total Tasks: {tasks.length}</p>
+                      <p>Filtered Tasks: {filteredTasks.length}</p>
+                      <p>My Tasks: {myTasks.length}</p>
+                      <p>Active Tab: {activeTab}</p>
+                    </div>
+                  </div>
+
                   {/* Task Statistics */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
@@ -1541,7 +1568,23 @@ const ContributionPage = () => {
                     <div className="text-center py-12">
                       <CheckSquare className="w-16 h-16 text-gray-500 mx-auto mb-4" />
                       <p className="text-gray-400 text-lg mb-2">No tasks found</p>
-                      <p className="text-gray-500">Try adjusting your filters or create a new task</p>
+                      <p className="text-gray-500 mb-4">Try adjusting your filters or create a new task</p>
+                      
+                      {tasks.length === 0 && (
+                        <div className="mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                          <p className="text-red-300 text-sm">
+                            <strong>No tasks found in database.</strong><br/>
+                            This could mean:
+                          </p>
+                          <ul className="text-red-300 text-sm mt-2 list-disc list-inside">
+                            <li>No tasks have been created for this project</li>
+                            <li>API connection issues</li>
+                            <li>Firebase connection issues</li>
+                            <li>Project ID mismatch</li>
+                            <li>User access issues</li>
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

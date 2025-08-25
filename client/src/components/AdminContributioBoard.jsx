@@ -1636,6 +1636,13 @@ const AdminContributionBoard = ({
                         <span className="text-sm text-green-400">Live Updates</span>
                       </div>
                       <button
+                        onClick={loadTasksFromAPI}
+                        className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <FaSync />
+                        Load Tasks
+                      </button>
+                      <button
                         onClick={openAddModal}
                         className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
                       >
