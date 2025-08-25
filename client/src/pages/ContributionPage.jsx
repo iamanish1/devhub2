@@ -47,10 +47,10 @@ import { db } from "../Config/firebase";
 import { 
   doc, 
   getDoc,
-  onSnapshot,
-  collection,
-  query,
-  where
+  onSnapshot
+  // collection,
+  // query,
+  // where
 } from "firebase/firestore";
 
 
@@ -98,27 +98,43 @@ const ContributionPage = () => {
   // Task status update
   const [updatingTaskStatus, setUpdatingTaskStatus] = useState(false);
   
-  // Task filtering and computed values
-  const filteredTasks = tasks.filter(task => {
-    const matchesStatus = taskFilters.status === 'all' || task.status === taskFilters.status;
-    const matchesPriority = taskFilters.priority === 'all' || task.priority === taskFilters.priority;
+  // Task filtering and computed values - TEMPORARILY SHOW ALL TASKS
+  const filteredTasks = tasks; // Temporarily show all tasks without filtering
+  
+  // Original filtering logic (commented out for testing)
+  // const filteredTasks = tasks.filter(task => {
+  //   console.log('🔍 Filtering task:', task.title, task);
     
-    // Handle assignedTo filter - task.assignedTo can be an object or string
-    const taskAssignedToId = typeof task.assignedTo === 'object' ? task.assignedTo._id : task.assignedTo;
-    const matchesAssignedTo = taskFilters.assignedTo === 'all' || taskAssignedToId === taskFilters.assignedTo;
+  //   const matchesStatus = taskFilters.status === 'all' || task.status === taskFilters.status;
+  //   const matchesPriority = taskFilters.priority === 'all' || task.priority === taskFilters.priority;
     
-    const matchesSearch = taskFilters.search === '' || 
-      task.title.toLowerCase().includes(taskFilters.search.toLowerCase()) ||
-      task.description.toLowerCase().includes(taskFilters.search.toLowerCase());
+  //   // Handle assignedTo filter - task.assignedTo can be an object or string
+  //   const taskAssignedToId = typeof task.assignedTo === 'object' ? task.assignedTo._id : task.assignedTo;
+  //   const matchesAssignedTo = taskFilters.assignedTo === 'all' || taskAssignedToId === taskFilters.assignedTo;
     
-    return matchesStatus && matchesPriority && matchesAssignedTo && matchesSearch;
-  });
+  //   const matchesSearch = taskFilters.search === '' || 
+  //     task.title.toLowerCase().includes(taskFilters.search.toLowerCase()) ||
+  //     task.description.toLowerCase().includes(taskFilters.search.toLowerCase());
+    
+  //   const result = matchesStatus && matchesPriority && matchesAssignedTo && matchesSearch;
+  //   console.log('🔍 Task filter result for', task.title, ':', {
+  //     matchesStatus,
+  //     matchesPriority,
+  //     matchesAssignedTo,
+  //     matchesSearch,
+  //     result
+  //   });
+    
+  //   return result;
+  // });
 
   // Debug logging for tasks
   useEffect(() => {
     console.log('🔍 Tasks state updated:', tasks);
     console.log('🔍 Filtered tasks:', filteredTasks);
     console.log('🔍 Task filters:', taskFilters);
+    console.log('🔍 Tasks length:', tasks.length);
+    console.log('🔍 Filtered tasks length:', filteredTasks.length);
   }, [tasks, filteredTasks, taskFilters]);
 
   // Get tasks assigned to current user
@@ -181,68 +197,68 @@ const ContributionPage = () => {
     if (projectId && user?._id) {
       // Load tasks from API first
       loadTasks();
-      // Then setup Firebase listener for real-time updates
-      const timer = setTimeout(() => {
-        setupTaskRealtimeListener();
-      }, 1000); // Small delay to ensure API loads first
+      // Temporarily disable Firebase listener to test API data
+      // const timer = setTimeout(() => {
+      //   setupTaskRealtimeListener();
+      // }, 1000); // Small delay to ensure API loads first
       
-      return () => clearTimeout(timer);
+      // return () => clearTimeout(timer);
     }
   }, [projectId, user?._id]);
 
-  // Setup real-time task listener
-  const setupTaskRealtimeListener = () => {
-    try {
-      console.log('🔍 Setting up Firebase task listener for project:', projectId);
+  // Setup real-time task listener - TEMPORARILY DISABLED
+  // const setupTaskRealtimeListener = () => {
+  //   try {
+  //     console.log('🔍 Setting up Firebase task listener for project:', projectId);
       
-      const tasksQuery = query(
-        collection(db, 'project_tasks'),
-        where('projectId', '==', projectId),
-        where('deleted', '!=', true)
-      );
+  //     const tasksQuery = query(
+  //       collection(db, 'project_tasks'),
+  //       where('projectId', '==', projectId),
+  //       where('deleted', '!=', true)
+  //     );
 
-      const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-        console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
+  //     const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+  //       console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
         
-        // Only update tasks from Firebase if we have data and it's different from current tasks
-        if (snapshot.size > 0) {
-          const updatedTasks = [];
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            console.log('🔍 Firebase task data:', data);
-            updatedTasks.push({
-              _id: data.id,
-              title: data.title,
-              description: data.description,
-              status: data.status,
-              priority: data.priority,
-              assignedTo: data.assignedTo,
-              createdBy: data.createdBy,
-              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-              dueDate: data.dueDate?.toDate?.() || data.dueDate,
-              estimatedHours: data.estimatedHours || 0,
-              actualHours: data.actualHours || 0,
-              completionNotes: data.completionNotes,
-              completedAt: data.completedAt?.toDate?.() || data.completedAt,
-              progress: data.progress || 0
-            });
-          });
-          console.log('🔍 Setting tasks from Firebase:', updatedTasks);
-          setTasks(updatedTasks);
-        } else {
-          console.log('🔍 Firebase returned empty snapshot, keeping API tasks');
-          // Don't override tasks if Firebase is empty
-        }
-      }, (error) => {
-        console.error('🔍 Firebase task listener error:', error);
-        // On error, don't override the API tasks
-      });
+  //       // Only update tasks from Firebase if we have data and it's different from current tasks
+  //       if (snapshot.size > 0) {
+  //         const updatedTasks = [];
+  //         snapshot.forEach((doc) => {
+  //           const data = doc.data();
+  //           console.log('🔍 Firebase task data:', data);
+  //           updatedTasks.push({
+  //             _id: data.id,
+  //             title: data.title,
+  //             description: data.description,
+  //             status: data.status,
+  //             priority: data.priority,
+  //             assignedTo: data.assignedTo,
+  //             createdBy: data.createdBy,
+  //             createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+  //             dueDate: data.dueDate?.toDate?.() || data.dueDate,
+  //             estimatedHours: data.estimatedHours || 0,
+  //             actualHours: data.actualHours || 0,
+  //             completionNotes: data.completionNotes,
+  //             completedAt: data.completedAt?.toDate?.() || data.completedAt,
+  //             progress: data.progress || 0
+  //           });
+  //         });
+  //         console.log('🔍 Setting tasks from Firebase:', updatedTasks);
+  //         setTasks(updatedTasks);
+  //       } else {
+  //         console.log('🔍 Firebase returned empty snapshot, keeping API tasks');
+  //         // Don't override tasks if Firebase is empty
+  //       }
+  //     }, (error) => {
+  //       console.error('🔍 Firebase task listener error:', error);
+  //       // On error, don't override the API tasks
+  //     });
 
-      return unsubscribe;
-    } catch (error) {
-      console.error('🔍 Error setting up task listener:', error);
-    }
-  };
+  //     return unsubscribe;
+  //   } catch (error) {
+  //     console.error('🔍 Error setting up task listener:', error);
+  //   }
+  // };
 
   // Load tasks from API
   const loadTasks = async () => {
@@ -252,6 +268,7 @@ const ContributionPage = () => {
       
       const responseData = await projectTaskApi.getProjectTasks(projectId);
       console.log('🔍 API Response data:', responseData);
+      console.log('🔍 Setting tasks from API:', responseData.tasks || []);
       setTasks(responseData.tasks || []);
     } catch (error) {
       console.error('🔍 Failed to load tasks:', error);
@@ -1367,6 +1384,7 @@ const ContributionPage = () => {
 
                 {/* Tasks List */}
                 <div className="space-y-4">
+                  {console.log('🔍 Rendering filtered tasks:', filteredTasks)}
                   {filteredTasks.map(task => (
                     <div key={task._id} className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] border border-gray-700 rounded-lg p-6 hover:shadow-lg hover:border-[#00A8E8]/30 transition-all">
                       <div className="flex items-start justify-between">
