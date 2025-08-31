@@ -1049,27 +1049,48 @@ export const requestUserWithdrawal = async (req, res) => {
 
     if (userDetails.bankDetails && userDetails.bankDetails.accountNumber) {
       try {
-        // Create payout via Razorpay
-        const payoutData = {
-          account_number: userDetails.bankDetails.accountNumber,
-          fund_account_id: userDetails.bankDetails.fundAccountId || null,
-          amount: actualAmountReceived * 100, // Convert to paise
-          currency: 'INR',
-          mode: 'IMPS',
-          purpose: 'payout',
-          queue_if_low_balance: true,
-          reference_id: withdrawal.referenceId,
-          narration: `Withdrawal to ${userDetails.bankDetails.accountNumber}`
-        };
+        // For immediate processing, we'll simulate success in test mode
+        // In production, this would create actual Razorpay payout
+        const isTestMode = process.env.RAZORPAY_ENV === 'test';
+        
+        if (isTestMode) {
+          // Simulate immediate success in test mode
+          payoutResult = {
+            id: `test_payout_${Date.now()}`,
+            status: 'processed',
+            amount: actualAmountReceived * 100,
+            reference_id: withdrawal.referenceId
+          };
+          
+          withdrawal.razorpayPayoutId = payoutResult.id;
+          withdrawal.payoutStatus = 'processed';
+          withdrawal.status = 'completed';
+          withdrawal.notes += ' | Test mode - immediate processing';
+          
+          logger.info(`[EscrowWallet] Test mode payout processed immediately for user ${userId}`);
+        } else {
+          // Production mode - create actual Razorpay payout
+          const payoutData = {
+            account_number: userDetails.bankDetails.accountNumber,
+            fund_account_id: userDetails.bankDetails.fundAccountId || null,
+            amount: actualAmountReceived * 100, // Convert to paise
+            currency: 'INR',
+            mode: 'IMPS',
+            purpose: 'payout',
+            queue_if_low_balance: true,
+            reference_id: withdrawal.referenceId,
+            narration: `Withdrawal to ${userDetails.bankDetails.accountNumber}`
+          };
 
-        payoutResult = await createPayout(payoutData);
-        
-        // Update withdrawal record with payout details
-        withdrawal.razorpayPayoutId = payoutResult.id;
-        withdrawal.payoutStatus = payoutResult.status;
-        withdrawal.status = payoutResult.status === 'processed' ? 'success' : 'pending';
-        
-        logger.info(`[EscrowWallet] Razorpay payout created for user ${userId}, payout ID: ${payoutResult.id}`);
+          payoutResult = await createPayout(payoutData);
+          
+          // Update withdrawal record with payout details
+          withdrawal.razorpayPayoutId = payoutResult.id;
+          withdrawal.payoutStatus = payoutResult.status;
+          withdrawal.status = payoutResult.status === 'processed' ? 'completed' : 'pending';
+          
+          logger.info(`[EscrowWallet] Razorpay payout created for user ${userId}, payout ID: ${payoutResult.id}`);
+        }
         
       } catch (payoutErr) {
         payoutError = payoutErr;
@@ -1099,10 +1120,17 @@ export const requestUserWithdrawal = async (req, res) => {
 
     // Prepare response based on payout result
     let responseMessage = 'Withdrawal request submitted successfully';
+    let isImmediateSuccess = false;
+    
     if (payoutError) {
       responseMessage = 'Withdrawal request submitted but payout processing failed. Our team will contact you.';
+    } else if (withdrawal.status === 'completed') {
+      responseMessage = 'Withdrawal processed successfully! Money will be transferred to your bank account immediately.';
+      isImmediateSuccess = true;
     } else if (!userDetails.bankDetails || !userDetails.bankDetails.accountNumber) {
       responseMessage = 'Withdrawal request submitted. Please update your bank details for faster processing.';
+    } else if (withdrawal.status === 'pending') {
+      responseMessage = 'Withdrawal request submitted and will be processed shortly.';
     }
 
     res.status(200).json({
@@ -1121,7 +1149,9 @@ export const requestUserWithdrawal = async (req, res) => {
       newBalance: userDetails.balance.available,
       pendingWithdrawals: userDetails.balance.pending,
       payoutResult: payoutResult,
-      requiresBankDetails: !userDetails.bankDetails || !userDetails.bankDetails.accountNumber
+      requiresBankDetails: !userDetails.bankDetails || !userDetails.bankDetails.accountNumber,
+      isImmediateSuccess: isImmediateSuccess,
+      processingTime: isImmediateSuccess ? 'immediate' : 'pending'
     });
 
   } catch (error) {

@@ -88,10 +88,12 @@ const WithdrawalPage = () => {
       );
       
       // Show appropriate message based on response
-      if (response.requiresBankDetails) {
+      if (response.isImmediateSuccess) {
+        notificationService.success('🎉 Withdrawal processed successfully! Money will be transferred to your bank account immediately.');
+      } else if (response.requiresBankDetails) {
         notificationService.info('Withdrawal submitted. Please update your bank details for faster processing.');
-      } else if (response.payoutResult) {
-        notificationService.success('Withdrawal request submitted successfully!');
+      } else if (response.processingTime === 'immediate') {
+        notificationService.success('✅ Withdrawal processed immediately! Check your bank account.');
       } else {
         notificationService.success(response.message || 'Withdrawal request submitted successfully');
       }
@@ -266,7 +268,15 @@ const WithdrawalPage = () => {
 
         {/* Withdrawal Form */}
         <div className="glass rounded-xl p-6 border border-gray-700 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Request Withdrawal</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Request Withdrawal</h2>
+            {bankDetails && isBankDetailsComplete() && (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-green-400 text-sm font-medium">Ready for immediate processing</span>
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Form */}
@@ -308,15 +318,16 @@ const WithdrawalPage = () => {
                   </div>
                 </div>
 
-                                 <button
-                   onClick={handleWithdrawal}
-                   disabled={!validation.isValid || isProcessing || availableBalance === 0}
-                   className="w-full btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
-                 >
-                   {isProcessing ? 'Processing...' : 
-                    availableBalance === 0 ? 'No Available Balance' : 
-                    !bankDetails || !bankDetails.accountNumber ? 'Add Bank Details First' : 'Request Withdrawal'}
-                 </button>
+                                         <button
+          onClick={handleWithdrawal}
+          disabled={!validation.isValid || isProcessing || availableBalance === 0}
+          className="w-full btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
+        >
+          {isProcessing ? 'Processing...' : 
+           availableBalance === 0 ? 'No Available Balance' : 
+           !bankDetails || !bankDetails.accountNumber ? 'Add Bank Details First' : 
+           isBankDetailsComplete() ? 'Process Withdrawal Immediately' : 'Request Withdrawal'}
+        </button>
               </div>
             </div>
 
