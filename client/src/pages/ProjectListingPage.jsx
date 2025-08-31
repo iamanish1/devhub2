@@ -119,7 +119,9 @@ const ProjectListingPage = () => {
     setPaymentVerificationLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(
+      
+      // First try to get payment status using the intent ID
+      let response = await axios.get(
         `${import.meta.env.VITE_API_URL}/api/payments/status/${intentId}`,
         {
           headers: {
@@ -129,12 +131,55 @@ const ProjectListingPage = () => {
         }
       );
 
+      // If the payment is already marked as paid, return true
       if (response.data.success && response.data.data.status === 'paid') {
         return true;
       }
+
+      // If payment is not paid, try to verify with Razorpay using the order ID
+      if (response.data.success && response.data.data.orderId) {
+        const orderId = response.data.data.orderId;
+        
+        // Use the webhook check endpoint as fallback
+        const checkResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/webhooks/check-payment/${orderId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (checkResponse.data.success && checkResponse.data.paymentStatus === 'paid') {
+          return true;
+        }
+      }
+
       return false;
     } catch (error) {
       console.error('Payment verification failed:', error);
+      
+      // If the first endpoint fails, try the webhook check endpoint directly
+      try {
+        const token = localStorage.getItem('token');
+        const checkResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/webhooks/check-payment/${intentId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (checkResponse.data.success && checkResponse.data.paymentStatus === 'paid') {
+          return true;
+        }
+      } catch (fallbackError) {
+        console.error('Fallback payment verification also failed:', fallbackError);
+      }
+      
       return false;
     } finally {
       setPaymentVerificationLoading(false);

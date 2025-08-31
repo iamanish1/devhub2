@@ -350,21 +350,29 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
     
     console.log(`[Payment Check] Checking payment status for orderId: ${orderId}, userId: ${userId}`);
     
-    // Find payment intent
-    const intent = await PaymentIntent.findOne({
+    // Find payment intent by orderId first
+    let intent = await PaymentIntent.findOne({
       orderId: orderId,
-      userId: userId,
-      purpose: 'bid_fee'
+      userId: userId
     });
 
+    // If not found by orderId, try to find by intentId (orderId might be the intentId)
     if (!intent) {
+      intent = await PaymentIntent.findOne({
+        _id: orderId,
+        userId: userId
+      });
+    }
+
+    if (!intent) {
+      console.log(`[Payment Check] No payment intent found for orderId: ${orderId}`);
       return res.status(404).json({ 
         message: 'Payment intent not found',
         orderId: orderId
       });
     }
 
-    console.log(`[Payment Check] Found payment intent - status: ${intent.status}, bidId: ${intent.notes?.bidId}`);
+    console.log(`[Payment Check] Found payment intent - status: ${intent.status}, purpose: ${intent.purpose}, bidId: ${intent.notes?.bidId}`);
 
     // If payment is already marked as paid, check if bid needs updating
     if (intent.status === 'paid') {
@@ -413,6 +421,7 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
           console.log(`[Payment Check] Bid status updated successfully - bidId: ${bidId}`);
           
           return res.status(200).json({
+            success: true,
             message: 'Bid status updated successfully',
             paymentStatus: 'paid',
             bidStatus: 'paid',
@@ -421,11 +430,22 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
           });
         } else if (bid && bid.payment_status === 'paid') {
           return res.status(200).json({
+            success: true,
             message: 'Bid is already paid',
             paymentStatus: 'paid',
             bidStatus: 'paid'
           });
         }
+      }
+
+      // For non-bid payments (like bonus funding), just return success
+      if (intent.purpose !== 'bid_fee') {
+        return res.status(200).json({
+          success: true,
+          message: 'Payment is already verified',
+          paymentStatus: 'paid',
+          purpose: intent.purpose
+        });
       }
     }
 
@@ -433,18 +453,19 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
     if (intent.status !== 'paid') {
       try {
         const { verifyOrderWithRazorpay } = await import('../services/razorpay.js');
-        const orderVerified = await verifyOrderWithRazorpay(orderId);
+        const orderVerified = await verifyOrderWithRazorpay(intent.orderId || orderId);
         
         if (orderVerified) {
           console.log(`[Payment Check] Order verified with Razorpay - updating payment status`);
           
           // Update payment intent status
           intent.status = 'paid';
+          intent.updatedAt = new Date();
           await intent.save();
           
-          // Update bid status
+          // Update bid status if it's a bid fee payment
           const bidId = intent.notes?.bidId;
-          if (bidId) {
+          if (bidId && intent.purpose === 'bid_fee') {
             await Bidding.findByIdAndUpdate(bidId, {
               payment_status: 'paid',
               'escrow_details.payment_intent_id': intent._id.toString(),
@@ -453,10 +474,13 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
           }
           
           return res.status(200).json({
-            message: 'Payment verified and bid status updated',
+            success: true,
+            message: 'Payment verified and status updated',
             paymentStatus: 'paid',
-            bidStatus: 'paid'
+            bidStatus: intent.purpose === 'bid_fee' ? 'paid' : 'n/a'
           });
+        } else {
+          console.log(`[Payment Check] Order verification failed with Razorpay`);
         }
       } catch (verifyError) {
         console.error(`[Payment Check] Error verifying order:`, verifyError);
@@ -464,7 +488,8 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: 'Payment status checked',
+      success: false,
+      message: 'Payment verification failed',
       paymentStatus: intent.status,
       bidStatus: 'pending'
     });
@@ -472,6 +497,7 @@ export const checkPaymentAndUpdateBid = async (req, res) => {
   } catch (error) {
     console.error('[Payment Check] Error:', error);
     res.status(500).json({ 
+      success: false,
       message: 'Error checking payment status',
       error: error.message 
     });

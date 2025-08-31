@@ -282,6 +282,13 @@ export const verifyWebhookSignature = (payload, signature) => {
 // Verify order status with Razorpay API for additional security
 export const verifyOrderWithRazorpay = async (orderId) => {
   try {
+    if (!isRazorpayConfigured) {
+      logger.error('Razorpay service is not configured - cannot verify order', { orderId });
+      return false;
+    }
+
+    logger.info('Verifying order with Razorpay API', { orderId });
+    
     const order = await getOrder(orderId);
     
     // Verify the order exists and has valid status
@@ -310,7 +317,9 @@ export const verifyOrderWithRazorpay = async (orderId) => {
   } catch (error) {
     logger.error('Order verification failed', { 
       orderId, 
-      error: error.message 
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data
     });
     return false;
   }
