@@ -900,8 +900,11 @@ export const moveFundsToBalance = async (req, res) => {
     // Get escrow wallet
     const escrowWallet = await EscrowWallet.findOne({ projectId });
     if (!escrowWallet) {
+      logger.error(`[EscrowWallet] Escrow wallet not found for project ${projectId}`);
       return res.status(404).json({ message: 'Escrow wallet not found for this project' });
     }
+
+    logger.info(`[EscrowWallet] Found escrow wallet for project ${projectId}, status: ${escrowWallet.status}`);
 
     // Find user's locked funds
     const userFunds = escrowWallet.lockedFunds.find(fund => 
@@ -909,11 +912,15 @@ export const moveFundsToBalance = async (req, res) => {
     );
 
     if (!userFunds) {
+      logger.error(`[EscrowWallet] No escrow funds found for user ${userId} in project ${projectId}`);
       return res.status(404).json({ message: 'No escrow funds found for this user' });
     }
 
+    logger.info(`[EscrowWallet] Found user funds, status: ${userFunds.lockStatus}, amount: ${userFunds.totalAmount}`);
+
     // Check if funds can be moved to balance
     if (userFunds.lockStatus !== 'released') {
+      logger.error(`[EscrowWallet] Funds cannot be moved to balance. Current status: ${userFunds.lockStatus}`);
       return res.status(400).json({ 
         message: 'Funds cannot be moved to balance yet. They will be available after project completion.' 
       });
@@ -921,6 +928,7 @@ export const moveFundsToBalance = async (req, res) => {
 
     // Check if funds are already moved to balance
     if (userFunds.lockStatus === 'moved_to_balance') {
+      logger.error(`[EscrowWallet] Funds already moved to balance for user ${userId}`);
       return res.status(400).json({ 
         message: 'Funds have already been moved to your available balance.' 
       });
@@ -929,8 +937,11 @@ export const moveFundsToBalance = async (req, res) => {
     // Get user and update balance
     const userDetails = await user.findById(userId);
     if (!userDetails) {
+      logger.error(`[EscrowWallet] User not found: ${userId}`);
       return res.status(404).json({ message: 'User not found' });
     }
+
+    logger.info(`[EscrowWallet] Current user balance - available: ${userDetails.balance.available}, total: ${userDetails.balance.total}`);
 
     // Update user balance
     userDetails.balance.available += userFunds.totalAmount;
@@ -958,7 +969,7 @@ export const moveFundsToBalance = async (req, res) => {
 
     await escrowWallet.save();
 
-    logger.info(`[EscrowWallet] Funds moved to balance for user ${userId}, amount: ${userFunds.totalAmount}`);
+    logger.info(`[EscrowWallet] Funds moved to balance for user ${userId}, amount: ${userFunds.totalAmount}, new balance: ${userDetails.balance.available}`);
 
     res.status(200).json({
       message: 'Funds successfully moved to your available balance',

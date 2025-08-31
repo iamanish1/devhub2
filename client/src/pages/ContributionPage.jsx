@@ -890,7 +890,7 @@ const ContributionPage = () => {
 
 
 
-  // Handle withdrawal request
+  // Handle withdrawal request - Step 1: Move funds to available balance
   const handleWithdrawalRequest = async () => {
     try {
       setLoading(true);
@@ -901,32 +901,22 @@ const ContributionPage = () => {
         throw new Error('No released funds available for withdrawal');
       }
 
-      const withdrawalData = {
-        withdrawalMethod: "razorpay",
-        accountDetails: {
-          // Add account details if needed
-        },
-      };
-
-      console.log('🔍 Processing withdrawal request for amount:', userEarnings.totalAmount);
+      console.log('🔍 Moving funds to available balance for amount:', userEarnings.totalAmount);
       
-      const result = await escrowWalletApi.requestUserWithdrawal(
-        projectId,
-        withdrawalData
-      );
+      const result = await escrowWalletApi.moveFundsToBalance(projectId);
       
-      console.log('🔍 Withdrawal result:', result);
+      console.log('🔍 Move to balance result:', result);
       
       notificationService.success(
-        result.message || `Successfully processed withdrawal of ₹${userEarnings.totalAmount}`
+        result.message || `Successfully moved ₹${userEarnings.totalAmount} to your available balance`
       );
 
       // Refresh escrow data to get updated status
       await loadEscrowWalletData();
       
     } catch (err) {
-      console.error('Withdrawal error:', err);
-      const errorMessage = err.message || "Failed to process withdrawal request";
+      console.error('Move to balance error:', err);
+      const errorMessage = err.message || "Failed to move funds to available balance";
       setError(errorMessage);
       notificationService.error(errorMessage);
     } finally {
