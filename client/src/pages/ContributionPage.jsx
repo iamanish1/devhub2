@@ -40,6 +40,9 @@ import {
   Settings,
   Bell,
   X,
+  Lock,
+  Unlock,
+  RefreshCw,
 } from "lucide-react";
 
 // Firebase imports for workspace access and real-time updates
@@ -299,6 +302,9 @@ const ContributionPage = () => {
             const previousWallet = escrowWallet;
             setEscrowWallet(updatedWallet);
 
+            // Handle project completion status changes
+            handleProjectCompletionChange(updatedWallet);
+
             // Update user earnings if user data is available
             if (user?._id) {
               const userFunds = updatedWallet.lockedFunds?.find(
@@ -335,6 +341,10 @@ const ContributionPage = () => {
                   } else if (userFunds.lockStatus === "locked") {
                     notificationService.info(
                       "🔒 Your funds have been locked in escrow. They will be released upon project completion."
+                    );
+                  } else if (userFunds.lockStatus === "refunded") {
+                    notificationService.info(
+                      "ℹ️ Your funds have been refunded by the project owner."
                     );
                   } else if (userFunds.lockStatus === "withdrawn") {
                     notificationService.success(
@@ -384,9 +394,19 @@ const ContributionPage = () => {
     }
   };
 
+  // Handle project completion status changes
+  const handleProjectCompletionChange = (escrowData) => {
+    if (escrowData.projectCompletion?.isCompleted && !escrowWallet?.projectCompletion?.isCompleted) {
+      notificationService.info(
+        "🎯 Project has been completed! Your payment will be released soon."
+      );
+    }
+  };
+
   // Load escrow wallet data
   const loadEscrowWalletData = async () => {
     try {
+      setLoading(true);
       console.log('🔍 Loading escrow wallet data for project:', projectId);
       console.log('🔍 User ID:', user?._id);
       
@@ -398,6 +418,11 @@ const ContributionPage = () => {
         setUserEarnings(data.userEarnings);
         console.log('🔍 Escrow wallet set:', data.escrowWallet);
         console.log('🔍 User earnings set:', data.userEarnings);
+        
+        // Show success notification if funds are released
+        if (data.userEarnings.status === 'released') {
+          notificationService.success('Your payment has been released and is ready for withdrawal!');
+        }
       } else {
         console.log('🔍 No escrow wallet data found, setting defaults');
         setEscrowWallet(null);
@@ -410,9 +435,20 @@ const ContributionPage = () => {
         response: error.response?.data,
         status: error.response?.status
       });
-      // Set default values if escrow wallet doesn't exist yet
-      setEscrowWallet(null);
-      setUserEarnings(null);
+      
+      // Handle specific error cases
+      if (error.response?.status === 404) {
+        // No escrow wallet found - this is normal for new projects
+        setEscrowWallet(null);
+        setUserEarnings(null);
+      } else {
+        // Other errors
+        setError("Failed to load escrow wallet data. Please try again.");
+        setEscrowWallet(null);
+        setUserEarnings(null);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -771,6 +807,11 @@ const ContributionPage = () => {
       setLoading(true);
       setError(null);
 
+      // Validate that user has released funds
+      if (!userEarnings || userEarnings.status !== 'released') {
+        throw new Error('No released funds available for withdrawal');
+      }
+
       const withdrawalData = {
         withdrawalMethod: "razorpay",
         accountDetails: {
@@ -778,21 +819,27 @@ const ContributionPage = () => {
         },
       };
 
+      console.log('🔍 Processing withdrawal request for amount:', userEarnings.totalAmount);
+      
       const result = await escrowWalletApi.requestUserWithdrawal(
         projectId,
         withdrawalData
       );
+      
+      console.log('🔍 Withdrawal result:', result);
+      
       notificationService.success(
-        result.message || "Withdrawal request processed successfully"
+        result.message || `Successfully processed withdrawal of ₹${userEarnings.totalAmount}`
       );
 
-      // Refresh escrow data
+      // Refresh escrow data to get updated status
       await loadEscrowWalletData();
+      
     } catch (err) {
-      setError(err.message || "Failed to process withdrawal request");
-      notificationService.error(
-        err.message || "Failed to process withdrawal request"
-      );
+      console.error('Withdrawal error:', err);
+      const errorMessage = err.message || "Failed to process withdrawal request";
+      setError(errorMessage);
+      notificationService.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -2044,15 +2091,71 @@ const ContributionPage = () => {
             {/* Earnings Tab */}
             {activeTab === "earnings" && (
               <div className="space-y-6">
-                {/* Earnings Overview */}
+                {/* Project & Escrow Overview */}
                 <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">
-                      Your Earnings
+                      Project Earnings Dashboard
                     </h2>
-                    <DollarSign className="w-8 h-8 text-emerald-400" />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={loadEscrowWalletData}
+                        disabled={loading}
+                        className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-700 text-white px-3 py-1 rounded-lg transition flex items-center gap-2 text-sm"
+                      >
+                        <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                      </button>
+                      <DollarSign className="w-8 h-8 text-emerald-400" />
+                    </div>
                   </div>
 
+                  {/* Project Information */}
+                  {escrowWallet && (
+                    <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4 mb-6">
+                      <h3 className="text-lg font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                        <Target className="w-5 h-5 text-blue-400" />
+                        Project Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-400">Project Status:</span>
+                          <span className="ml-2 text-white font-medium">
+                            {escrowWallet.projectCompletion?.isCompleted ? 'Completed' : 'In Progress'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Escrow Status:</span>
+                          <span className={`ml-2 font-medium ${
+                            escrowWallet.status === 'active' ? 'text-green-400' : 
+                            escrowWallet.status === 'locked' ? 'text-yellow-400' : 
+                            escrowWallet.status === 'released' ? 'text-blue-400' : 'text-gray-400'
+                          }`}>
+                            {escrowWallet.status?.toUpperCase()}
+                          </span>
+                        </div>
+                        {escrowWallet.projectCompletion?.completedAt && (
+                          <div>
+                            <span className="text-gray-400">Completed:</span>
+                            <span className="ml-2 text-white">
+                              {new Date(escrowWallet.projectCompletion.completedAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                        {escrowWallet.projectCompletion?.qualityScore && (
+                          <div>
+                            <span className="text-gray-400">Quality Score:</span>
+                            <span className="ml-2 text-white flex items-center">
+                              {escrowWallet.projectCompletion.qualityScore}/10
+                              <Star className="w-4 h-4 text-yellow-500 ml-1" />
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Earnings Overview */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] border border-emerald-500/20 rounded-lg p-4">
                       <div className="flex items-center justify-between">
@@ -2097,69 +2200,239 @@ const ContributionPage = () => {
                     </div>
                   </div>
 
+                  {/* Payment Status */}
                   <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-gray-300 mb-3">
+                    <h3 className="text-lg font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-blue-400" />
                       Payment Status
                     </h3>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-3 mb-3">
                       <div
                         className={`w-3 h-3 rounded-full ${
                           userEarnings?.status === "released"
                             ? "bg-green-400"
                             : userEarnings?.status === "locked"
                             ? "bg-yellow-400"
+                            : userEarnings?.status === "refunded"
+                            ? "bg-red-400"
                             : "bg-gray-500"
                         }`}
                       ></div>
-                      <span className="text-gray-300">
+                      <span className="text-gray-300 font-medium">
                         {userEarnings?.status === "released"
                           ? "Payment Released - Available for Withdrawal"
                           : userEarnings?.status === "locked"
                           ? "Payment Locked - Will be released upon project completion"
+                          : userEarnings?.status === "refunded"
+                          ? "Payment Refunded"
                           : "Payment Pending"}
                       </span>
                     </div>
+                    
+                    {/* Additional Status Details */}
+                    {userEarnings?.lockedAt && (
+                      <div className="text-sm text-gray-400">
+                        <span>Locked: {new Date(userEarnings.lockedAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {userEarnings?.releasedAt && (
+                      <div className="text-sm text-gray-400">
+                        <span>Released: {new Date(userEarnings.releasedAt).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {userEarnings?.releaseReason && (
+                      <div className="text-sm text-gray-400">
+                        <span>Reason: {userEarnings.releaseReason.replace('_', ' ')}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Withdrawal Section */}
                 <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
-                  <h3 className="text-xl font-semibold text-white mb-4">
+                  <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-emerald-400" />
                     Withdraw Earnings
                   </h3>
-                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
-                    <div className="flex items-start space-x-3">
-                      <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-yellow-300">
-                          Payment Release Process
-                        </h4>
-                        <p className="text-sm text-yellow-200 mt-1">
-                          Your earnings will be automatically released to your
-                          wallet once the project is completed and approved by
-                          the project owner.
-                        </p>
+                  
+                  {userEarnings?.status === "released" ? (
+                    <div className="space-y-4">
+                      <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-400 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-green-300">
+                              Payment Ready for Withdrawal
+                            </h4>
+                            <p className="text-sm text-green-200 mt-1">
+                              Your earnings have been released and are ready to be withdrawn to your wallet.
+                            </p>
+                          </div>
+                        </div>
                       </div>
+
+                      <button
+                        onClick={handleWithdrawalRequest}
+                        disabled={loading}
+                        className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-emerald-700 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Processing Withdrawal...
+                          </>
+                        ) : (
+                          <>
+                            <DollarSign className="w-4 h-4" />
+                            Withdraw ₹{userEarnings?.totalAmount || 0} to Wallet
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : userEarnings?.status === "locked" ? (
+                    <div className="space-y-4">
+                      <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                        <div className="flex items-start space-x-3">
+                          <Clock className="w-5 h-5 text-yellow-400 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-yellow-300">
+                              Payment Currently Locked
+                            </h4>
+                            <p className="text-sm text-yellow-200 mt-1">
+                              Your earnings will be automatically released once the project is completed and approved by the project owner.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-gray-300 mb-2">Project Completion Status</h4>
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            escrowWallet?.projectCompletion?.isCompleted ? 'bg-green-400' : 'bg-yellow-400'
+                          }`}></div>
+                          <span className="text-sm text-gray-400">
+                            {escrowWallet?.projectCompletion?.isCompleted 
+                              ? 'Project completed - waiting for owner approval' 
+                              : 'Project in progress'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        disabled={true}
+                        className="w-full px-4 py-3 bg-gray-600 text-gray-300 rounded-lg cursor-not-allowed"
+                      >
+                        Payment Locked - Complete Project First
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="bg-gray-900/20 border border-gray-500/30 rounded-lg p-4">
+                        <div className="flex items-start space-x-3">
+                          <AlertCircle className="w-5 h-5 text-gray-400 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-gray-300">
+                              No Payment Available
+                            </h4>
+                            <p className="text-sm text-gray-200 mt-1">
+                              No escrow funds have been allocated for your account in this project.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        disabled={true}
+                        className="w-full px-4 py-3 bg-gray-600 text-gray-300 rounded-lg cursor-not-allowed"
+                      >
+                        No Payment Available
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Transaction History */}
+                {userEarnings && (
+                  <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-400" />
+                      Transaction History
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      {userEarnings.lockedAt && (
+                        <div className="flex items-center justify-between bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center justify-center">
+                              <Lock className="w-4 h-4 text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">Funds Locked</p>
+                              <p className="text-xs text-gray-400">
+                                {new Date(userEarnings.lockedAt).toLocaleDateString()} at {new Date(userEarnings.lockedAt).toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-white">₹{userEarnings.totalAmount}</p>
+                            <p className="text-xs text-gray-400">Total Amount</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {userEarnings.releasedAt && (
+                        <div className="flex items-center justify-between bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-green-500/20 border border-green-500/30 rounded-lg flex items-center justify-center">
+                              <Unlock className="w-4 h-4 text-green-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">Funds Released</p>
+                              <p className="text-xs text-gray-400">
+                                {new Date(userEarnings.releasedAt).toLocaleDateString()} at {new Date(userEarnings.releasedAt).toLocaleTimeString()}
+                              </p>
+                              {userEarnings.releaseReason && (
+                                <p className="text-xs text-gray-400">Reason: {userEarnings.releaseReason.replace('_', ' ')}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-white">₹{userEarnings.totalAmount}</p>
+                            <p className="text-xs text-gray-400">Released Amount</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {userEarnings.refundedAt && (
+                        <div className="flex items-center justify-between bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center justify-center">
+                              <RefreshCw className="w-4 h-4 text-red-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-white">Funds Refunded</p>
+                              <p className="text-xs text-gray-400">
+                                {new Date(userEarnings.refundedAt).toLocaleDateString()} at {new Date(userEarnings.refundedAt).toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-white">₹{userEarnings.totalAmount}</p>
+                            <p className="text-xs text-gray-400">Refunded Amount</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {!userEarnings.lockedAt && !userEarnings.releasedAt && !userEarnings.refundedAt && (
+                        <div className="text-center py-8">
+                          <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                          <p className="text-gray-400">No transaction history available</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  <button
-                    onClick={handleWithdrawalRequest}
-                    disabled={userEarnings?.status !== "released" || loading}
-                    className="w-full px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {loading ? (
-                      <div className="flex items-center justify-center">
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Processing...
-                      </div>
-                    ) : userEarnings?.status === "released" ? (
-                      "Withdraw to Wallet"
-                    ) : (
-                      "Payment Locked - Complete Project First"
-                    )}
-                  </button>
-                </div>
+                )}
               </div>
             )}
 
