@@ -317,30 +317,50 @@ const AdminPage = () => {
   // Enhanced escrow wallet fetch with real-time updates
   useEffect(() => {
     if (view === "escrow") {
+      loadEscrowData();
+    }
+  }, [view]);
+
+  // Load escrow data function
+  const loadEscrowData = async () => {
+    try {
       setEscrowLoading(true);
       setEscrowError(null);
       
-      Promise.all([
+      console.log('🔍 Loading escrow data for admin panel...');
+      
+      const [escrowsRes, statsRes] = await Promise.all([
         escrowWalletApi.getProjectOwnerEscrows(),
         escrowWalletApi.getEscrowStats()
-      ])
-        .then(([escrowsRes, statsRes]) => {
-          setEscrowWallets(escrowsRes.escrowWallets || []);
-          setEscrowStats(statsRes.stats || {});
-          setEscrowError(null);
-          
-          // Set up Firebase real-time listeners for escrow updates
-          setupEscrowFirebaseListeners(escrowsRes.escrowWallets || []);
-          // Set up Firebase real-time listeners for task updates
-          setupTaskFirebaseListeners(escrowsRes.escrowWallets || []);
-        })
-        .catch((error) => {
-          console.error("Error fetching escrow data:", error);
-          setEscrowError("Failed to fetch escrow wallet data");
-        })
-        .finally(() => setEscrowLoading(false));
+      ]);
+      
+      console.log('🔍 Escrow wallets response:', escrowsRes);
+      console.log('🔍 Escrow stats response:', statsRes);
+      
+      const escrowWallets = escrowsRes.escrowWallets || [];
+      const stats = statsRes.stats || {};
+      
+      console.log('🔍 Setting escrow wallets:', escrowWallets);
+      console.log('🔍 Setting escrow stats:', stats);
+      
+      setEscrowWallets(escrowWallets);
+      setEscrowStats(stats);
+      setEscrowError(null);
+      
+      // Set up Firebase real-time listeners for escrow updates
+      setupEscrowFirebaseListeners(escrowWallets);
+      // Set up Firebase real-time listeners for task updates
+      setupTaskFirebaseListeners(escrowWallets);
+      
+    } catch (error) {
+      console.error("Error loading escrow data:", error);
+      setEscrowError("Failed to fetch escrow wallet data");
+      setEscrowWallets([]);
+      setEscrowStats({});
+    } finally {
+      setEscrowLoading(false);
     }
-  }, [view]);
+  };
 
   // Setup Firebase listeners for escrow real-time updates
   const setupEscrowFirebaseListeners = (escrowWallets) => {
@@ -387,20 +407,6 @@ const AdminPage = () => {
       // Store unsubscribe function for cleanup
       setFirebaseListeners(prev => [...prev, taskUnsubscribe]);
     });
-  };
-
-  // Load escrow data function
-  const loadEscrowData = async () => {
-    try {
-      const [escrowsRes, statsRes] = await Promise.all([
-        escrowWalletApi.getProjectOwnerEscrows(),
-        escrowWalletApi.getEscrowStats()
-      ]);
-      setEscrowWallets(escrowsRes.escrowWallets || []);
-      setEscrowStats(statsRes.stats || {});
-    } catch (error) {
-      console.error("Error loading escrow data:", error);
-    }
   };
 
   // Handle escrow wallet creation
@@ -1737,7 +1743,7 @@ const AdminPage = () => {
                       </button>
                     </Link>
                     <button
-                      onClick={() => window.location.reload()}
+                      onClick={loadEscrowData}
                       className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
                     >
                       <FaChartLine />

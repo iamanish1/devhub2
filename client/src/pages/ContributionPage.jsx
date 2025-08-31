@@ -387,11 +387,29 @@ const ContributionPage = () => {
   // Load escrow wallet data
   const loadEscrowWalletData = async () => {
     try {
+      console.log('🔍 Loading escrow wallet data for project:', projectId);
+      console.log('🔍 User ID:', user?._id);
+      
       const data = await escrowWalletApi.getUserEscrowWallet(projectId);
-      setEscrowWallet(data.escrowWallet);
-      setUserEarnings(data.userEarnings);
+      console.log('🔍 Escrow wallet data response:', data);
+      
+      if (data.escrowWallet && data.userEarnings) {
+        setEscrowWallet(data.escrowWallet);
+        setUserEarnings(data.userEarnings);
+        console.log('🔍 Escrow wallet set:', data.escrowWallet);
+        console.log('🔍 User earnings set:', data.userEarnings);
+      } else {
+        console.log('🔍 No escrow wallet data found, setting defaults');
+        setEscrowWallet(null);
+        setUserEarnings(null);
+      }
     } catch (error) {
       console.error("Failed to load escrow wallet data:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       // Set default values if escrow wallet doesn't exist yet
       setEscrowWallet(null);
       setUserEarnings(null);
