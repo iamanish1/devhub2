@@ -43,11 +43,25 @@ export const createEscrowWallet = async (req, res) => {
     const totalContributors = selection.selectedUsers.length;
     const amountPerContributor = Math.floor(bonusPoolAmount / totalContributors);
 
+    // Calculate total bid amount from selected users
+    let totalBidAmount = 0;
+    for (const selectedUser of selection.selectedUsers) {
+      const bid = await Bidding.findById(selectedUser.bidId);
+      if (bid) {
+        totalBidAmount += bid.bid_amount || 0;
+      }
+    }
+
+    // Calculate total escrow amount (bid amount + bonus pool)
+    const totalEscrowAmount = totalBidAmount + bonusPoolAmount;
+
     // Create escrow wallet
     const escrowWallet = new EscrowWallet({
       projectId,
       projectOwner: req.user._id,
+      totalBidAmount: totalBidAmount,
       totalBonusPool: bonusPoolAmount,
+      totalEscrowAmount: totalEscrowAmount,
       bonusPoolDistribution: {
         totalContributors,
         amountPerContributor,
@@ -538,11 +552,25 @@ export const createEscrowWalletIfReady = async (projectId, userId) => {
       return null;
     }
 
+    // Calculate total bid amount from selected users
+    let totalBidAmount = 0;
+    for (const selectedUser of selection.selectedUsers) {
+      const bid = await Bidding.findById(selectedUser.bidId);
+      if (bid) {
+        totalBidAmount += bid.bid_amount || 0;
+      }
+    }
+
+    // Calculate total escrow amount (bid amount + bonus pool)
+    const totalEscrowAmount = totalBidAmount + bonusPool.totalAmount;
+
     // Create escrow wallet
     const escrowWallet = new EscrowWallet({
       projectId,
       projectOwner: userId,
+      totalBidAmount: totalBidAmount,
       totalBonusPool: bonusPool.totalAmount,
+      totalEscrowAmount: totalEscrowAmount,
       bonusPoolDistribution: {
         totalContributors: selection.selectedUsers.length,
         amountPerContributor: Math.floor(bonusPool.totalAmount / selection.selectedUsers.length),

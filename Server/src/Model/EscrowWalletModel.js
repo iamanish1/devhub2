@@ -207,15 +207,21 @@ EscrowWalletSchema.index({ status: 1, 'paymentProcessing.processingStatus': 1 })
 EscrowWalletSchema.pre('save', function(next) {
   this.updatedAt = new Date();
   
-  // Calculate total escrow amount
-  this.totalEscrowAmount = this.totalBidAmount + this.totalBonusPool;
+  // Calculate total escrow amount if not already set
+  if (!this.totalEscrowAmount) {
+    this.totalEscrowAmount = this.totalBidAmount + this.totalBonusPool;
+  }
   
-  // Calculate bonus pool distribution
-  if (this.bonusPoolDistribution.totalContributors > 0) {
-    this.bonusPoolDistribution.amountPerContributor = 
-      Math.floor(this.totalBonusPool / this.bonusPoolDistribution.totalContributors);
-    this.bonusPoolDistribution.remainingAmount = 
-      this.totalBonusPool - this.bonusPoolDistribution.distributedAmount;
+  // Calculate bonus pool distribution if not already set
+  if (this.bonusPoolDistribution && this.bonusPoolDistribution.totalContributors > 0) {
+    if (!this.bonusPoolDistribution.amountPerContributor) {
+      this.bonusPoolDistribution.amountPerContributor = 
+        Math.floor(this.totalBonusPool / this.bonusPoolDistribution.totalContributors);
+    }
+    if (!this.bonusPoolDistribution.remainingAmount) {
+      this.bonusPoolDistribution.remainingAmount = 
+        this.totalBonusPool - this.bonusPoolDistribution.distributedAmount;
+    }
   }
   
   // Validate amounts
@@ -223,7 +229,7 @@ EscrowWalletSchema.pre('save', function(next) {
     return next(new Error('Total escrow amount cannot be negative'));
   }
   
-  if (this.bonusPoolDistribution.remainingAmount < 0) {
+  if (this.bonusPoolDistribution && this.bonusPoolDistribution.remainingAmount < 0) {
     return next(new Error('Remaining bonus pool amount cannot be negative'));
   }
   
@@ -277,11 +283,8 @@ EscrowWalletSchema.methods.lockUserFunds = function(userId, bidId, bidAmount, bo
     lockedAt: new Date()
   });
   
-  // Update totals
-  this.totalBidAmount += bidAmount;
-  // Don't add to totalBonusPool here as it's already set when escrow wallet is created
-  // this.totalBonusPool += bonusAmount;
-  this.totalEscrowAmount += totalAmount;
+  // Don't update totals here as they should be calculated when escrow wallet is created
+  // The totals are already set correctly during escrow wallet creation
   
   // Update status
   if (this.status === 'active') {
