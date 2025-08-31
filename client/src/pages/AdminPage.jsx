@@ -1919,14 +1919,14 @@ const AdminPage = () => {
                                       {fund.lockStatus === 'locked' && (
                                         <>
                                           <button
-                                            onClick={() => handleReleaseUserFunds(wallet, fund.userId, fund.bidId)}
+                                            onClick={() => handleReleaseUserFunds(wallet, fund.userId?._id || fund.userId?.toString() || fund.userId, fund.bidId?._id || fund.bidId?.toString() || fund.bidId)}
                                             disabled={escrowActionLoading}
                                             className="bg-green-500 hover:bg-green-600 disabled:bg-green-700 text-white px-2 py-1 rounded text-xs transition"
                                           >
                                             Release
                                           </button>
                                           <button
-                                            onClick={() => handleRefundUserFunds(wallet, fund.userId, fund.bidId)}
+                                            onClick={() => handleRefundUserFunds(wallet, fund.userId?._id || fund.userId?.toString() || fund.userId, fund.bidId?._id || fund.bidId?.toString() || fund.bidId)}
                                             disabled={escrowActionLoading}
                                             className="bg-red-500 hover:bg-red-600 disabled:bg-red-700 text-white px-2 py-1 rounded text-xs transition"
                                           >

@@ -193,7 +193,7 @@ export const releaseUserFunds = async (req, res) => {
 
     // Find the locked fund
     const lockedFund = escrowWallet.lockedFunds.find(fund => 
-      fund.userId.toString() === userId && fund.bidId.toString() === bidId
+      fund.userId.toString() === userId.toString() && fund.bidId.toString() === bidId.toString()
     );
 
     if (!lockedFund) {
@@ -286,7 +286,7 @@ export const refundUserFunds = async (req, res) => {
 
     // Find the locked fund
     const lockedFund = escrowWallet.lockedFunds.find(fund => 
-      fund.userId.toString() === userId && fund.bidId.toString() === bidId
+      fund.userId.toString() === userId.toString() && fund.bidId.toString() === bidId.toString()
     );
 
     if (!lockedFund) {
