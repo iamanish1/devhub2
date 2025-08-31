@@ -144,6 +144,12 @@ const ProjectListingSchema = new mongoose.Schema({
   escrow: {
     totalBidLocked: { type: Number, default: 0 },
     status: { type: String, enum: ['locked', 'released', 'refunded'], default: 'locked' }
+  },
+  // Project status field
+  project_status: {
+    type: String,
+    enum: ['draft', 'active', 'in_progress', 'completed', 'cancelled', 'paused'],
+    default: 'active'
   }
 }, {
   timestamps: true // This will automatically add createdAt and updatedAt fields

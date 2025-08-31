@@ -534,6 +534,18 @@ export const createEscrowWalletIfReady = async (projectId, userId) => {
     const existingEscrow = await EscrowWallet.findOne({ projectId });
     if (existingEscrow) {
       logger.info(`[EscrowWallet] Escrow wallet already exists for project: ${projectId}`);
+      
+      // Check if funds are properly locked
+      if (existingEscrow.lockedFunds.length === 0) {
+        logger.info(`[EscrowWallet] Escrow wallet exists but no funds are locked. Attempting to lock funds...`);
+        const fundsLocked = await ensureEscrowFundsLocked(projectId, existingEscrow);
+        if (fundsLocked) {
+          logger.info(`[EscrowWallet] Successfully locked funds for existing escrow wallet`);
+        } else {
+          logger.error(`[EscrowWallet] Failed to lock funds for existing escrow wallet`);
+        }
+      }
+      
       return existingEscrow;
     }
 
@@ -601,6 +613,83 @@ export const createEscrowWalletIfReady = async (projectId, userId) => {
   } catch (error) {
     logger.error(`[EscrowWallet] Error in createEscrowWalletIfReady: ${error.message}`, error);
     return null;
+  }
+};
+
+/**
+ * Ensure escrow funds are properly locked for all selected users
+ */
+const ensureEscrowFundsLocked = async (projectId, escrowWallet) => {
+  try {
+    // Get project selection
+    const { default: ProjectSelection } = await import('../Model/ProjectSelectionModel.js');
+    const selection = await ProjectSelection.findOne({ projectId });
+    if (!selection || selection.status !== 'completed') {
+      logger.error(`[EscrowWallet] Project selection not completed for project: ${projectId}`);
+      return false;
+    }
+
+    let allFundsLocked = true;
+
+    // Lock funds for each selected user
+    for (const selectedUser of selection.selectedUsers) {
+      try {
+        // Check if funds are already locked for this user
+        const existingFund = escrowWallet.lockedFunds.find(fund => 
+          fund.userId.toString() === selectedUser.userId.toString() && 
+          fund.bidId.toString() === selectedUser.bidId.toString()
+        );
+
+        if (existingFund) {
+          logger.info(`[EscrowWallet] Funds already locked for user ${selectedUser.userId}`);
+          continue;
+        }
+
+        // Get the bid to get the bid amount
+        const bid = await Bidding.findById(selectedUser.bidId);
+        if (!bid) {
+          logger.error(`[EscrowWallet] Bid not found for user ${selectedUser.userId}, bid ID: ${selectedUser.bidId}`);
+          allFundsLocked = false;
+          continue;
+        }
+
+        const bidAmount = bid.bid_amount || 0;
+        const bonusAmount = escrowWallet.bonusPoolDistribution.amountPerContributor;
+
+        logger.info(`[EscrowWallet] Locking funds for user ${selectedUser.userId}: bidAmount=${bidAmount}, bonusAmount=${bonusAmount}`);
+
+        // Lock the funds
+        escrowWallet.lockUserFunds(
+          selectedUser.userId,
+          selectedUser.bidId,
+          bidAmount,
+          bonusAmount
+        );
+
+        // Update selection record
+        selectedUser.escrowLocked = true;
+        selectedUser.escrowLockedAt = new Date();
+
+        logger.info(`[EscrowWallet] Successfully locked funds for user ${selectedUser.userId}`);
+
+      } catch (error) {
+        logger.error(`[EscrowWallet] Failed to lock funds for user ${selectedUser.userId}: ${error.message}`);
+        allFundsLocked = false;
+      }
+    }
+
+    // Save both the escrow wallet and selection
+    if (allFundsLocked) {
+      await escrowWallet.save();
+      await selection.save();
+      logger.info(`[EscrowWallet] All escrow funds locked successfully for project: ${projectId}`);
+    }
+
+    return allFundsLocked;
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in ensureEscrowFundsLocked: ${error.message}`, error);
+    return false;
   }
 };
 

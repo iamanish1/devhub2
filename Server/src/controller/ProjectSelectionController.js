@@ -482,16 +482,25 @@ export const manualSelection = async (req, res) => {
           // Lock funds for each selected user
           for (const selectedUser of selection.selectedUsers) {
             try {
+              // Get the bid to get the bid amount
+              const { default: Bidding } = await import('../Model/BiddingModel.js');
+              const bid = await Bidding.findById(selectedUser.bidId);
+              if (!bid) {
+                logger.error(`[ProjectSelection] Bid not found for user ${selectedUser.userId}, bid ID: ${selectedUser.bidId}`);
+                continue;
+              }
+
+              const bidAmount = bid.bid_amount || 0;
               const bonusAmount = escrowWallet.bonusPoolDistribution.amountPerContributor;
               
               logger.info(
-                `[ProjectSelection] Locking funds for user ${selectedUser.userId}: bidAmount=${selectedUser.bidAmount}, bonusAmount=${bonusAmount}`
+                `[ProjectSelection] Locking funds for user ${selectedUser.userId}: bidAmount=${bidAmount}, bonusAmount=${bonusAmount}`
               );
               
               escrowWallet.lockUserFunds(
                 selectedUser.userId, 
                 selectedUser.bidId, 
-                selectedUser.bidAmount || 0, 
+                bidAmount, 
                 bonusAmount
               );
 
@@ -508,7 +517,7 @@ export const manualSelection = async (req, res) => {
                 await notificationService.sendEscrowFundsLockedNotification(
                   selectedUser.userId,
                   projectId,
-                  selectedUser.bidAmount || 0,
+                  bidAmount,
                   bonusAmount
                 );
               } catch (notificationError) {
@@ -523,12 +532,27 @@ export const manualSelection = async (req, res) => {
             }
           }
 
-          await escrowWallet.save();
-          await selection.save();
-
-          logger.info(
-            `[ProjectSelection] Escrow wallet created and funds locked for project: ${projectId}`
-          );
+          // Save both the escrow wallet and selection
+          try {
+            await escrowWallet.save();
+            await selection.save();
+            logger.info(
+              `[ProjectSelection] Escrow wallet created and funds locked for project: ${projectId}`
+            );
+          } catch (saveError) {
+            logger.error(
+              `[ProjectSelection] Failed to save escrow wallet or selection: ${saveError.message}`
+            );
+            // Try to save selection separately to avoid losing selection data
+            try {
+              await selection.save();
+              logger.info(`[ProjectSelection] Selection data saved successfully`);
+            } catch (selectionSaveError) {
+              logger.error(
+                `[ProjectSelection] Failed to save selection data: ${selectionSaveError.message}`
+              );
+            }
+          }
         } else {
           logger.info(
             `[ProjectSelection] Escrow wallet not created - bonus pool not funded or already exists for project: ${projectId}`
