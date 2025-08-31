@@ -37,6 +37,7 @@ const WithdrawalPage = () => {
   const [pendingBalance, setPendingBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [bankDetails, setBankDetails] = useState(null);
+  const [recentWithdrawals, setRecentWithdrawals] = useState([]);
 
   // Fetch user balance and bank details from API
   const fetchUserBalance = async () => {
@@ -47,12 +48,7 @@ const WithdrawalPage = () => {
       setTotalEarnings(balanceData.balance?.total || 0);
       setPendingBalance(balanceData.balance?.pending || 0);
       setBankDetails(balanceData.bankDetails);
-      
-      // Also fetch withdrawal history from the same API
-      if (balanceData.recentWithdrawals) {
-        // Update the payment context with withdrawal history
-        // This will be handled by the context
-      }
+      setRecentWithdrawals(balanceData.recentWithdrawals || []);
     } catch (error) {
       console.error('Error fetching user balance:', error);
       notificationService.error('Failed to fetch balance information');
@@ -404,13 +400,13 @@ const WithdrawalPage = () => {
 
            {isProcessing ? (
              <LoadingSpinner />
-           ) : withdrawalHistory?.length > 0 ? (
-            <div className="space-y-4">
-              {withdrawalHistory.map((withdrawal) => (
-                <div
-                  key={withdrawal.id}
-                  className="bg-[#2A2A2A] rounded-lg p-6 border border-gray-600"
-                >
+           ) : (recentWithdrawals?.length > 0 || withdrawalHistory?.length > 0) ? (
+                         <div className="space-y-4">
+               {(recentWithdrawals || withdrawalHistory || []).map((withdrawal) => (
+                                 <div
+                   key={withdrawal.id || withdrawal.referenceId || withdrawal._id}
+                   className="bg-[#2A2A2A] rounded-lg p-6 border border-gray-600"
+                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className={`p-3 rounded-lg ${getPaymentStatusColor(withdrawal.status)}`}>
@@ -418,38 +414,38 @@ const WithdrawalPage = () => {
                       </div>
                       <div>
                         <p className="text-white font-semibold">Withdrawal Request</p>
-                        <p className="text-gray-400 text-sm">
-                          {formatPaymentDate(withdrawal.createdAt)}
-                        </p>
-                        <p className="text-gray-500 text-sm">
-                          ID: {withdrawal.id}
-                        </p>
+                                                 <p className="text-gray-400 text-sm">
+                           {formatPaymentDate(withdrawal.createdAt || withdrawal.date)}
+                         </p>
+                                               <p className="text-gray-500 text-sm">
+                         ID: {withdrawal.id || withdrawal.referenceId}
+                       </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-white font-bold text-lg">
-                        {formatCurrency(withdrawal.amount)}
-                      </p>
+                                             <p className="text-white font-bold text-lg">
+                         {formatCurrency(withdrawal.amount || withdrawal.totalAmount)}
+                       </p>
                                              <p className={`text-sm font-medium ${getPaymentStatusColor(withdrawal.status)}`}>
                          {withdrawal.status === 'completed' ? '✅ Completed' : 
                           withdrawal.status === 'pending' ? '⏳ Processing' : 
                           withdrawal.status === 'failed' ? '❌ Failed' : 
                           withdrawal.status}
                        </p>
-                      {withdrawal.fee && (
-                        <p className="text-gray-400 text-xs">
-                          Fee: {formatCurrency(withdrawal.fee)}
-                        </p>
-                      )}
+                                             {(withdrawal.fee || withdrawal.totalDeducted) && (
+                         <p className="text-gray-400 text-xs">
+                           Fee: {formatCurrency(withdrawal.fee || (withdrawal.totalDeducted - withdrawal.amount))}
+                         </p>
+                       )}
                     </div>
                   </div>
 
-                  {/* Additional Details */}
-                  {withdrawal.description && (
-                    <div className="mt-4 pt-4 border-t border-gray-600">
-                      <p className="text-gray-300 text-sm">{withdrawal.description}</p>
-                    </div>
-                  )}
+                                     {/* Additional Details */}
+                   {(withdrawal.description || withdrawal.notes) && (
+                     <div className="mt-4 pt-4 border-t border-gray-600">
+                       <p className="text-gray-300 text-sm">{withdrawal.description || withdrawal.notes}</p>
+                     </div>
+                   )}
                 </div>
               ))}
             </div>
