@@ -683,8 +683,17 @@ export const getUserEscrowWallet = async (req, res) => {
     // Get escrow wallet
     const escrowWallet = await EscrowWallet.findOne({ projectId });
     if (!escrowWallet) {
-      return res.status(404).json({ message: 'Escrow wallet not found for this project' });
+      logger.info(`[EscrowWallet] No escrow wallet found for project ${projectId}`);
+      return res.status(404).json({ 
+        message: 'Escrow wallet not found for this project',
+        errorType: 'NO_ESCROW_WALLET',
+        projectId,
+        userId
+      });
     }
+
+    logger.info(`[EscrowWallet] Found escrow wallet for project ${projectId}, checking user funds for user ${userId}`);
+    logger.info(`[EscrowWallet] Escrow wallet has ${escrowWallet.lockedFunds?.length || 0} locked funds`);
 
     // Find user's locked funds
     const userFunds = escrowWallet.lockedFunds.find(fund => 
@@ -692,7 +701,15 @@ export const getUserEscrowWallet = async (req, res) => {
     );
 
     if (!userFunds) {
-      return res.status(404).json({ message: 'No escrow funds found for this user' });
+      logger.info(`[EscrowWallet] No escrow funds found for user ${userId} in project ${projectId}`);
+      logger.info(`[EscrowWallet] Available users in escrow: ${escrowWallet.lockedFunds?.map(f => f.userId.toString()).join(', ')}`);
+      return res.status(404).json({ 
+        message: 'No escrow funds found for this user',
+        errorType: 'NO_USER_FUNDS',
+        projectId,
+        userId,
+        availableUsers: escrowWallet.lockedFunds?.map(f => f.userId.toString()) || []
+      });
     }
 
     // Calculate user's earnings

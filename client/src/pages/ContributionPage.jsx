@@ -405,54 +405,143 @@ const ContributionPage = () => {
 
   // Load escrow wallet data
   const loadEscrowWalletData = async () => {
-    try {
-      setLoading(true);
-      console.log('🔍 Loading escrow wallet data for project:', projectId);
-      console.log('🔍 User ID:', user?._id);
-      
-      const data = await escrowWalletApi.getUserEscrowWallet(projectId);
-      console.log('🔍 Escrow wallet data response:', data);
-      
-      if (data.escrowWallet && data.userEarnings) {
-        setEscrowWallet(data.escrowWallet);
-        setUserEarnings(data.userEarnings);
-        console.log('🔍 Escrow wallet set:', data.escrowWallet);
-        console.log('🔍 User earnings set:', data.userEarnings);
+    const maxRetries = 2;
+    let retryCount = 0;
+    
+    const attemptLoad = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log(`🔍 Loading escrow wallet data for project: ${projectId} (attempt ${retryCount + 1})`);
+        console.log('🔍 User ID:', user?._id);
+        console.log('🔍 Auth token present:', !!localStorage.getItem('token'));
+        console.log('🔍 Auth token value:', localStorage.getItem('token') ? `${localStorage.getItem('token').substring(0, 20)}...` : 'Missing');
         
-        // Show success notification if funds are released
-        if (data.userEarnings.status === 'released') {
-          notificationService.success('Your payment has been released and is ready for withdrawal!');
+        // Debug: Check if user has access to this project first
+        try {
+          const accessCheck = await projectTaskApi.checkWorkspaceAccess(projectId);
+          console.log('🔍 Workspace access check:', accessCheck);
+        } catch (accessError) {
+          console.log('🔍 Workspace access check failed:', accessError.message);
         }
-      } else {
-        console.log('🔍 No escrow wallet data found, setting defaults');
-        setEscrowWallet(null);
-        setUserEarnings(null);
+        
+        const data = await escrowWalletApi.getUserEscrowWallet(projectId);
+        console.log('🔍 Escrow wallet data response:', data);
+        
+        if (data.escrowWallet && data.userEarnings) {
+          setEscrowWallet(data.escrowWallet);
+          setUserEarnings(data.userEarnings);
+          console.log('🔍 Escrow wallet set:', data.escrowWallet);
+          console.log('🔍 User earnings set:', data.userEarnings);
+          
+          // Show success notification if funds are released
+          if (data.userEarnings.status === 'released') {
+            notificationService.success('Your payment has been released and is ready for withdrawal!');
+          }
+        } else {
+          console.log('🔍 No escrow wallet data found, setting defaults');
+          setEscrowWallet(null);
+          setUserEarnings(null);
+        }
+        
+        // Success - no need to retry
+        return true;
+      } catch (error) {
+        console.error(`Failed to load escrow wallet data (attempt ${retryCount + 1}):`, error);
+        console.error("Error details:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          url: error.response?.config?.url,
+          headers: error.response?.config?.headers
+        });
+        
+        // Handle specific error cases
+        if (error.response?.status === 404) {
+          const errorData = error.response?.data;
+          console.log('🔍 404 - Error details:', errorData);
+          
+          if (errorData?.errorType === 'NO_ESCROW_WALLET') {
+            // No escrow wallet found - this is normal for new projects
+            console.log('🔍 No escrow wallet found for this project - this is normal for new projects');
+            setEscrowWallet(null);
+            setUserEarnings(null);
+            setError(null); // Don't show error as it's expected for new projects
+            return true; // Success - no need to retry
+          } else if (errorData?.errorType === 'NO_USER_FUNDS') {
+            // Escrow wallet exists but user has no funds
+            console.log('🔍 Escrow wallet exists but user has no funds');
+            console.log('🔍 Available users in escrow:', errorData?.availableUsers);
+            setEscrowWallet(null);
+            setUserEarnings(null);
+            setError("You don't have any escrow funds for this project. This usually means you haven't been selected as a contributor yet.");
+            return true; // Success - no need to retry
+          } else {
+            // Generic 404
+            console.log('🔍 Generic 404 error');
+            setEscrowWallet(null);
+            setUserEarnings(null);
+            setError("No escrow data found for this project.");
+            return true; // Success - no need to retry
+          }
+        } else if (error.response?.status === 401) {
+          // Authentication error - don't trigger automatic logout
+          console.log('🔍 401 - Authentication error - preventing automatic logout');
+          setError("Authentication error. Please check your login status and try again.");
+          setEscrowWallet(null);
+          setUserEarnings(null);
+          
+          // Don't retry on auth errors
+          return false;
+        } else if (error.response?.status === 403) {
+          // Authorization error
+          console.log('🔍 403 - Authorization error');
+          setError("You don't have access to this project's escrow data.");
+          setEscrowWallet(null);
+          setUserEarnings(null);
+          
+          // Don't retry on auth errors
+          return false;
+        } else if (error.response?.status === 500) {
+          // Server error - retry
+          console.log('🔍 500 - Server error');
+          setError("Server error. Please try again later.");
+          setEscrowWallet(null);
+          setUserEarnings(null);
+          
+          // Retry on server errors
+          return false;
+        } else {
+          // Other errors - retry
+          console.log('🔍 Other error:', error.response?.status);
+          setError("Failed to load escrow wallet data. Please try again.");
+          setEscrowWallet(null);
+          setUserEarnings(null);
+          
+          // Retry on other errors
+          return false;
+        }
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to load escrow wallet data:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
+    };
+    
+    // Attempt to load with retries
+    while (retryCount < maxRetries) {
+      const success = await attemptLoad();
+      if (success) {
+        break; // Success - exit retry loop
+      }
       
-      // Handle specific error cases
-      if (error.response?.status === 404) {
-        // No escrow wallet found - this is normal for new projects
-        setEscrowWallet(null);
-        setUserEarnings(null);
-      } else {
-        // Other errors
-        setError("Failed to load escrow wallet data. Please try again.");
-        setEscrowWallet(null);
-        setUserEarnings(null);
+      retryCount++;
+      if (retryCount < maxRetries) {
+        console.log(`🔍 Retrying escrow wallet load (attempt ${retryCount + 1}/${maxRetries})`);
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
-    } finally {
-      setLoading(false);
     }
   };
-
-
 
   // Load team members
   const loadTeamMembers = async () => {
@@ -2430,6 +2519,57 @@ const ContributionPage = () => {
                           <p className="text-gray-400">No transaction history available</p>
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Debug Information (only show in development) */}
+                {import.meta.env.DEV && (
+                  <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-yellow-500/20 p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-yellow-400" />
+                      Debug Information (Development Only)
+                    </h3>
+                    
+                    <div className="space-y-3 text-sm">
+                      <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+                        <h4 className="font-medium text-gray-300 mb-2">Project & User Info</h4>
+                        <div className="space-y-1 text-gray-400">
+                          <div>Project ID: {projectId}</div>
+                          <div>User ID: {user?._id}</div>
+                          <div>Auth Token: {localStorage.getItem('token') ? 'Present' : 'Missing'}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+                        <h4 className="font-medium text-gray-300 mb-2">Escrow Wallet Status</h4>
+                        <div className="space-y-1 text-gray-400">
+                          <div>Escrow Wallet: {escrowWallet ? 'Found' : 'Not Found'}</div>
+                          <div>User Earnings: {userEarnings ? 'Found' : 'Not Found'}</div>
+                          <div>Loading: {loading ? 'Yes' : 'No'}</div>
+                          <div>Error: {error || 'None'}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+                        <h4 className="font-medium text-gray-300 mb-2">API Endpoints</h4>
+                        <div className="space-y-1 text-gray-400">
+                          <div>User Escrow: {import.meta.env.VITE_API_URL}/api/escrow/user/{projectId}</div>
+                          <div>User Status: {import.meta.env.VITE_API_URL}/api/escrow/user/{projectId}/status</div>
+                        </div>
+                      </div>
+
+                      <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+                        <h4 className="font-medium text-gray-300 mb-2">Actions</h4>
+                        <button
+                          onClick={loadEscrowWalletData}
+                          disabled={loading}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg text-sm flex items-center gap-2"
+                        >
+                          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                          {loading ? 'Loading...' : 'Refresh Escrow Data'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

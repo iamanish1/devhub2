@@ -141,12 +141,45 @@ export const escrowWalletApi = {
    */
   getUserEscrowWallet: async (projectId) => {
     try {
-      const response = await createAuthInstance().get(
+      // Create a custom axios instance without the global interceptor for this call
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const customAxios = axios.create({
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Add a custom response interceptor for this specific call
+      customAxios.interceptors.response.use(
+        (response) => response,
+        (error) => {
+          // Don't trigger global logout for this specific API call
+          // Just return the error to be handled by the component
+          return Promise.reject(error);
+        }
+      );
+
+      const response = await customAxios.get(
         API_ENDPOINTS.GET_USER_ESCROW(projectId)
       );
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      // Log the error details for debugging
+      console.error('🔍 getUserEscrowWallet error:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.response?.config?.url
+      });
+      
+      // Re-throw the error to be handled by the component
+      throw error;
     }
   },
 
