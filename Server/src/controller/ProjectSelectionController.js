@@ -455,32 +455,17 @@ export const manualSelection = async (req, res) => {
     let escrowCreated = false;
     if (selection.status === "completed") {
       try {
-        // Check if escrow wallet already exists
-        const existingEscrow = await EscrowWallet.findOne({ projectId });
-        if (!existingEscrow) {
-          // Calculate bonus pool amount (minimum ₹200 per contributor)
-          const bonusPoolAmount = Math.max(200 * selection.selectedUsers.length, 200);
-          
-          // Create escrow wallet
-          const escrowWallet = new EscrowWallet({
-            projectId,
-            projectOwner: req.user._id,
-            totalBonusPool: bonusPoolAmount,
-            bonusPoolDistribution: {
-              totalContributors: selection.selectedUsers.length,
-              amountPerContributor: Math.floor(bonusPoolAmount / selection.selectedUsers.length),
-              distributedAmount: 0,
-              remainingAmount: bonusPoolAmount
-            },
-            status: 'active'
-          });
-
-          await escrowWallet.save();
+        // Use the new function to create escrow wallet if ready
+        const { createEscrowWalletIfReady } = await import('./EscrowWalletController.js');
+        const escrowWallet = await createEscrowWalletIfReady(projectId, req.user._id);
+        
+        if (escrowWallet) {
+          escrowCreated = true;
 
           // Lock funds for each selected user
           for (const selectedUser of selection.selectedUsers) {
             try {
-              const bonusAmount = Math.floor(bonusPoolAmount / selection.selectedUsers.length);
+              const bonusAmount = escrowWallet.bonusPoolDistribution.amountPerContributor;
               
               logger.info(
                 `[ProjectSelection] Locking funds for user ${selectedUser.userId}: bidAmount=${selectedUser.bidAmount}, bonusAmount=${bonusAmount}`
@@ -523,14 +508,13 @@ export const manualSelection = async (req, res) => {
 
           await escrowWallet.save();
           await selection.save();
-          escrowCreated = true;
 
           logger.info(
             `[ProjectSelection] Escrow wallet created and funds locked for project: ${projectId}`
           );
         } else {
           logger.info(
-            `[ProjectSelection] Escrow wallet already exists for project: ${projectId}`
+            `[ProjectSelection] Escrow wallet not created - bonus pool not funded or already exists for project: ${projectId}`
           );
         }
       } catch (escrowError) {

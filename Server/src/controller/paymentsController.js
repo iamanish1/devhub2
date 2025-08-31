@@ -1001,14 +1001,64 @@ export const verifyPaymentWithRazorpay = async (req, res) => {
         // Handle different payment purposes
         switch (intent.purpose) {
           case 'bonus_funding':
-            // Update bonus pool status
-            if (intent.projectId) {
+            // Create or update bonus pool
+            const bonusAmount = intent.amount;
+            const contributorCount = intent.notes?.contributorsCount || 1;
+            const amountPerContributor = Math.floor(bonusAmount / contributorCount);
+            const isNewProject = intent.notes?.isNewProject;
+            
+            if (isNewProject) {
+              // For new projects, create a temporary bonus pool record
+              await BonusPool.create({
+                projectId: null, // Will be updated when project is created
+                projectOwner: intent.userId,
+                totalAmount: bonusAmount,
+                contributorCount,
+                amountPerContributor,
+                status: 'funded',
+                paymentIntentId: intent._id,
+                orderId: orderId,
+                fundedAt: new Date(),
+                projectTitle: intent.notes?.projectTitle,
+                isNewProject: true
+              });
+            } else {
+              // For existing projects, update the bonus pool
+              await BonusPool.findOneAndUpdate(
+                { projectId: intent.projectId },
+                { 
+                  $set: { 
+                    projectOwner: intent.userId,
+                    totalAmount: bonusAmount,
+                    contributorCount,
+                    amountPerContributor,
+                    status: 'funded',
+                    paymentIntentId: intent._id,
+                    orderId: orderId,
+                    fundedAt: new Date()
+                  } 
+                },
+                { upsert: true }
+              );
+              
               await ProjectListing.findByIdAndUpdate(intent.projectId, { 
                 $set: { 
                   'bonus.funded': true,
                   'bonus.razorpayOrderId': orderId
                 } 
               });
+
+              // Check if project selection is completed and create escrow wallet if possible
+              try {
+                const { createEscrowWalletIfReady } = await import('./EscrowWalletController.js');
+                const escrowWallet = await createEscrowWalletIfReady(intent.projectId, intent.userId);
+                if (escrowWallet) {
+                  console.log(`[Payment Verification] Created escrow wallet for project: ${intent.projectId}`);
+                }
+              } catch (escrowError) {
+                console.error(`[Payment Verification] Error creating escrow wallet:`, escrowError);
+                // Don't fail the payment verification if escrow creation fails
+              }
             }
             break;
             

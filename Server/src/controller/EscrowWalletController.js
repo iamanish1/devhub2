@@ -512,6 +512,71 @@ async function processPaymentToUser(userId, amount, projectId, bidId) {
 }
 
 /**
+ * Create escrow wallet automatically when both bonus funding and project selection are completed
+ */
+export const createEscrowWalletIfReady = async (projectId, userId) => {
+  try {
+    // Check if escrow wallet already exists
+    const existingEscrow = await EscrowWallet.findOne({ projectId });
+    if (existingEscrow) {
+      logger.info(`[EscrowWallet] Escrow wallet already exists for project: ${projectId}`);
+      return existingEscrow;
+    }
+
+    // Check if project selection is completed
+    const { default: ProjectSelection } = await import('../Model/ProjectSelectionModel.js');
+    const selection = await ProjectSelection.findOne({ projectId });
+    if (!selection || selection.status !== 'completed') {
+      logger.info(`[EscrowWallet] Project selection not completed for project: ${projectId}`);
+      return null;
+    }
+
+    // Check if bonus pool has been funded
+    const bonusPool = await BonusPool.findOne({ projectId });
+    if (!bonusPool || bonusPool.status !== 'funded') {
+      logger.info(`[EscrowWallet] Bonus pool not funded for project: ${projectId}`);
+      return null;
+    }
+
+    // Create escrow wallet
+    const escrowWallet = new EscrowWallet({
+      projectId,
+      projectOwner: userId,
+      totalBonusPool: bonusPool.totalAmount,
+      bonusPoolDistribution: {
+        totalContributors: selection.selectedUsers.length,
+        amountPerContributor: Math.floor(bonusPool.totalAmount / selection.selectedUsers.length),
+        distributedAmount: 0,
+        remainingAmount: bonusPool.totalAmount
+      },
+      status: 'active'
+    });
+
+    await escrowWallet.save();
+
+    // Send notification to project owner
+    try {
+      await notificationService.sendEscrowCreatedNotification(
+        userId,
+        projectId,
+        bonusPool.totalAmount,
+        selection.selectedUsers.length
+      );
+    } catch (notificationError) {
+      logger.error(`[EscrowWallet] Notification failed: ${notificationError.message}`);
+    }
+
+    logger.info(`[EscrowWallet] Created escrow wallet for project: ${projectId}, Bonus pool: ${bonusPool.totalAmount}`);
+
+    return escrowWallet;
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in createEscrowWalletIfReady: ${error.message}`, error);
+    return null;
+  }
+};
+
+/**
  * Get escrow statistics
  */
 export const getEscrowStats = async (req, res) => {
