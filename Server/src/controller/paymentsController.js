@@ -178,13 +178,19 @@ export const createBonus = async (req, res) => {
         throw new ApiError(404, 'Project not found or access denied');
       }
 
-      // Check if bonus already funded
-      if (project.bonus?.funded) {
-        throw new ApiError(400, 'Bonus already funded for this project');
+      // Check if bonus pool already exists and is funded
+      const existingBonusPool = await BonusPool.findOne({ projectId });
+      if (existingBonusPool && existingBonusPool.status === 'funded') {
+        throw new ApiError(400, 'Bonus pool already funded for this project');
       }
 
-      // Calculate minimum bonus amount
-      minBonus = BONUS_PER_CONTRIBUTOR * contributorsCount;
+      // Use the project's bonus pool amount if available
+      if (project.bonus_pool_amount && project.bonus_pool_contributors) {
+        minBonus = project.bonus_pool_amount * project.bonus_pool_contributors;
+      } else {
+        // Calculate minimum bonus amount
+        minBonus = BONUS_PER_CONTRIBUTOR * contributorsCount;
+      }
     }
 
     // Create payment intent
@@ -1024,7 +1030,7 @@ export const verifyPaymentWithRazorpay = async (req, res) => {
               });
             } else {
               // For existing projects, update the bonus pool
-              await BonusPool.findOneAndUpdate(
+              const updatedBonusPool = await BonusPool.findOneAndUpdate(
                 { projectId: intent.projectId },
                 { 
                   $set: { 
@@ -1038,8 +1044,10 @@ export const verifyPaymentWithRazorpay = async (req, res) => {
                     fundedAt: new Date()
                   } 
                 },
-                { upsert: true }
+                { upsert: true, new: true }
               );
+
+              console.log(`[Payment Verification] Updated bonus pool: ${updatedBonusPool._id} for project: ${intent.projectId}`);
               
               await ProjectListing.findByIdAndUpdate(intent.projectId, { 
                 $set: { 

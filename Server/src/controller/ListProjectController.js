@@ -1,4 +1,6 @@
 import ProjectListing from "../Model/ProjectListingModel.js";
+import BonusPool from "../Model/BonusPoolModel.js";
+
 const ListProject = async (req, res) => {
   try {
     const {
@@ -90,9 +92,31 @@ const ListProject = async (req, res) => {
       bonus_pool_contributors: bonus_pool_contributors || 1,
     });
     await project.save();
+
+    // Create a pending bonus pool record for the project
+    const totalBonusAmount = (bonus_pool_amount || 200) * (bonus_pool_contributors || 1);
+    const bonusPool = new BonusPool({
+      projectId: project._id,
+      projectOwner: userId,
+      totalAmount: totalBonusAmount,
+      contributorCount: bonus_pool_contributors || 1,
+      amountPerContributor: bonus_pool_amount || 200,
+      status: 'pending', // Will be updated to 'funded' when payment is completed
+      projectTitle: project_Title,
+      isNewProject: false
+    });
+    await bonusPool.save();
+
+    console.log(`[ProjectListing] Created project: ${project._id} with pending bonus pool: ${bonusPool._id}`);
+
     res.status(200).json({
       message: "Project listed successfully",
       project,
+      bonusPool: {
+        id: bonusPool._id,
+        totalAmount: bonusPool.totalAmount,
+        status: bonusPool.status
+      }
     });
   } catch (error) {
     res.status(500).json({
