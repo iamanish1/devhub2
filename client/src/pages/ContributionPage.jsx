@@ -2354,7 +2354,7 @@ const ContributionPage = () => {
                               Payment Ready for Withdrawal
                             </h4>
                             <p className="text-sm text-green-200 mt-1">
-                              Your earnings have been released and are ready to be withdrawn to your wallet.
+                              Your earnings have been released and are ready to be moved to your available balance.
                             </p>
                           </div>
                         </div>
@@ -2373,7 +2373,7 @@ const ContributionPage = () => {
                         ) : (
                           <>
                             <DollarSign className="w-4 h-4" />
-                            Withdraw ₹{userEarnings?.totalAmount || 0} to Wallet
+                            Move ₹{userEarnings?.totalAmount || 0} to Available Balance
                           </>
                         )}
                       </button>

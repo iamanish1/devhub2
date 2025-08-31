@@ -888,15 +888,14 @@ export const getUserEscrowStatus = async (req, res) => {
 };
 
 /**
- * Request withdrawal of user's escrow funds
+ * Move released funds to user's available balance (Step 1 of withdrawal)
  */
-export const requestUserWithdrawal = async (req, res) => {
+export const moveFundsToBalance = async (req, res) => {
   try {
     const { projectId } = req.params;
     const userId = req.user._id;
-    const { withdrawalMethod = 'razorpay', accountDetails } = req.body;
 
-    logger.info(`[EscrowWallet] User ${userId} requesting withdrawal for project ${projectId}`);
+    logger.info(`[EscrowWallet] User ${userId} requesting to move funds to balance for project ${projectId}`);
 
     // Get escrow wallet
     const escrowWallet = await EscrowWallet.findOne({ projectId });
@@ -913,59 +912,168 @@ export const requestUserWithdrawal = async (req, res) => {
       return res.status(404).json({ message: 'No escrow funds found for this user' });
     }
 
-    // Check if funds can be withdrawn
+    // Check if funds can be moved to balance
     if (userFunds.lockStatus !== 'released') {
       return res.status(400).json({ 
-        message: 'Funds cannot be withdrawn yet. They will be available after project completion.' 
+        message: 'Funds cannot be moved to balance yet. They will be available after project completion.' 
       });
     }
 
-    // Process withdrawal via Razorpay
-    try {
-      const payout = await processPaymentToUser(userId, userFunds.totalAmount, projectId, userFunds.bidId);
-      
-      // Update fund status to withdrawn
-      userFunds.lockStatus = 'withdrawn';
-      userFunds.withdrawnAt = new Date();
-      userFunds.withdrawalMethod = withdrawalMethod;
-      userFunds.accountDetails = accountDetails;
-      
-      await escrowWallet.save();
-
-      // Add audit log
-      escrowWallet.addAuditLog(
-        'withdrawal',
-        userFunds.totalAmount,
-        userId,
-        `User withdrawal processed via ${withdrawalMethod}`,
-        req.ip,
-        req.get('User-Agent')
-      );
-
-      await escrowWallet.save();
-
-      logger.info(`[EscrowWallet] Withdrawal processed for user ${userId}, amount: ${userFunds.totalAmount}`);
-
-      res.status(200).json({
-        message: 'Withdrawal request processed successfully',
-        withdrawal: {
-          amount: userFunds.totalAmount,
-          method: withdrawalMethod,
-          payoutId: payout.id,
-          status: payout.status
-        }
-      });
-
-    } catch (paymentError) {
-      logger.error(`[EscrowWallet] Payment processing failed: ${paymentError.message}`);
-      res.status(500).json({ 
-        message: 'Withdrawal processing failed. Please try again later.',
-        error: paymentError.message 
+    // Check if funds are already moved to balance
+    if (userFunds.lockStatus === 'moved_to_balance') {
+      return res.status(400).json({ 
+        message: 'Funds have already been moved to your available balance.' 
       });
     }
+
+    // Get user and update balance
+    const userDetails = await user.findById(userId);
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update user balance
+    userDetails.balance.available += userFunds.totalAmount;
+    userDetails.balance.total += userFunds.totalAmount;
+
+    // Update fund status
+    userFunds.lockStatus = 'moved_to_balance';
+    userFunds.movedToBalanceAt = new Date();
+
+    // Save both documents
+    await Promise.all([
+      userDetails.save(),
+      escrowWallet.save()
+    ]);
+
+    // Add audit log
+    escrowWallet.addAuditLog(
+      'move_to_balance',
+      userFunds.totalAmount,
+      userId,
+      `Funds moved to user's available balance`,
+      req.ip,
+      req.get('User-Agent')
+    );
+
+    await escrowWallet.save();
+
+    logger.info(`[EscrowWallet] Funds moved to balance for user ${userId}, amount: ${userFunds.totalAmount}`);
+
+    res.status(200).json({
+      message: 'Funds successfully moved to your available balance',
+      amount: userFunds.totalAmount,
+      newBalance: userDetails.balance.available,
+      totalEarnings: userDetails.balance.total
+    });
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in moveFundsToBalance: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+/**
+ * Request withdrawal from available balance to bank account (Step 2 of withdrawal)
+ */
+export const requestUserWithdrawal = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { amount, withdrawalMethod = 'bank_transfer' } = req.body;
+
+    logger.info(`[EscrowWallet] User ${userId} requesting withdrawal of ${amount} from available balance`);
+
+    // Validate amount
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid withdrawal amount' });
+    }
+
+    // Get user details
+    const userDetails = await user.findById(userId);
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has sufficient balance
+    if (userDetails.balance.available < amount) {
+      return res.status(400).json({ 
+        message: 'Insufficient available balance for withdrawal',
+        availableBalance: userDetails.balance.available,
+        requestedAmount: amount
+      });
+    }
+
+    // Check if user has bank details (for bank transfers)
+    if (withdrawalMethod === 'bank_transfer' && (!userDetails.bankDetails || !userDetails.bankDetails.accountNumber)) {
+      return res.status(400).json({ 
+        message: 'Bank account details not found. Please update your bank details before making a withdrawal.' 
+      });
+    }
+
+    // Create withdrawal record
+    const withdrawal = {
+      amount: amount,
+      status: 'pending',
+      method: withdrawalMethod,
+      referenceId: `WD_${userId}_${Date.now()}`,
+      createdAt: new Date(),
+      notes: `Withdrawal request via ${withdrawalMethod}`
+    };
+
+    userDetails.withdrawals.push(withdrawal);
+
+    // Update balance
+    userDetails.balance.available -= amount;
+    userDetails.balance.pending += amount;
+
+    await userDetails.save();
+
+    logger.info(`[EscrowWallet] Withdrawal request created for user ${userId}, amount: ${amount}`);
+
+    res.status(200).json({
+      message: 'Withdrawal request submitted successfully',
+      withdrawal: {
+        id: withdrawal.referenceId,
+        amount: withdrawal.amount,
+        status: withdrawal.status,
+        method: withdrawal.method,
+        createdAt: withdrawal.createdAt
+      },
+      newBalance: userDetails.balance.available,
+      pendingWithdrawals: userDetails.balance.pending
+    });
 
   } catch (error) {
     logger.error(`[EscrowWallet] Error in requestUserWithdrawal: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+/**
+ * Get user's balance and withdrawal information
+ */
+export const getUserBalance = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const userDetails = await user.findById(userId);
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get recent withdrawals
+    const recentWithdrawals = userDetails.withdrawals
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 10);
+
+    res.status(200).json({
+      balance: userDetails.balance,
+      bankDetails: userDetails.bankDetails,
+      recentWithdrawals: recentWithdrawals
+    });
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in getUserBalance: ${error.message}`, error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };

@@ -41,7 +41,34 @@ const UserSchema = new mongoose.Schema({
   subscription: {
     isActive: { type: Boolean, default: false },
     expiresAt: { type: Date }
-  }
+  },
+  // Balance and withdrawal system
+  balance: {
+    available: { type: Number, default: 0, min: 0 }, // Available balance for withdrawal
+    pending: { type: Number, default: 0, min: 0 },   // Pending withdrawals
+    total: { type: Number, default: 0, min: 0 }      // Total earnings
+  },
+  // Bank account details for withdrawals
+  bankDetails: {
+    accountNumber: String,
+    ifscCode: String,
+    accountHolderName: String,
+    bankName: String
+  },
+  // Withdrawal history
+  withdrawals: [{
+    amount: { type: Number, required: true },
+    status: { 
+      type: String, 
+      enum: ['pending', 'processing', 'completed', 'failed'],
+      default: 'pending'
+    },
+    method: { type: String, default: 'bank_transfer' },
+    referenceId: String,
+    createdAt: { type: Date, default: Date.now },
+    processedAt: Date,
+    notes: String
+  }]
 });
 
 const user = mongoose.model("user", UserSchema);

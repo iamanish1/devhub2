@@ -69,11 +69,12 @@ const EscrowWalletSchema = new mongoose.Schema({
     },
     lockStatus: {
       type: String,
-      enum: ['pending', 'locked', 'released', 'refunded', 'withdrawn'],
+      enum: ['pending', 'locked', 'released', 'moved_to_balance', 'refunded', 'withdrawn'],
       default: 'pending'
     },
     lockedAt: Date,
     releasedAt: Date,
+    movedToBalanceAt: Date,
     refundedAt: Date,
     // Payment details
     paymentIntentId: String,

@@ -11,7 +11,9 @@ import {
   getEscrowStats,
   getUserEscrowWallet,
   getUserEscrowStatus,
-  requestUserWithdrawal
+  requestUserWithdrawal,
+  moveFundsToBalance,
+  getUserBalance
 } from '../controller/EscrowWalletController.js';
 
 const escrowWalletRoutes = express.Router();
@@ -43,6 +45,13 @@ escrowWalletRoutes.get('/owner/stats', authMiddleware, getEscrowStats);
 // User escrow endpoints for contribution panel
 escrowWalletRoutes.get('/user/:projectId', authMiddleware, getUserEscrowWallet);
 escrowWalletRoutes.get('/user/:projectId/status', authMiddleware, getUserEscrowStatus);
+
+// New two-step withdrawal system
+escrowWalletRoutes.post('/user/:projectId/move-to-balance', authMiddleware, moveFundsToBalance);
+escrowWalletRoutes.post('/user/withdraw', authMiddleware, requestUserWithdrawal);
+escrowWalletRoutes.get('/user/balance', authMiddleware, getUserBalance);
+
+// Legacy withdrawal endpoint (keeping for backward compatibility)
 escrowWalletRoutes.post('/user/:projectId/withdraw', authMiddleware, requestUserWithdrawal);
 
 export default escrowWalletRoutes;

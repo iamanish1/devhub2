@@ -74,6 +74,10 @@ export const API_ENDPOINTS = {
   GET_USER_ESCROW: (projectId) => `${API_BASE_URL}/api/escrow/user/${projectId}`,
   GET_USER_ESCROW_STATUS: (projectId) => `${API_BASE_URL}/api/escrow/user/${projectId}/status`,
   REQUEST_USER_WITHDRAWAL: (projectId) => `${API_BASE_URL}/api/escrow/user/${projectId}/withdraw`,
+  // New two-step withdrawal system
+  MOVE_FUNDS_TO_BALANCE: (projectId) => `${API_BASE_URL}/api/escrow/user/${projectId}/move-to-balance`,
+  REQUEST_BALANCE_WITHDRAWAL: `${API_BASE_URL}/api/escrow/user/withdraw`,
+  GET_USER_BALANCE: `${API_BASE_URL}/api/escrow/user/balance`,
 
   // Project Task System endpoints
   PROJECT_TASKS_BASE: `${API_BASE_URL}/api/project-tasks`,

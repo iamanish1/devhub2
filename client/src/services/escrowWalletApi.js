@@ -210,6 +210,49 @@ export const escrowWalletApi = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  /**
+   * Move released funds to user's available balance (Step 1)
+   */
+  moveFundsToBalance: async (projectId) => {
+    try {
+      const response = await createAuthInstance().post(
+        API_ENDPOINTS.MOVE_FUNDS_TO_BALANCE(projectId)
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Request withdrawal from available balance to bank account (Step 2)
+   */
+  requestBalanceWithdrawal: async (amount, withdrawalMethod = 'bank_transfer') => {
+    try {
+      const response = await createAuthInstance().post(
+        API_ENDPOINTS.REQUEST_BALANCE_WITHDRAWAL,
+        { amount, withdrawalMethod }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get user's balance and withdrawal information
+   */
+  getUserBalance: async () => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_USER_BALANCE
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 
