@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectSelectionApi } from '../services/projectSelectionApi';
+import { escrowWalletApi } from '../services/escrowWalletApi';
 import { 
   Users, 
   Settings, 
@@ -17,7 +18,9 @@ import {
   Star,
   DollarSign,
   Briefcase,
-  Calendar
+  Calendar,
+  Wallet,
+  Shield
 } from 'lucide-react';
 
 const ProjectSelectionManager = () => {
@@ -32,6 +35,8 @@ const ProjectSelectionManager = () => {
   const [activeTab, setActiveTab] = useState('config');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showManualSelection, setShowManualSelection] = useState(false);
+  const [escrowWallet, setEscrowWallet] = useState(null);
+  const [escrowLoading, setEscrowLoading] = useState(false);
 
   // Configuration state
   const [config, setConfig] = useState({
@@ -73,11 +78,30 @@ const ProjectSelectionManager = () => {
             availability: 10
           }
         });
+
+        // Load escrow wallet data if selection is completed
+        if (selectionData.selection.status === 'completed') {
+          await loadEscrowWalletData();
+        }
       }
     } catch (err) {
       setError(err.message || 'Failed to load selection data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load escrow wallet data
+  const loadEscrowWalletData = async () => {
+    try {
+      setEscrowLoading(true);
+      const data = await escrowWalletApi.getEscrowWallet(projectId);
+      setEscrowWallet(data.escrowWallet);
+    } catch (error) {
+      console.error('Failed to load escrow wallet data:', error);
+      setEscrowWallet(null);
+    } finally {
+      setEscrowLoading(false);
     }
   };
 
@@ -110,6 +134,12 @@ const ProjectSelectionManager = () => {
       
       const result = await projectSelectionApi.executeAutomaticSelection(projectId);
       setSelection(result.selection);
+      
+      // If escrow was created, load escrow data
+      if (result.escrowCreated) {
+        await loadEscrowWalletData();
+      }
+      
       setActiveTab('results');
     } catch (err) {
       setError(err.message || 'Failed to execute automatic selection');
@@ -140,10 +170,16 @@ const ProjectSelectionManager = () => {
       setLoading(true);
       setError(null);
       
-      await projectSelectionApi.manualSelection(projectId, selectedUsers, 'manual_selection');
+      const result = await projectSelectionApi.manualSelection(projectId, selectedUsers, 'manual_selection');
       await loadSelectionData();
       setShowManualSelection(false);
       setSelectedUsers([]);
+      
+      // If escrow was created, load escrow data
+      if (result.escrowCreated) {
+        await loadEscrowWalletData();
+      }
+      
       setActiveTab('results');
     } catch (err) {
       setError(err.message || 'Failed to complete manual selection');
@@ -607,14 +643,84 @@ const ProjectSelectionManager = () => {
           </div>
 
           {selection.status === 'completed' && (
-            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center">
-                <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
-                <span className="text-green-800">
-                  Selection completed successfully! Selected users have been notified and can now access the project workspace.
-                </span>
+            <>
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
+                  <span className="text-green-800">
+                    Selection completed successfully! Selected users have been notified and can now access the project workspace.
+                  </span>
+                </div>
               </div>
-            </div>
+
+              {/* Escrow Wallet Management Section */}
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <Wallet className="w-6 h-6 text-blue-600 mr-2" />
+                    <h3 className="text-lg font-semibold text-blue-900">Escrow Wallet Management</h3>
+                  </div>
+                  <Shield className="w-5 h-5 text-blue-600" />
+                </div>
+
+                {escrowLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-600 mr-2" />
+                    <span className="text-blue-800">Loading escrow wallet...</span>
+                  </div>
+                ) : escrowWallet ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white rounded-lg p-4 border border-blue-200">
+                        <div className="text-sm text-blue-600 mb-1">Total Bonus Pool</div>
+                        <div className="text-2xl font-bold text-blue-900">₹{escrowWallet.totalBonusPool}</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 border border-blue-200">
+                        <div className="text-sm text-blue-600 mb-1">Locked Funds</div>
+                        <div className="text-2xl font-bold text-blue-900">₹{escrowWallet.totalEscrowAmount || 0}</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 border border-blue-200">
+                        <div className="text-sm text-blue-600 mb-1">Per Contributor</div>
+                        <div className="text-2xl font-bold text-blue-900">₹{escrowWallet.bonusPoolDistribution?.amountPerContributor || 0}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => navigate(`/escrow-wallet/${projectId}`)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
+                      >
+                        <Wallet className="w-4 h-4" />
+                        Manage Escrow Wallet
+                      </button>
+                      <button
+                        onClick={() => navigate(`/admin/`)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Go to Admin Panel
+                      </button>
+                    </div>
+
+                    <div className="text-sm text-blue-700 bg-blue-100 p-3 rounded-lg">
+                      <strong>Escrow Status:</strong> Funds have been automatically locked in escrow for all selected contributors. 
+                      The escrow wallet will be managed through the dedicated escrow management interface.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Wallet className="w-12 h-12 text-blue-400 mx-auto mb-2" />
+                    <p className="text-blue-800 mb-3">Escrow wallet is being created...</p>
+                    <button
+                      onClick={loadEscrowWalletData}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+                    >
+                      Refresh Status
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}

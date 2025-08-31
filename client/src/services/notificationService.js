@@ -105,6 +105,7 @@ export const notificationService = {
    */
   escrowUpdate: (action, amount, projectTitle) => {
     const messages = {
+      created: `🔒 Escrow wallet created for "${projectTitle}"`,
       locked: `💰 ₹${amount} locked in escrow for "${projectTitle}"`,
       released: `✅ ₹${amount} released from escrow for "${projectTitle}"`,
       refunded: `↩️ ₹${amount} refunded from escrow for "${projectTitle}"`,
@@ -115,6 +116,8 @@ export const notificationService = {
     
     if (action === 'completed') {
       notificationService.success(message, { duration: 8000 });
+    } else if (action === 'created') {
+      notificationService.success(message, { duration: 6000 });
     } else if (action === 'refunded') {
       notificationService.warning(message, { duration: 6000 });
     } else {

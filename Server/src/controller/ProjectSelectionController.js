@@ -348,6 +348,84 @@ export const executeAutomaticSelection = async (req, res) => {
       } 
       
 
+      // Create escrow wallet and lock funds for selected users
+      try {
+        // Calculate bonus pool amount (minimum ₹200 per contributor)
+        const bonusPoolAmount = Math.max(200 * result.selectedUsers.length, 200);
+        
+        // Create escrow wallet
+        const escrowWallet = new EscrowWallet({
+          projectId,
+          projectOwner: req.user._id,
+          totalBonusPool: bonusPoolAmount,
+          bonusPoolDistribution: {
+            totalContributors: result.selectedUsers.length,
+            amountPerContributor: Math.floor(bonusPoolAmount / result.selectedUsers.length),
+            distributedAmount: 0,
+            remainingAmount: bonusPoolAmount
+          },
+          status: 'active'
+        });
+
+        await escrowWallet.save();
+
+        // Lock funds for each selected user
+        for (const selectedUser of result.selectedUsers) {
+          try {
+            const bonusAmount = Math.floor(bonusPoolAmount / result.selectedUsers.length);
+            escrowWallet.lockUserFunds(
+              selectedUser.userId, 
+              selectedUser.bidId, 
+              selectedUser.bidAmount || 0, 
+              bonusAmount
+            );
+
+            // Update selection record to mark escrow as locked
+            const userSelection = selection.selectedUsers.find(
+              user => user.userId.toString() === selectedUser.userId.toString()
+            );
+            if (userSelection) {
+              userSelection.escrowLocked = true;
+              userSelection.escrowLockedAt = new Date();
+            }
+
+            logger.info(
+              `[ProjectSelection] Funds locked in escrow for user ${selectedUser.userId} on project ${projectId}`
+            );
+
+            // Send escrow funds locked notification
+            try {
+              await notificationService.sendEscrowFundsLockedNotification(
+                selectedUser.userId,
+                projectId,
+                selectedUser.bidAmount || 0,
+                bonusAmount
+              );
+            } catch (notificationError) {
+              logger.error(
+                `[ProjectSelection] Escrow notification failed for user ${selectedUser.userId}: ${notificationError.message}`
+              );
+            }
+          } catch (escrowError) {
+            logger.error(
+              `[ProjectSelection] Failed to lock funds for user ${selectedUser.userId}: ${escrowError.message}`
+            );
+          }
+        }
+
+        await escrowWallet.save();
+        await selection.save();
+
+        logger.info(
+          `[ProjectSelection] Escrow wallet created and funds locked for project: ${projectId}`
+        );
+      } catch (escrowError) {
+        logger.error(
+          `[ProjectSelection] Failed to create escrow wallet: ${escrowError.message}`
+        );
+        // Don't fail the selection process if escrow creation fails
+      }
+
       // Send notification to project owner
       try {
         await notificationService.sendSelectionStartedNotification(
@@ -374,6 +452,7 @@ export const executeAutomaticSelection = async (req, res) => {
         message: result.message,
         selection,
         result,
+        escrowCreated: true
       });
     } else {
       // Update status to failed
@@ -634,6 +713,91 @@ export const manualSelection = async (req, res) => {
       }
     }
 
+    // Create escrow wallet and lock funds if selection is completed
+    let escrowCreated = false;
+    if (selection.status === "completed") {
+      try {
+        // Check if escrow wallet already exists
+        const existingEscrow = await EscrowWallet.findOne({ projectId });
+        if (!existingEscrow) {
+          // Calculate bonus pool amount (minimum ₹200 per contributor)
+          const bonusPoolAmount = Math.max(200 * selection.selectedUsers.length, 200);
+          
+          // Create escrow wallet
+          const escrowWallet = new EscrowWallet({
+            projectId,
+            projectOwner: req.user._id,
+            totalBonusPool: bonusPoolAmount,
+            bonusPoolDistribution: {
+              totalContributors: selection.selectedUsers.length,
+              amountPerContributor: Math.floor(bonusPoolAmount / selection.selectedUsers.length),
+              distributedAmount: 0,
+              remainingAmount: bonusPoolAmount
+            },
+            status: 'active'
+          });
+
+          await escrowWallet.save();
+
+          // Lock funds for each selected user
+          for (const selectedUser of selection.selectedUsers) {
+            try {
+              const bonusAmount = Math.floor(bonusPoolAmount / selection.selectedUsers.length);
+              escrowWallet.lockUserFunds(
+                selectedUser.userId, 
+                selectedUser.bidId, 
+                selectedUser.bidAmount || 0, 
+                bonusAmount
+              );
+
+              // Update selection record to mark escrow as locked
+              selectedUser.escrowLocked = true;
+              selectedUser.escrowLockedAt = new Date();
+
+              logger.info(
+                `[ProjectSelection] Funds locked in escrow for user ${selectedUser.userId} on project ${projectId}`
+              );
+
+              // Send escrow funds locked notification
+              try {
+                await notificationService.sendEscrowFundsLockedNotification(
+                  selectedUser.userId,
+                  projectId,
+                  selectedUser.bidAmount || 0,
+                  bonusAmount
+                );
+              } catch (notificationError) {
+                logger.error(
+                  `[ProjectSelection] Escrow notification failed for user ${selectedUser.userId}: ${notificationError.message}`
+                );
+              }
+            } catch (escrowError) {
+              logger.error(
+                `[ProjectSelection] Failed to lock funds for user ${selectedUser.userId}: ${escrowError.message}`
+              );
+            }
+          }
+
+          await escrowWallet.save();
+          await selection.save();
+          escrowCreated = true;
+
+          logger.info(
+            `[ProjectSelection] Escrow wallet created and funds locked for project: ${projectId}`
+          );
+        } else {
+          logger.info(
+            `[ProjectSelection] Escrow wallet already exists for project: ${projectId}`
+          );
+        }
+      } catch (escrowError) {
+        logger.error(
+          `[ProjectSelection] Failed to create escrow wallet: ${escrowError.message}`
+        );
+        // Don't fail the selection process if escrow creation fails
+      }
+    }
+
     logger.info(
       `[ProjectSelection] Manual selection completed for project: ${projectId}. Selected: ${selectedUsers.length} users`
     );
@@ -643,6 +807,7 @@ export const manualSelection = async (req, res) => {
       message: `Successfully selected ${selectedUsers.length} users`,
       selection,
       selectedUsers,
+      escrowCreated
     });
   } catch (error) {
     logger.error(

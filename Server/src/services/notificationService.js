@@ -555,6 +555,35 @@ Funds will be locked when users are selected.`
       throw error;
     }
   }
+
+  /**
+   * Send escrow funds locked notification to selected users
+   */
+  async sendEscrowFundsLockedNotification(userId, projectId, bidAmount, bonusAmount) {
+    try {
+      const project = await ProjectListing.findById(projectId);
+      const userDetails = await user.findById(userId);
+
+      if (!project || !userDetails) {
+        throw new Error('Project or user not found');
+      }
+
+      const data = {
+        userName: userDetails.username,
+        projectTitle: project.project_Title,
+        projectId: projectId,
+        bidAmount: bidAmount,
+        bonusAmount: bonusAmount,
+        totalAmount: bidAmount + bonusAmount
+      };
+
+      return await this.sendNotification(userId, 'escrow_funds_locked', data, ['email', 'push']);
+
+    } catch (error) {
+      this.logger.error(`[NotificationService] Error sending escrow funds locked notification:`, error);
+      throw error;
+    }
+  }
 }
 
 export default new NotificationService();

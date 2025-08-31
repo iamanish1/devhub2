@@ -810,7 +810,11 @@ const AdminPage = () => {
             totalBidders: result.totalBidders
           }, { merge: true });
 
-          notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected.`);
+          if (result.escrowCreated) {
+            notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected. Escrow wallet created and funds locked.`);
+          } else {
+            notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected.`);
+          }
         } else {
           notificationService.error(result.message || "Automatic selection failed");
         }
@@ -876,7 +880,11 @@ const AdminPage = () => {
             totalBidders: selectedUserIds.length
           }, { merge: true });
 
-          notificationService.success(`Manual selection completed! ${selectedUserIds.length} contributors selected.`);
+          if (result.escrowCreated) {
+            notificationService.success(`Manual selection completed! ${selectedUserIds.length} contributors selected. Escrow wallet created and funds locked.`);
+          } else {
+            notificationService.success(`Manual selection completed! ${selectedUserIds.length} contributors selected.`);
+          }
         } else {
           notificationService.error(result.message || "Manual selection failed");
         }
@@ -1576,6 +1584,15 @@ const AdminPage = () => {
                                 <span className="text-gray-400">Selected:</span>
                                 <span className="text-white ml-2">{selectionConfig.selectedUsers?.length || 0} users</span>
                               </div>
+                              {selectionConfig.status === 'completed' && (
+                                <div>
+                                  <span className="text-gray-400">Escrow:</span>
+                                  <span className="text-green-400 ml-2 flex items-center gap-1">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                    Funds Locked
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
