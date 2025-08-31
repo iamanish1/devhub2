@@ -163,7 +163,7 @@ const EscrowWalletSchema = new mongoose.Schema({
     auditLog: [{
       action: {
         type: String,
-        enum: ['lock', 'release', 'refund', 'audit'],
+        enum: ['lock', 'release', 'refund', 'audit', 'move_to_balance'],
         required: true
       },
       amount: Number,
