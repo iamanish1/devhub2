@@ -329,22 +329,20 @@ const AdminPage = () => {
       
       console.log('🔍 Loading escrow data for admin panel...');
       
-      const [escrowsRes, statsRes] = await Promise.all([
-        escrowWalletApi.getProjectOwnerEscrows(),
-        escrowWalletApi.getEscrowStats()
-      ]);
+      const escrowsRes = await escrowWalletApi.getProjectOwnerEscrows();
       
       console.log('🔍 Escrow wallets response:', escrowsRes);
-      console.log('🔍 Escrow stats response:', statsRes);
       
       const escrowWallets = escrowsRes.escrowWallets || [];
-      const stats = statsRes.stats || {};
+      
+      // Calculate stats from escrow wallets data
+      const calculatedStats = calculateEscrowStats(escrowWallets);
       
       console.log('🔍 Setting escrow wallets:', escrowWallets);
-      console.log('🔍 Setting escrow stats:', stats);
+      console.log('🔍 Calculated stats:', calculatedStats);
       
       setEscrowWallets(escrowWallets);
-      setEscrowStats(stats);
+      setEscrowStats(calculatedStats);
       setEscrowError(null);
       
       // Set up Firebase real-time listeners for escrow updates
@@ -362,6 +360,41 @@ const AdminPage = () => {
     }
   };
 
+  // Calculate escrow stats from wallets data
+  const calculateEscrowStats = (wallets) => {
+    const stats = {
+      totalWallets: wallets.length,
+      totalLockedFunds: 0,
+      totalBonusPool: 0,
+      completedProjects: 0,
+      activeWallets: 0,
+      totalContributors: 0
+    };
+
+    wallets.forEach(wallet => {
+      // Total locked funds (total escrow amount)
+      stats.totalLockedFunds += wallet.totalEscrowAmount || 0;
+      
+      // Total bonus pool
+      stats.totalBonusPool += wallet.totalBonusPool || 0;
+      
+      // Count active wallets
+      if (wallet.status === 'active' || wallet.status === 'locked') {
+        stats.activeWallets++;
+      }
+      
+      // Count completed projects
+      if (wallet.projectCompletion?.isCompleted) {
+        stats.completedProjects++;
+      }
+      
+      // Total contributors across all wallets
+      stats.totalContributors += wallet.bonusPoolDistribution?.totalContributors || 0;
+    });
+
+    return stats;
+  };
+
   // Setup Firebase listeners for escrow real-time updates
   const setupEscrowFirebaseListeners = (escrowWallets) => {
     escrowWallets.forEach(wallet => {
@@ -369,9 +402,13 @@ const AdminPage = () => {
       const unsubscribe = onSnapshot(escrowRef, (doc) => {
         if (doc.exists()) {
           const updatedWallet = { id: doc.id, ...doc.data() };
-          setEscrowWallets(prev => 
-            prev.map(w => w._id === wallet._id ? updatedWallet : w)
-          );
+          setEscrowWallets(prev => {
+            const updatedWallets = prev.map(w => w._id === wallet._id ? updatedWallet : w);
+            // Recalculate stats when wallets are updated
+            const newStats = calculateEscrowStats(updatedWallets);
+            setEscrowStats(newStats);
+            return updatedWallets;
+          });
         }
       });
       
@@ -455,12 +492,11 @@ const AdminPage = () => {
       setEscrowForm({ projectId: '', bonusPoolAmount: '', completionNotes: '', qualityScore: 10 });
       
       // Refresh escrow data
-      const [escrowsRes, statsRes] = await Promise.all([
-        escrowWalletApi.getProjectOwnerEscrows(),
-        escrowWalletApi.getEscrowStats()
-      ]);
-      setEscrowWallets(escrowsRes.escrowWallets || []);
-      setEscrowStats(statsRes.stats || {});
+      const escrowsRes = await escrowWalletApi.getProjectOwnerEscrows();
+      const escrowWallets = escrowsRes.escrowWallets || [];
+      const calculatedStats = calculateEscrowStats(escrowWallets);
+      setEscrowWallets(escrowWallets);
+      setEscrowStats(calculatedStats);
       
     } catch (error) {
       console.error("Error completing project:", error);
@@ -480,12 +516,11 @@ const AdminPage = () => {
       notificationService.success("User funds released successfully");
       
       // Refresh escrow data
-      const [escrowsRes, statsRes] = await Promise.all([
-        escrowWalletApi.getProjectOwnerEscrows(),
-        escrowWalletApi.getEscrowStats()
-      ]);
-      setEscrowWallets(escrowsRes.escrowWallets || []);
-      setEscrowStats(statsRes.stats || {});
+      const escrowsRes = await escrowWalletApi.getProjectOwnerEscrows();
+      const escrowWallets = escrowsRes.escrowWallets || [];
+      const calculatedStats = calculateEscrowStats(escrowWallets);
+      setEscrowWallets(escrowWallets);
+      setEscrowStats(calculatedStats);
       
     } catch (error) {
       console.error("Error releasing user funds:", error);
@@ -505,12 +540,11 @@ const AdminPage = () => {
       notificationService.success("User funds refunded successfully");
       
       // Refresh escrow data
-      const [escrowsRes, statsRes] = await Promise.all([
-        escrowWalletApi.getProjectOwnerEscrows(),
-        escrowWalletApi.getEscrowStats()
-      ]);
-      setEscrowWallets(escrowsRes.escrowWallets || []);
-      setEscrowStats(statsRes.stats || {});
+      const escrowsRes = await escrowWalletApi.getProjectOwnerEscrows();
+      const escrowWallets = escrowsRes.escrowWallets || [];
+      const calculatedStats = calculateEscrowStats(escrowWallets);
+      setEscrowWallets(escrowWallets);
+      setEscrowStats(calculatedStats);
       
     } catch (error) {
       console.error("Error refunding user funds:", error);
@@ -1692,65 +1726,76 @@ const AdminPage = () => {
             ) : (
               <div className="space-y-6">
                 {/* Escrow Statistics */}
-                {escrowStats && (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-gradient-to-br from-blue-900/60 to-blue-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
-                      <FaWallet className="text-3xl text-blue-400 mx-auto mb-3" />
-                      <div className="text-2xl font-bold text-blue-400">
-                        {escrowStats.totalWallets || 0}
-                      </div>
-                      <div className="text-gray-300">Total Wallets</div>
+                {escrowLoading ? (
+                  <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                      <span className="ml-3 text-blue-400">Loading escrow statistics...</span>
                     </div>
-                    <div className="bg-gradient-to-br from-green-900/60 to-green-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
-                      <FaMoneyBillWave className="text-3xl text-green-400 mx-auto mb-3" />
-                      <div className="text-2xl font-bold text-green-400">
-                        ₹{escrowStats.totalLockedFunds || 0}
+                  </div>
+                ) : escrowStats ? (
+                  <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-2xl font-bold text-blue-400">Escrow Wallet Statistics</h2>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowEscrowModal(true)}
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition flex items-center gap-2 text-sm"
+                        >
+                          <FaWallet className="w-4 h-4" />
+                          Create Wallet
+                        </button>
+                        <button
+                          onClick={loadEscrowData}
+                          disabled={escrowLoading}
+                          className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-700 text-white px-3 py-1 rounded-lg transition flex items-center gap-2 text-sm"
+                        >
+                          <FaChartLine className="w-4 h-4" />
+                          {escrowLoading ? 'Refreshing...' : 'Refresh'}
+                        </button>
                       </div>
-                      <div className="text-gray-300">Locked Funds</div>
                     </div>
-                    <div className="bg-gradient-to-br from-purple-900/60 to-purple-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
-                      <FaShieldAlt className="text-3xl text-purple-400 mx-auto mb-3" />
-                      <div className="text-2xl font-bold text-purple-400">
-                        ₹{escrowStats.totalBonusPool || 0}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="bg-gradient-to-br from-blue-900/60 to-blue-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                        <FaWallet className="text-3xl text-blue-400 mx-auto mb-3" />
+                        <div className="text-2xl font-bold text-blue-400">
+                          {escrowStats.totalWallets || 0}
+                        </div>
+                        <div className="text-gray-300">Total Wallets</div>
                       </div>
-                      <div className="text-gray-300">Bonus Pool</div>
+                      <div className="bg-gradient-to-br from-green-900/60 to-green-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                        <FaMoneyBillWave className="text-3xl text-green-400 mx-auto mb-3" />
+                        <div className="text-2xl font-bold text-green-400">
+                          ₹{escrowStats.totalLockedFunds || 0}
+                        </div>
+                        <div className="text-gray-300">Locked Funds</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-900/60 to-purple-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                        <FaShieldAlt className="text-3xl text-purple-400 mx-auto mb-3" />
+                        <div className="text-2xl font-bold text-purple-400">
+                          ₹{escrowStats.totalBonusPool || 0}
+                        </div>
+                        <div className="text-gray-300">Bonus Pool</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-yellow-900/60 to-yellow-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
+                        <FaCheckCircle className="text-3xl text-yellow-400 mx-auto mb-3" />
+                        <div className="text-2xl font-bold text-yellow-400">
+                          {escrowStats.completedProjects || 0}
+                        </div>
+                        <div className="text-gray-300">Completed</div>
+                      </div>
                     </div>
-                    <div className="bg-gradient-to-br from-yellow-900/60 to-yellow-700/40 rounded-2xl shadow-lg p-6 text-center border border-blue-500/10">
-                      <FaCheckCircle className="text-3xl text-yellow-400 mx-auto mb-3" />
-                      <div className="text-2xl font-bold text-yellow-400">
-                        {escrowStats.completedProjects || 0}
-                      </div>
-                      <div className="text-gray-300">Completed</div>
+                  </div>
+                ) : (
+                  <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
+                    <div className="text-center py-8">
+                      <FaWallet className="text-4xl text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-400">No escrow statistics available</p>
                     </div>
                   </div>
                 )}
 
-                {/* Quick Actions */}
-                <div className="bg-[#232a34] rounded-2xl p-6 border border-blue-500/10">
-                  <h2 className="text-2xl font-bold mb-4 text-blue-400">Quick Actions</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                      onClick={() => setShowEscrowModal(true)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      <FaWallet />
-                      Create Escrow Wallet
-                    </button>
-                    <Link to="/escrow-wallet/new" className="block">
-                      <button className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2">
-                        <FaShieldAlt />
-                        Advanced Management
-                      </button>
-                    </Link>
-                    <button
-                      onClick={loadEscrowData}
-                      className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      <FaChartLine />
-                      Refresh Data
-                    </button>
-                  </div>
-                </div>
+
 
                 {/* Integration Status */}
                 <div className="bg-[#232a34] rounded-2xl p-6 border border-green-500/10">
