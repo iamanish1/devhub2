@@ -1112,7 +1112,11 @@ export const requestUserWithdrawal = async (req, res) => {
 
     // Update balance - deduct total amount (including fee)
     userDetails.balance.available -= totalAmountToDeduct;
-    userDetails.balance.pending += actualAmountReceived; // Only the actual withdrawal amount goes to pending
+    
+    // Only add to pending if the withdrawal is not immediately completed
+    if (withdrawal.status !== 'completed') {
+      userDetails.balance.pending += actualAmountReceived;
+    }
 
     await userDetails.save();
 
@@ -1125,8 +1129,13 @@ export const requestUserWithdrawal = async (req, res) => {
     if (payoutError) {
       responseMessage = 'Withdrawal request submitted but payout processing failed. Our team will contact you.';
     } else if (withdrawal.status === 'completed') {
-      responseMessage = 'Withdrawal processed successfully! Money will be transferred to your bank account immediately.';
+      responseMessage = '🎉 Withdrawal processed successfully! Money has been transferred to your bank account.';
       isImmediateSuccess = true;
+      
+      // Clear any pending balance since withdrawal is completed
+      if (userDetails.balance.pending > 0) {
+        userDetails.balance.pending = Math.max(0, userDetails.balance.pending - actualAmountReceived);
+      }
     } else if (!userDetails.bankDetails || !userDetails.bankDetails.accountNumber) {
       responseMessage = 'Withdrawal request submitted. Please update your bank details for faster processing.';
     } else if (withdrawal.status === 'pending') {

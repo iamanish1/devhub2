@@ -47,6 +47,12 @@ const WithdrawalPage = () => {
       setTotalEarnings(balanceData.balance?.total || 0);
       setPendingBalance(balanceData.balance?.pending || 0);
       setBankDetails(balanceData.bankDetails);
+      
+      // Also fetch withdrawal history from the same API
+      if (balanceData.recentWithdrawals) {
+        // Update the payment context with withdrawal history
+        // This will be handled by the context
+      }
     } catch (error) {
       console.error('Error fetching user balance:', error);
       notificationService.error('Failed to fetch balance information');
@@ -58,6 +64,13 @@ const WithdrawalPage = () => {
   useEffect(() => {
     fetchUserBalance();
     refreshData();
+    
+    // Set up periodic refresh to check for status updates
+    const interval = setInterval(() => {
+      fetchUserBalance();
+    }, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(interval);
   }, [refreshData]);
 
   const handleWithdrawalAmountChange = (e) => {
@@ -87,16 +100,21 @@ const WithdrawalPage = () => {
         'bank_transfer'
       );
       
-      // Show appropriate message based on response
-      if (response.isImmediateSuccess) {
-        notificationService.success('🎉 Withdrawal processed successfully! Money will be transferred to your bank account immediately.');
-      } else if (response.requiresBankDetails) {
-        notificationService.info('Withdrawal submitted. Please update your bank details for faster processing.');
-      } else if (response.processingTime === 'immediate') {
-        notificationService.success('✅ Withdrawal processed immediately! Check your bank account.');
-      } else {
-        notificationService.success(response.message || 'Withdrawal request submitted successfully');
-      }
+             // Show appropriate message based on response
+       if (response.isImmediateSuccess) {
+         notificationService.success('🎉 Withdrawal processed successfully! Money has been transferred to your bank account.');
+         
+         // Show additional info about the transfer
+         setTimeout(() => {
+           notificationService.info(`💰 Amount transferred: ${formatCurrency(response.withdrawal.amount)} | Fee deducted: ${formatCurrency(response.withdrawal.fee)}`);
+         }, 2000);
+       } else if (response.requiresBankDetails) {
+         notificationService.info('Withdrawal submitted. Please update your bank details for faster processing.');
+       } else if (response.processingTime === 'immediate') {
+         notificationService.success('✅ Withdrawal processed immediately! Check your bank account.');
+       } else {
+         notificationService.success(response.message || 'Withdrawal request submitted successfully');
+       }
       
       // Refresh balance data
       await fetchUserBalance();
@@ -182,19 +200,22 @@ const WithdrawalPage = () => {
             </div>
           </div>
 
-          <div className="glass rounded-xl p-6 border border-gray-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Pending Withdrawals</p>
-                <p className="text-2xl font-bold text-white">{formatCurrency(pendingBalance)}</p>
-              </div>
-              <div className="text-[#00A8E8]">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
+                     <div className="glass rounded-xl p-6 border border-gray-700">
+             <div className="flex items-center justify-between">
+               <div>
+                 <p className="text-gray-400 text-sm">Pending Withdrawals</p>
+                 <p className="text-2xl font-bold text-white">{formatCurrency(pendingBalance)}</p>
+                 {pendingBalance > 0 && (
+                   <p className="text-yellow-400 text-xs mt-1">⏳ Processing...</p>
+                 )}
+               </div>
+               <div className="text-[#00A8E8]">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                 </svg>
+               </div>
+             </div>
+           </div>
 
           <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
@@ -377,13 +398,13 @@ const WithdrawalPage = () => {
           </div>
         </div>
 
-        {/* Withdrawal History */}
-        <div className="glass rounded-xl p-6 border border-gray-700">
-          <h2 className="text-2xl font-bold text-white mb-6">Withdrawal History</h2>
+                 {/* Withdrawal History */}
+         <div className="glass rounded-xl p-6 border border-gray-700">
+           <h2 className="text-2xl font-bold text-white mb-6">Withdrawal History</h2>
 
-          {isProcessing ? (
-            <LoadingSpinner />
-          ) : withdrawalHistory?.length > 0 ? (
+           {isProcessing ? (
+             <LoadingSpinner />
+           ) : withdrawalHistory?.length > 0 ? (
             <div className="space-y-4">
               {withdrawalHistory.map((withdrawal) => (
                 <div
@@ -409,9 +430,12 @@ const WithdrawalPage = () => {
                       <p className="text-white font-bold text-lg">
                         {formatCurrency(withdrawal.amount)}
                       </p>
-                      <p className={`text-sm font-medium ${getPaymentStatusColor(withdrawal.status)}`}>
-                        {withdrawal.status}
-                      </p>
+                                             <p className={`text-sm font-medium ${getPaymentStatusColor(withdrawal.status)}`}>
+                         {withdrawal.status === 'completed' ? '✅ Completed' : 
+                          withdrawal.status === 'pending' ? '⏳ Processing' : 
+                          withdrawal.status === 'failed' ? '❌ Failed' : 
+                          withdrawal.status}
+                       </p>
                       {withdrawal.fee && (
                         <p className="text-gray-400 text-xs">
                           Fee: {formatCurrency(withdrawal.fee)}
