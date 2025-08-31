@@ -386,14 +386,14 @@ const AdminPage = () => {
       // Listen for task updates in the project
       const taskQuery = query(
         collection(db, 'project_tasks'),
-        where('projectId', '==', wallet.projectId)
+        where('projectId', '==', wallet.projectId?._id || wallet.projectId)
       );
       
       const taskUnsubscribe = onSnapshot(taskQuery, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'modified' || change.type === 'added') {
             const taskData = change.doc.data();
-            console.log(`🔄 Task update for project ${wallet.projectId}:`, taskData);
+            console.log(`🔄 Task update for project ${wallet.projectId?._id || wallet.projectId}:`, taskData);
             
             // Update escrow stats if needed
             if (taskData.status === 'completed') {
@@ -444,7 +444,7 @@ const AdminPage = () => {
       const { completionNotes, qualityScore } = escrowForm;
       
       await escrowWalletApi.completeProject(
-        escrowWallet.projectId,
+        escrowWallet.projectId?._id || escrowWallet.projectId,
         completionNotes,
         qualityScore
       );
@@ -475,7 +475,7 @@ const AdminPage = () => {
     try {
       setEscrowActionLoading(true);
       
-      await escrowWalletApi.releaseUserFunds(escrowWallet.projectId, userId, bidId);
+      await escrowWalletApi.releaseUserFunds(escrowWallet.projectId?._id || escrowWallet.projectId, userId, bidId);
       
       notificationService.success("User funds released successfully");
       
@@ -500,7 +500,7 @@ const AdminPage = () => {
     try {
       setEscrowActionLoading(true);
       
-      await escrowWalletApi.refundUserFunds(escrowWallet.projectId, userId, bidId);
+      await escrowWalletApi.refundUserFunds(escrowWallet.projectId?._id || escrowWallet.projectId, userId, bidId);
       
       notificationService.success("User funds refunded successfully");
       
@@ -1830,7 +1830,7 @@ const AdminPage = () => {
                               <h3 className="text-lg font-semibold text-white">
                                 {wallet.projectId?.project_Title || "Untitled Project"}
                               </h3>
-                              <p className="text-sm text-gray-400">Project ID: {wallet.projectId}</p>
+                              <p className="text-sm text-gray-400">Project ID: {wallet.projectId?._id || wallet.projectId}</p>
                             </div>
                             {getEscrowStatusBadge(wallet.status)}
                           </div>
@@ -1862,7 +1862,7 @@ const AdminPage = () => {
                                 {wallet.lockedFunds.map((fund, index) => (
                                   <div key={index} className="flex items-center justify-between bg-[#232a34] rounded-lg p-3">
                                     <div>
-                                      <div className="text-sm font-medium text-white">User: {fund.userId}</div>
+                                      <div className="text-sm font-medium text-white">User: {fund.userId?.username || fund.userId}</div>
                                       <div className="text-xs text-gray-400">
                                         Bid: ₹{fund.bidAmount} | Bonus: ₹{fund.bonusAmount} | Total: ₹{fund.totalAmount}
                                       </div>
@@ -1916,12 +1916,12 @@ const AdminPage = () => {
                           )}
 
                           <div className="flex gap-2">
-                            <Link to={`/escrow-wallet/${wallet.projectId}`}>
+                            <Link to={`/escrow-wallet/${wallet.projectId?._id || wallet.projectId}`}>
                               <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition text-xs">
                                 Detailed View
                               </button>
                             </Link>
-                            <Link to={`/contribution/${wallet.projectId}`} target="_blank">
+                            <Link to={`/contribution/${wallet.projectId?._id || wallet.projectId}`} target="_blank">
                               <button className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded-lg transition text-xs">
                                 View Contribution Panel
                               </button>
