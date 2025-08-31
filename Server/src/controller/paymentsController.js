@@ -3,7 +3,7 @@ import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
 import { createOrder as rpCreateOrder, createRefund } from '../services/razorpay.js';
-import { BID_FEE, LISTING_FEE, BONUS_PER_CONTRIBUTOR } from '../utils/flags.js';
+import { BID_FEE, LISTING_FEE, BONUS_PER_CONTRIBUTOR, WITHDRAWAL_FEE } from '../utils/flags.js';
 import { logPaymentEvent } from '../utils/logger.js';
 import { ApiError } from '../utils/error.js';
 import { v4 as uuid } from 'uuid';
@@ -342,7 +342,7 @@ export const createSubscription = async (req, res) => {
   }
 };
 
-// Create withdrawal payment (₹15 fee)
+// Create withdrawal payment (₹20 fee)
 export const createWithdrawal = async (req, res) => {
   try {
     const { amount } = req.body;
@@ -353,7 +353,7 @@ export const createWithdrawal = async (req, res) => {
       throw new ApiError(400, 'Invalid withdrawal amount. Must be between ₹1 and ₹10,000');
     }
 
-    const withdrawalFee = 15; // ₹15 withdrawal fee
+    const withdrawalFee = WITHDRAWAL_FEE; // ₹20 withdrawal fee
     const totalAmount = withdrawalFee; // User pays the fee
 
     // Create payment intent

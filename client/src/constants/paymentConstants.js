@@ -2,7 +2,7 @@
 export const PAYMENT_TYPES = {
   BID_FEE: 'bid_fee',           // ₹9 per bid
   BONUS_FUNDING: 'bonus_funding', // ₹200 × contributors
-  WITHDRAWAL_FEE: 'withdrawal_fee', // ₹15 (up to ₹10k)
+  WITHDRAWAL_FEE: 'withdrawal_fee', // ₹20 (up to ₹10k)
   SUBSCRIPTION: 'subscription',   // ₹299/month
   LISTING: 'listing'             // ₹199 per listing
 };
@@ -11,8 +11,9 @@ export const PAYMENT_TYPES = {
 export const PAYMENT_AMOUNTS = {
   BID_FEE: 9,
   BONUS_PER_CONTRIBUTOR: 200,
-  WITHDRAWAL_FEE: 15,
+  WITHDRAWAL_FEE: 20,
   WITHDRAWAL_MAX: 10000,
+  WITHDRAWAL_MIN: 100,
   SUBSCRIPTION: 299,
   LISTING_FEE: 199
 };

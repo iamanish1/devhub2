@@ -23,19 +23,35 @@ export const calculateWithdrawalFee = (amount) => {
 
 // Calculate total withdrawal amount (including fee)
 export const calculateTotalWithdrawalAmount = (amount) => {
-  return amount + calculateWithdrawalFee(amount);
+  return amount - calculateWithdrawalFee(amount);
 };
 
 // Validate withdrawal amount
-export const validateWithdrawalAmount = (amount) => {
+export const validateWithdrawalAmount = (amount, availableBalance = 0) => {
   if (amount <= 0) {
     return { isValid: false, error: 'Amount must be greater than 0' };
+  }
+  
+  if (amount < PAYMENT_AMOUNTS.WITHDRAWAL_MIN) {
+    return { 
+      isValid: false, 
+      error: `Minimum withdrawal amount is ₹${PAYMENT_AMOUNTS.WITHDRAWAL_MIN}` 
+    };
   }
   
   if (amount > PAYMENT_AMOUNTS.WITHDRAWAL_MAX) {
     return { 
       isValid: false, 
       error: `Maximum withdrawal amount is ${formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_MAX)}` 
+    };
+  }
+
+  // Check if user has enough balance to cover withdrawal amount + fee
+  const totalRequired = amount + calculateWithdrawalFee(amount);
+  if (availableBalance > 0 && totalRequired > availableBalance) {
+    return { 
+      isValid: false, 
+      error: `Insufficient balance. You need ${formatCurrency(totalRequired)} (${formatCurrency(amount)} + ${formatCurrency(calculateWithdrawalFee(amount))} fee)` 
     };
   }
   

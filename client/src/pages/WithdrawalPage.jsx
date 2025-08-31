@@ -197,7 +197,7 @@ const WithdrawalPage = () => {
                     onChange={handleWithdrawalAmountChange}
                     className="w-full bg-[#1E1E1E] text-white px-4 py-3 rounded-lg border border-gray-600 focus:border-[#00A8E8] focus:outline-none"
                     max={PAYMENT_AMOUNTS.WITHDRAWAL_MAX}
-                    min="1"
+                    min={PAYMENT_AMOUNTS.WITHDRAWAL_MIN}
                   />
                   {validationError && (
                     <p className="text-red-400 text-sm mt-1">{validationError}</p>
@@ -239,22 +239,22 @@ const WithdrawalPage = () => {
                 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Withdrawal Amount:</span>
+                    <span className="text-gray-300">Requested Amount:</span>
                     <span className="text-white font-medium">
                       {withdrawalAmount ? formatCurrency(withdrawalAmount) : '₹0'}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Withdrawal Fee:</span>
-                    <span className="text-white font-medium">
-                      {formatCurrency(withdrawalFee)}
+                    <span className="text-gray-300">Withdrawal Fee (Deducted):</span>
+                    <span className="text-red-400 font-medium">
+                      -{formatCurrency(withdrawalFee)}
                     </span>
                   </div>
                   
                   <div className="border-t border-gray-600 pt-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-white font-semibold">Total Amount:</span>
+                      <span className="text-white font-semibold">You Will Receive:</span>
                       <span className="gradient-text font-bold text-lg">
                         {formatCurrency(totalAmount)}
                       </span>
@@ -266,9 +266,10 @@ const WithdrawalPage = () => {
                   <h4 className="text-white font-medium mb-2">Important Notes:</h4>
                   <ul className="text-gray-400 text-sm space-y-1">
                     <li>• Maximum withdrawal: {formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_MAX)}</li>
-                    <li>• Fixed fee: {formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_FEE)} per withdrawal</li>
+                    <li>• Fixed fee: {formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_FEE)} deducted per withdrawal</li>
                     <li>• Processing time: 2-5 business days</li>
-                    <li>• Minimum withdrawal: ₹100</li>
+                    <li>• Minimum withdrawal: {formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_MIN)}</li>
+                    <li>• Fee is automatically deducted from your withdrawal amount</li>
                   </ul>
                 </div>
               </div>

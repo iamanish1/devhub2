@@ -56,7 +56,7 @@ paymentsRoutes.post('/subscription',
   createSubscription
 );
 
-// Withdrawal fee payment (₹15)
+// Withdrawal fee payment (₹20)
 paymentsRoutes.post('/withdrawal', 
   authMiddleware, 
   validateRequest(withdrawalSchema),

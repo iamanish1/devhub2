@@ -8,6 +8,7 @@ import user from '../Model/UserModel.js';
 import { logger } from '../utils/logger.js';
 import notificationService from '../services/notificationService.js';
 import { createOrder as rpCreateOrder, createPayout } from '../services/razorpay.js';
+import { WITHDRAWAL_FEE, WITHDRAWAL_MAX, WITHDRAWAL_MIN } from '../utils/flags.js';
 import mongoose from 'mongoose';
 
 /**
@@ -998,18 +999,33 @@ export const requestUserWithdrawal = async (req, res) => {
       return res.status(400).json({ message: 'Invalid withdrawal amount' });
     }
 
+    if (amount < WITHDRAWAL_MIN) {
+      return res.status(400).json({ message: `Minimum withdrawal amount is ₹${WITHDRAWAL_MIN}` });
+    }
+
+    if (amount > WITHDRAWAL_MAX) {
+      return res.status(400).json({ message: `Maximum withdrawal amount is ₹${WITHDRAWAL_MAX.toLocaleString()}` });
+    }
+
     // Get user details
     const userDetails = await user.findById(userId);
     if (!userDetails) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if user has sufficient balance
-    if (userDetails.balance.available < amount) {
+    // Calculate withdrawal fee and total amount to deduct
+    const withdrawalFee = WITHDRAWAL_FEE; // ₹20 withdrawal fee
+    const totalAmountToDeduct = amount + withdrawalFee; // User pays withdrawal amount + fee
+    const actualAmountReceived = amount; // User receives the requested amount
+
+    // Check if user has sufficient balance (including fee)
+    if (userDetails.balance.available < totalAmountToDeduct) {
       return res.status(400).json({ 
         message: 'Insufficient available balance for withdrawal',
         availableBalance: userDetails.balance.available,
-        requestedAmount: amount
+        requestedAmount: amount,
+        fee: withdrawalFee,
+        totalRequired: totalAmountToDeduct
       });
     }
 
@@ -1022,19 +1038,21 @@ export const requestUserWithdrawal = async (req, res) => {
 
     // Create withdrawal record
     const withdrawal = {
-      amount: amount,
+      amount: actualAmountReceived, // Amount user will receive
+      fee: withdrawalFee, // Fee deducted
+      totalDeducted: totalAmountToDeduct, // Total amount deducted from balance
       status: 'pending',
       method: withdrawalMethod,
       referenceId: `WD_${userId}_${Date.now()}`,
       createdAt: new Date(),
-      notes: `Withdrawal request via ${withdrawalMethod}`
+      notes: `Withdrawal request via ${withdrawalMethod}. Fee: ₹${withdrawalFee}`
     };
 
     userDetails.withdrawals.push(withdrawal);
 
-    // Update balance
-    userDetails.balance.available -= amount;
-    userDetails.balance.pending += amount;
+    // Update balance - deduct total amount (including fee)
+    userDetails.balance.available -= totalAmountToDeduct;
+    userDetails.balance.pending += actualAmountReceived; // Only the actual withdrawal amount goes to pending
 
     await userDetails.save();
 
@@ -1044,7 +1062,9 @@ export const requestUserWithdrawal = async (req, res) => {
       message: 'Withdrawal request submitted successfully',
       withdrawal: {
         id: withdrawal.referenceId,
-        amount: withdrawal.amount,
+        amount: withdrawal.amount, // Amount user will receive
+        fee: withdrawal.fee, // Fee deducted
+        totalDeducted: withdrawal.totalDeducted, // Total amount deducted from balance
         status: withdrawal.status,
         method: withdrawal.method,
         createdAt: withdrawal.createdAt
