@@ -14,7 +14,8 @@ import {
   getPaymentAnalytics,
   getPaymentSummary,
   processRefund,
-  getRefundHistory
+  getRefundHistory,
+  verifyPaymentWithRazorpay
 } from '../controller/paymentsController.js';
 import {
   validateRequest,
@@ -72,6 +73,12 @@ paymentsRoutes.post('/refund/:paymentIntentId',
 paymentsRoutes.get('/status/:intentId', 
   authMiddleware, 
   getPaymentStatus
+);
+
+// Verify payment with Razorpay
+paymentsRoutes.get('/verify-razorpay/:orderId', 
+  authMiddleware, 
+  verifyPaymentWithRazorpay
 );
 
 // Get payment history

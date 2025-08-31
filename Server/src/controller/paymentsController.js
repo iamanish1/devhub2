@@ -949,3 +949,111 @@ export const getPaymentSummary = async (req, res) => {
     });
   }
 };
+
+// Verify payment with Razorpay
+export const verifyPaymentWithRazorpay = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user._id;
+    
+    console.log(`[Payment Verification] Verifying payment with Razorpay for orderId: ${orderId}, userId: ${userId}`);
+    
+    // Find payment intent by orderId
+    const intent = await PaymentIntent.findOne({
+      orderId: orderId,
+      userId: userId
+    });
+
+    if (!intent) {
+      console.log(`[Payment Verification] No payment intent found for orderId: ${orderId}`);
+      return res.status(404).json({ 
+        success: false,
+        message: 'Payment intent not found',
+        orderId: orderId
+      });
+    }
+
+    console.log(`[Payment Verification] Found payment intent - status: ${intent.status}, purpose: ${intent.purpose}`);
+
+    // If payment is already marked as paid, return success
+    if (intent.status === 'paid') {
+      return res.status(200).json({
+        success: true,
+        message: 'Payment is already verified',
+        paymentStatus: 'paid',
+        purpose: intent.purpose
+      });
+    }
+
+    // Try to verify with Razorpay
+    try {
+      const { verifyOrderWithRazorpay } = await import('../services/razorpay.js');
+      const orderVerified = await verifyOrderWithRazorpay(orderId);
+      
+      if (orderVerified) {
+        console.log(`[Payment Verification] Order verified with Razorpay - updating payment status`);
+        
+        // Update payment intent status
+        intent.status = 'paid';
+        intent.updatedAt = new Date();
+        await intent.save();
+        
+        // Handle different payment purposes
+        switch (intent.purpose) {
+          case 'bonus_funding':
+            // Update bonus pool status
+            if (intent.projectId) {
+              await ProjectListing.findByIdAndUpdate(intent.projectId, { 
+                $set: { 
+                  'bonus.funded': true,
+                  'bonus.razorpayOrderId': orderId
+                } 
+              });
+            }
+            break;
+            
+          case 'bid_fee':
+            // Update bid status if it's a bid fee payment
+            const bidId = intent.notes?.bidId;
+            if (bidId) {
+              await Bidding.findByIdAndUpdate(bidId, {
+                payment_status: 'paid',
+                'escrow_details.payment_intent_id': intent._id.toString(),
+                'escrow_details.locked_at': new Date()
+              });
+            }
+            break;
+        }
+        
+        return res.status(200).json({
+          success: true,
+          message: 'Payment verified and status updated',
+          paymentStatus: 'paid',
+          purpose: intent.purpose
+        });
+      } else {
+        console.log(`[Payment Verification] Order verification failed with Razorpay`);
+        return res.status(400).json({
+          success: false,
+          message: 'Payment verification failed with Razorpay',
+          paymentStatus: intent.status
+        });
+      }
+    } catch (verifyError) {
+      console.error(`[Payment Verification] Error verifying order:`, verifyError);
+      return res.status(500).json({
+        success: false,
+        message: 'Error verifying payment with Razorpay',
+        error: verifyError.message
+      });
+    }
+
+  } catch (error) {
+    console.error('[Payment Verification] Error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error verifying payment',
+      error: error.message 
+    });
+  }
+};

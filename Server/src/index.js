@@ -161,7 +161,7 @@ app.use("/api/user-projects", userProjectsRoutes);
 
 // Payment routes
 app.use("/api/payments", paymentsRoutes);
-app.use("/webhooks", webhooksRoutes);
+app.use("/api/webhooks", webhooksRoutes);
 app.use("/api/projects", projectsPaymentRoutes);
 
 // Project selection routes

@@ -133,6 +133,7 @@ const ProjectListingPage = () => {
 
       // If the payment is already marked as paid, return true
       if (response.data.success && response.data.data.status === 'paid') {
+        console.log('✅ Payment already verified as paid');
         return true;
       }
 
@@ -141,18 +142,48 @@ const ProjectListingPage = () => {
         const orderId = response.data.data.orderId;
         
         // Use the webhook check endpoint as fallback
-        const checkResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/webhooks/check-payment/${orderId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
+        try {
+          const checkResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL}/api/webhooks/check-payment/${orderId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
             }
-          }
-        );
+          );
 
-        if (checkResponse.data.success && checkResponse.data.paymentStatus === 'paid') {
-          return true;
+          if (checkResponse.data.success && checkResponse.data.paymentStatus === 'paid') {
+            console.log('✅ Payment verified via webhook check');
+            return true;
+          }
+        } catch (webhookError) {
+          console.warn('⚠️ Webhook check failed, trying alternative verification:', webhookError.message);
+        }
+      }
+
+      // If we have an orderId, try to verify directly with Razorpay
+      if (response.data.success && response.data.data.orderId) {
+        const orderId = response.data.data.orderId;
+        
+        // Try to verify with Razorpay directly (this would require a backend endpoint)
+        try {
+          const razorpayResponse = await axios.get(
+            `${import.meta.env.VITE_API_URL}/api/payments/verify-razorpay/${orderId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          if (razorpayResponse.data.success) {
+            console.log('✅ Payment verified via Razorpay API');
+            return true;
+          }
+        } catch (razorpayError) {
+          console.warn('⚠️ Razorpay verification failed:', razorpayError.message);
         }
       }
 
@@ -174,6 +205,7 @@ const ProjectListingPage = () => {
         );
 
         if (checkResponse.data.success && checkResponse.data.paymentStatus === 'paid') {
+          console.log('✅ Payment verified via fallback webhook check');
           return true;
         }
       } catch (fallbackError) {
@@ -448,7 +480,7 @@ const ProjectListingPage = () => {
     {
       id: 4,
       title: "Bonus Pool (Required)",
-      subtitle: "Fund rewards for contributors",
+      subtitle: "Fund rewards for contributors to list your project",
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
