@@ -792,66 +792,7 @@ const AdminPage = () => {
     }
   };
 
-  const handleExecuteSelection = async (projectId) => {
-    try {
-      setSelectionInProgress(prev => ({ ...prev, [projectId]: true }));
-      
-      // Execute automatic selection
-      const result = await projectSelectionApi.executeAutomaticSelection(projectId);
-      
-              if (result.success) {
-          // Update Firebase for real-time updates
-          const selectionStatusRef = doc(db, 'selection_status', projectId);
-          await setDoc(selectionStatusRef, {
-            projectId,
-            status: 'completed',
-            selectedUsers: result.selectedUsers,
-            completedAt: serverTimestamp(),
-            totalBidders: result.totalBidders
-          }, { merge: true });
 
-          if (result.escrowCreated) {
-            notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected. Escrow wallet created and funds locked.`);
-          } else {
-            notificationService.success(`Automatic selection completed! ${result.selectedUsers?.length || 0} contributors selected.`);
-          }
-        } else {
-          notificationService.error(result.message || "Automatic selection failed");
-        }
-      
-      // Refresh data
-      const [applicantsRes, selectionsRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_API_URL}/api/admin/applicant`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }),
-        projectSelectionApi.getProjectOwnerSelections()
-      ]);
-      
-      const applicants = applicantsRes.data.applicants || [];
-      const selections = selectionsRes.selections || [];
-      
-      // Update grouped applicants
-      const groupedApplicants = {};
-      applicants.forEach(applicant => {
-        const projectId = applicant.project_id?._id || applicant.project_id;
-        if (!groupedApplicants[projectId]) {
-          groupedApplicants[projectId] = [];
-        }
-        groupedApplicants[projectId].push(applicant);
-      });
-      
-      setApplicantsByProject(groupedApplicants);
-      setApplicants(applicants);
-    } catch (error) {
-      console.error("Error executing automatic selection:", error);
-      notificationService.error("Failed to execute selection: " + (error.message || "Unknown error"));
-    } finally {
-      setSelectionInProgress(prev => ({ ...prev, [projectId]: false }));
-    }
-  };
 
   const handleGetRankedBidders = async (projectId) => {
     try {
@@ -1535,25 +1476,7 @@ const AdminPage = () => {
                                 View Rankings
                               </button>
                             )}
-                            {selectionConfig && selectionConfig.status === 'pending' && (
-                              <button
-                                onClick={() => handleExecuteSelection(projectId)}
-                                disabled={isSelectionInProgress}
-                                className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-500 text-white px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm"
-                              >
-                                {isSelectionInProgress ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                    Processing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <FaUserCheck />
-                                    Execute Selection
-                                  </>
-                                )}
-                              </button>
-                            )}
+
                           </div>
                         </div>
 
@@ -1564,7 +1487,7 @@ const AdminPage = () => {
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                               <div>
                                 <span className="text-gray-400">Mode:</span>
-                                <span className="text-white ml-2 capitalize">{selectionConfig.selectionMode}</span>
+                                <span className="text-white ml-2 capitalize">Manual Selection Only</span>
                               </div>
                               <div>
                                 <span className="text-gray-400">Required:</span>
@@ -1600,7 +1523,7 @@ const AdminPage = () => {
                         {/* Ranked Bidders Display */}
                         {projectRankedBidders && (
                           <div className="bg-[#181b23] rounded-xl p-4 mb-4 border border-green-500/10">
-                            <h4 className="text-lg font-semibold text-green-400 mb-2">AI Ranking Results</h4>
+                            <h4 className="text-lg font-semibold text-green-400 mb-2">User Rankings (Sorted by Bid Amount)</h4>
                             <div className="space-y-2 max-h-40 overflow-y-auto">
                               {projectRankedBidders.slice(0, 5).map((bidder, index) => (
                                 <div key={bidder.userId} className="flex items-center justify-between bg-[#232a34] rounded-lg p-2">

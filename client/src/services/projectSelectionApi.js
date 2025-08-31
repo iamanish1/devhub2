@@ -50,21 +50,6 @@ export const projectSelectionApi = {
   },
 
   /**
-   * Execute automatic selection
-   */
-  executeAutomaticSelection: async (projectId, force = false) => {
-    try {
-      const response = await createAuthInstance().post(
-        API_ENDPOINTS.EXECUTE_AUTOMATIC_SELECTION(projectId),
-        { force }
-      );
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
-  },
-
-  /**
    * Manual selection of users
    */
   manualSelection: async (projectId, selectedUserIds, reason = 'manual') => {

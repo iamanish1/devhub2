@@ -4,7 +4,6 @@ import { adminAuthenticationMiddleware } from '../Middleware/Adminauthentication
 import {
   createProjectSelection,
   getProjectSelection,
-  executeAutomaticSelection,
   manualSelection,
   getRankedBidders,
   updateSelectionConfig,
@@ -22,7 +21,6 @@ projectSelectionRoutes.get('/test', (req, res) => {
     timestamp: new Date().toISOString(),
     routes: [
       'POST /:projectId/manual-selection',
-      'POST /:projectId/execute-automatic',
       'GET /:projectId/ranked-bidders',
       'GET /:projectId/team-members',
       'GET /owner/selections'
@@ -38,12 +36,6 @@ projectSelectionRoutes.get('/:projectId', authMiddleware, getProjectSelection);
 
 // Get team members for a project
 projectSelectionRoutes.get('/:projectId/team-members', authMiddleware, getProjectTeamMembers);
-
-// Execute automatic selection
-projectSelectionRoutes.post('/:projectId/execute-automatic', authMiddleware, (req, res, next) => {
-  console.log(` Automatic selection route hit: ${req.params.projectId}`);
-  next();
-}, executeAutomaticSelection);
 
 // Manual selection of users
 projectSelectionRoutes.post('/:projectId/manual-selection', authMiddleware, (req, res, next) => {

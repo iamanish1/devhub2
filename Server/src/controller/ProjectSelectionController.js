@@ -4,7 +4,7 @@ import Bidding from "../Model/BiddingModel.js";
 import EscrowWallet from "../Model/EscrowWalletModel.js";
 import UserProfile from "../Model/UserProfileModel.js";
 import user from "../Model/UserModel.js";
-import selectionAlgorithm from "../services/selectionAlgorithm.js";
+// Remove selectionAlgorithm import since we're removing automation
 import notificationService from "../services/notificationService.js";
 import { logger } from "../utils/logger.js";
 import { ApiError } from "../utils/error.js";
@@ -77,7 +77,7 @@ export const createProjectSelection = async (req, res) => {
   try {
     const { projectId } = req.params;
     const {
-      selectionMode = "hybrid",
+      selectionMode = "manual", // Default to manual only
       requiredContributors,
       maxBidsToConsider = 50,
       requiredSkills = [],
@@ -138,11 +138,11 @@ export const createProjectSelection = async (req, res) => {
         .json({ message: "Criteria weights must sum to 100" });
     }
 
-    // Create selection configuration
+    // Create selection configuration (manual only)
     const selection = new ProjectSelection({
       projectId,
       projectOwner: req.user._id,
-      selectionMode,
+      selectionMode: "manual", // Force manual mode
       requiredContributors,
       maxBidsToConsider,
       requiredSkills,
@@ -153,7 +153,7 @@ export const createProjectSelection = async (req, res) => {
     await selection.save();
 
     logger.info(
-      `[ProjectSelection] Created selection config for project: ${projectId}`
+      `[ProjectSelection] Created manual selection config for project: ${projectId}`
     );
 
     res.status(201).json({
@@ -219,269 +219,6 @@ export const getProjectSelection = async (req, res) => {
 };
 
 /**
- * Execute automatic selection
- */
-export const executeAutomaticSelection = async (req, res) => {
-  try {
-    const { projectId } = req.params;
-    const { force = false } = req.body;
-
-    // Validate project exists and user owns it
-    const project = await ProjectListing.findById(projectId);
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    if (project.user.toString() !== req.user._id.toString()) {
-      return res
-        .status(403)
-        .json({
-          message: "You can only execute selection for your own projects",
-        });
-    }
-
-    // Get or create selection configuration
-    let selection = await ProjectSelection.findOne({ projectId });
-    if (!selection) {
-      // Create default selection configuration
-      selection = new ProjectSelection({
-        projectId,
-        projectOwner: req.user._id,
-        selectionMode: "automatic",
-        requiredContributors: project.Project_Contributor,
-        maxBidsToConsider: 50,
-        requiredSkills: [],
-        criteriaWeights: {
-          skillMatch: 40,
-          bidAmount: 30,
-          experience: 20,
-          availability: 10,
-        },
-        status: "pending",
-      });
-      await selection.save();
-    }
-
-    // Check if selection is already in progress or completed
-    if (selection.status === "in_progress" && !force) {
-      return res
-        .status(400)
-        .json({ message: "Selection is already in progress" });
-    }
-
-    if (selection.status === "completed" && !force) {
-      return res
-        .status(400)
-        .json({ message: "Selection is already completed" });
-    }
-
-    // Update status to in progress
-    selection.status = "in_progress";
-    selection.selectionStartedAt = new Date();
-    await selection.save();
-
-    logger.info(
-      `[ProjectSelection] Starting automatic selection for project: ${projectId}`
-    );
-
-    // Execute selection algorithm
-    const selectionConfig = {
-      requiredContributors: selection.requiredContributors,
-      maxBidsToConsider: selection.maxBidsToConsider,
-      requiredSkills: selection.requiredSkills,
-      criteriaWeights: selection.criteriaWeights,
-    };
-
-    const result = await selectionAlgorithm.executeAutomaticSelection(
-      projectId,
-      selectionConfig
-    );
-
-    if (result.success) {
-      // Update selection with results
-      selection.selectedUsers = result.selectedUsers;
-      selection.status = "completed";
-      selection.selectionCompletedAt = new Date();
-      selection.totalBidsConsidered = result.totalBidders;
-      await selection.save();
-
-      // Update bid statuses and create Firebase workspace access for selected users
-      for (const selectedUser of result.selectedUsers) {
-        try {
-          // Update bid status
-          await Bidding.findByIdAndUpdate(selectedUser.bidId, {
-            bid_status: "Accepted",
-          });
-
-          // Create Firebase workspace access
-          const firebaseResult = await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
-          if (firebaseResult) {
-            logger.info(
-              `[ProjectSelection] Firebase workspace access created for user ${selectedUser.userId} on project ${projectId}`
-            );
-          } else {
-            logger.error(
-              `[ProjectSelection] Failed to create Firebase workspace access for user ${selectedUser.userId} on project ${projectId}`
-            );
-          }
-        } catch (error) {
-          logger.error(
-            `[ProjectSelection] Failed to process selected user ${selectedUser.userId}: ${error.message}`
-          );
-        }
-      }
-
-      // Send notifications to selected users
-      for (const selectedUser of result.selectedUsers) {
-        try {
-          await notificationService.sendUserSelectionNotification(
-            selectedUser.userId,
-            projectId,
-            selectedUser.bidAmount || 0,
-            selectedUser.bonusAmount || 0
-          );
-        } catch (notificationError) {
-          logger.error(
-            `[ProjectSelection] Notification failed for user ${selectedUser.userId}: ${notificationError.message}`
-          );
-        }
-      } 
-      
-
-      // Create escrow wallet and lock funds for selected users
-      try {
-        // Calculate bonus pool amount (minimum ₹200 per contributor)
-        const bonusPoolAmount = Math.max(200 * result.selectedUsers.length, 200);
-        
-        // Create escrow wallet
-        const escrowWallet = new EscrowWallet({
-          projectId,
-          projectOwner: req.user._id,
-          totalBonusPool: bonusPoolAmount,
-          bonusPoolDistribution: {
-            totalContributors: result.selectedUsers.length,
-            amountPerContributor: Math.floor(bonusPoolAmount / result.selectedUsers.length),
-            distributedAmount: 0,
-            remainingAmount: bonusPoolAmount
-          },
-          status: 'active'
-        });
-
-        await escrowWallet.save();
-
-        // Lock funds for each selected user
-        for (const selectedUser of result.selectedUsers) {
-          try {
-            const bonusAmount = Math.floor(bonusPoolAmount / result.selectedUsers.length);
-            escrowWallet.lockUserFunds(
-              selectedUser.userId, 
-              selectedUser.bidId, 
-              selectedUser.bidAmount || 0, 
-              bonusAmount
-            );
-
-            // Update selection record to mark escrow as locked
-            const userSelection = selection.selectedUsers.find(
-              user => user.userId.toString() === selectedUser.userId.toString()
-            );
-            if (userSelection) {
-              userSelection.escrowLocked = true;
-              userSelection.escrowLockedAt = new Date();
-            }
-
-            logger.info(
-              `[ProjectSelection] Funds locked in escrow for user ${selectedUser.userId} on project ${projectId}`
-            );
-
-            // Send escrow funds locked notification
-            try {
-              await notificationService.sendEscrowFundsLockedNotification(
-                selectedUser.userId,
-                projectId,
-                selectedUser.bidAmount || 0,
-                bonusAmount
-              );
-            } catch (notificationError) {
-              logger.error(
-                `[ProjectSelection] Escrow notification failed for user ${selectedUser.userId}: ${notificationError.message}`
-              );
-            }
-          } catch (escrowError) {
-            logger.error(
-              `[ProjectSelection] Failed to lock funds for user ${selectedUser.userId}: ${escrowError.message}`
-            );
-          }
-        }
-
-        await escrowWallet.save();
-        await selection.save();
-
-        logger.info(
-          `[ProjectSelection] Escrow wallet created and funds locked for project: ${projectId}`
-        );
-      } catch (escrowError) {
-        logger.error(
-          `[ProjectSelection] Failed to create escrow wallet: ${escrowError.message}`
-        );
-        // Don't fail the selection process if escrow creation fails
-      }
-
-      // Send notification to project owner
-      try {
-        await notificationService.sendSelectionStartedNotification(
-          req.user._id,
-          projectId,
-          {
-            requiredContributors: selection.requiredContributors,
-            totalBids: result.totalBidders,
-            selectionMode: selection.selectionMode,
-          }
-        );
-      } catch (notificationError) {
-        logger.error(
-          `[ProjectSelection] Notification failed for project owner: ${notificationError.message}`
-        );
-      }
-
-      logger.info(
-        `[ProjectSelection] Automatic selection completed for project: ${projectId}. Selected: ${result.selectedUsers.length} users`
-      );
-
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        selection,
-        result,
-        escrowCreated: true
-      });
-    } else {
-      // Update status to failed
-      selection.status = "failed";
-      selection.lastError = {
-        message: result.message,
-        timestamp: new Date(),
-        retryCount: (selection.lastError?.retryCount || 0) + 1,
-      };
-      await selection.save();
-
-      res.status(400).json({
-        success: false,
-        message: result.message,
-        selection,
-      });
-    }
-  } catch (error) {
-    logger.error(
-      `[ProjectSelection] Error in executeAutomaticSelection: ${error.message}`,
-      error
-    );
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
-  }
-};
-
-/**
  * Manual selection of users
  */
 export const manualSelection = async (req, res) => {
@@ -516,7 +253,7 @@ export const manualSelection = async (req, res) => {
       selection = new ProjectSelection({
         projectId,
         projectOwner: req.user._id,
-        selectionMode: "manual",
+        selectionMode: "manual", // Force manual mode
         requiredContributors: project.Project_Contributor || 10, // Default to 10 if not specified
         maxBidsToConsider: 50,
         requiredSkills: [],
@@ -530,7 +267,7 @@ export const manualSelection = async (req, res) => {
       });
       await selection.save();
       logger.info(
-        `[ProjectSelection] Created default selection config for project: ${projectId} with requiredContributors: ${selection.requiredContributors}`
+        `[ProjectSelection] Created default manual selection config for project: ${projectId} with requiredContributors: ${selection.requiredContributors}`
       );
     }
 
@@ -645,6 +382,7 @@ export const manualSelection = async (req, res) => {
     const selectedUsers = selectedBids.map((bid, index) => ({
       userId: bid.user_id,
       bidId: bid._id,
+      bidAmount: bid.total_amount || bid.bid_amount || 0, // Add bid amount from the bid
       selectionScore: 100, // Manual selection gets full score
       selectionReason: 'manual', // Use valid enum value
       skillMatchScore: 100,
@@ -743,6 +481,11 @@ export const manualSelection = async (req, res) => {
           for (const selectedUser of selection.selectedUsers) {
             try {
               const bonusAmount = Math.floor(bonusPoolAmount / selection.selectedUsers.length);
+              
+              logger.info(
+                `[ProjectSelection] Locking funds for user ${selectedUser.userId}: bidAmount=${selectedUser.bidAmount}, bonusAmount=${bonusAmount}`
+              );
+              
               escrowWallet.lockUserFunds(
                 selectedUser.userId, 
                 selectedUser.bidId, 
@@ -848,47 +591,73 @@ export const getRankedBidders = async (req, res) => {
         .json({ message: "Selection configuration not found" });
     }
 
-    // Get ranked bidders using selection algorithm
-    const selectionConfig = {
-      requiredContributors: selection.requiredContributors,
-      maxBidsToConsider: parseInt(limit),
-      requiredSkills: selection.requiredSkills,
-      criteriaWeights: selection.criteriaWeights,
-    };
+    // Get all bids for the project with user information
+    const bids = await Bidding.find({ 
+      project_id: projectId,
+      bid_status: 'Pending'
+    }).populate('user_id', 'username email usertype');
 
-    const rankedBidders = await selectionAlgorithm.selectBidders(
-      projectId,
-      selectionConfig
-    );
+    if (bids.length === 0) {
+      return res.status(200).json({
+        rankedBidders: [],
+        totalBidders: 0,
+        selectionConfig: null,
+      });
+    }
 
     // Get user profiles for additional details
-    const userIds = rankedBidders.map((bidder) => bidder.userId);
+    const userIds = bids.map(bid => bid.user_id._id);
     const userProfiles = await UserProfile.find({ username: { $in: userIds } });
     const profileMap = new Map();
     userProfiles.forEach((profile) => {
       profileMap.set(profile.username.toString(), profile);
     });
 
-    // Enhance bidder data with profile information
-    const enhancedBidders = rankedBidders.map((bidder) => {
-      const profile = profileMap.get(bidder.userId.toString());
-      return {
-        ...bidder,
-        profile: profile
-          ? {
-              bio: profile.user_profile_bio,
-              completedProjects: profile.user_completed_projects,
-              contributions: profile.user_project_contribution,
-              skills: profile.user_profile_skills,
-            }
-          : null,
-      };
-    });
+    // Create simple ranked bidders list (sorted by bid amount descending)
+    const rankedBidders = bids
+      .map((bid) => {
+        const profile = profileMap.get(bid.user_id._id.toString());
+        return {
+          userId: bid.user_id._id,
+          username: bid.user_id.username,
+          email: bid.user_id.email,
+          usertype: bid.user_id.usertype,
+          bidId: bid._id,
+          bidAmount: bid.bid_amount || 0,
+          bidDescription: bid.bid_description,
+          yearOfExperience: bid.year_of_experience,
+          hoursAvailable: bid.hours_avilable_per_week,
+          skills: bid.skills || [],
+          totalScore: 100, // Manual selection doesn't need scoring
+          scores: {
+            skillMatch: 100,
+            bidAmount: 100,
+            experience: 100,
+            availability: 100,
+            totalScore: 100
+          },
+          profile: profile
+            ? {
+                bio: profile.user_profile_bio,
+                completedProjects: profile.user_completed_projects,
+                contributions: profile.user_project_contribution,
+                skills: profile.user_profile_skills,
+              }
+            : null,
+        };
+      })
+      .sort((a, b) => b.bidAmount - a.bidAmount) // Sort by bid amount descending
+      .slice(0, parseInt(limit));
 
     res.status(200).json({
-      rankedBidders: enhancedBidders,
-      totalBidders: enhancedBidders.length,
-      selectionConfig,
+      rankedBidders: rankedBidders,
+      totalBidders: rankedBidders.length,
+      selectionConfig: {
+        requiredContributors: selection.requiredContributors,
+        maxBidsToConsider: parseInt(limit),
+        requiredSkills: selection.requiredSkills,
+        criteriaWeights: selection.criteriaWeights,
+      },
     });
   } catch (error) {
     logger.error(

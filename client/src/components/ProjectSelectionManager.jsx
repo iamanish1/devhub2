@@ -40,7 +40,7 @@ const ProjectSelectionManager = () => {
 
   // Configuration state
   const [config, setConfig] = useState({
-    selectionMode: 'hybrid',
+    selectionMode: 'manual', // Force manual mode only
     requiredContributors: 1,
     maxBidsToConsider: 50,
     requiredSkills: [],
@@ -67,7 +67,7 @@ const ProjectSelectionManager = () => {
       
       if (selectionData.selection) {
         setConfig({
-          selectionMode: selectionData.selection.selectionMode || 'hybrid',
+          selectionMode: 'manual', // Force manual mode
           requiredContributors: selectionData.selection.requiredContributors || 1,
           maxBidsToConsider: selectionData.selection.maxBidsToConsider || 50,
           requiredSkills: selectionData.selection.requiredSkills || [],
@@ -126,29 +126,9 @@ const ProjectSelectionManager = () => {
     }
   };
 
-  // Execute automatic selection
-  const handleAutomaticSelection = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const result = await projectSelectionApi.executeAutomaticSelection(projectId);
-      setSelection(result.selection);
-      
-      // If escrow was created, load escrow data
-      if (result.escrowCreated) {
-        await loadEscrowWalletData();
-      }
-      
-      setActiveTab('results');
-    } catch (err) {
-      setError(err.message || 'Failed to execute automatic selection');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  // Load ranked bidders for manual selection
+
+  // Load ranked bidders for user selection
   const handleLoadRankedBidders = async () => {
     try {
       setLoading(true);
@@ -164,7 +144,7 @@ const ProjectSelectionManager = () => {
     }
   };
 
-  // Manual selection
+  // User selection
   const handleManualSelection = async () => {
     try {
       setLoading(true);
@@ -182,7 +162,7 @@ const ProjectSelectionManager = () => {
       
       setActiveTab('results');
     } catch (err) {
-      setError(err.message || 'Failed to complete manual selection');
+      setError(err.message || 'Failed to complete user selection');
     } finally {
       setLoading(false);
     }
@@ -255,8 +235,8 @@ const ProjectSelectionManager = () => {
     <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Project Selection Manager</h1>
-        <p className="text-gray-600">Configure and manage user selection for your project</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Project User Selection Manager</h1>
+        <p className="text-gray-600">Configure and manually select contributors for your project</p>
       </div>
 
       {/* Error Display */}
@@ -275,7 +255,7 @@ const ProjectSelectionManager = () => {
           {[
             { id: 'config', label: 'Configuration', icon: Settings },
             { id: 'overview', label: 'Overview', icon: Eye },
-            { id: 'manual', label: 'Manual Selection', icon: UserCheck },
+            { id: 'manual', label: 'User Selection', icon: UserCheck },
             { id: 'results', label: 'Results', icon: Award }
           ].map(tab => {
             const Icon = tab.icon;
@@ -300,25 +280,9 @@ const ProjectSelectionManager = () => {
       {/* Configuration Tab */}
       {activeTab === 'config' && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-6">Selection Configuration</h2>
+          <h2 className="text-xl font-semibold mb-6">User Selection Configuration</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Selection Mode */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Selection Mode
-              </label>
-              <select
-                value={config.selectionMode}
-                onChange={(e) => setConfig(prev => ({ ...prev, selectionMode: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="automatic">Automatic Only</option>
-                <option value="manual">Manual Only</option>
-                <option value="hybrid">Hybrid (Automatic + Manual)</option>
-              </select>
-            </div>
-
             {/* Required Contributors */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -369,7 +333,7 @@ const ProjectSelectionManager = () => {
 
           {/* Criteria Weights */}
           <div className="mt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Selection Criteria Weights</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">User Evaluation Criteria (For Reference)</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(config.criteriaWeights).map(([key, value]) => (
                 <div key={key}>
@@ -402,7 +366,7 @@ const ProjectSelectionManager = () => {
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Configuration'}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save User Selection Configuration'}
             </button>
           </div>
         </div>
@@ -411,7 +375,7 @@ const ProjectSelectionManager = () => {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-6">Selection Overview</h2>
+          <h2 className="text-xl font-semibold mb-6">User Selection Overview</h2>
           
           {selection ? (
             <div className="space-y-6">
@@ -426,21 +390,12 @@ const ProjectSelectionManager = () => {
                   {selection.status === 'pending' && (
                     <>
                       <button
-                        onClick={handleAutomaticSelection}
-                        disabled={loading}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 flex items-center"
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        {loading ? 'Processing...' : 'Start Automatic Selection'}
-                      </button>
-                      
-                      <button
                         onClick={handleLoadRankedBidders}
                         disabled={loading}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 flex items-center"
                       >
                         <UserCheck className="w-4 h-4 mr-2" />
-                        Manual Selection
+                        Select Users
                       </button>
                     </>
                   )}
@@ -461,10 +416,10 @@ const ProjectSelectionManager = () => {
               {/* Configuration Summary */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 mb-3">Configuration Summary</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">Mode:</span>
-                    <span className="ml-2 font-medium">{selection.selectionMode}</span>
+                    <span className="ml-2 font-medium">Manual Selection Only</span>
                   </div>
                   <div>
                     <span className="text-gray-600">Required:</span>
@@ -473,10 +428,6 @@ const ProjectSelectionManager = () => {
                   <div>
                     <span className="text-gray-600">Max Bids:</span>
                     <span className="ml-2 font-medium">{selection.maxBidsToConsider}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Total Considered:</span>
-                    <span className="ml-2 font-medium">{selection.totalBidsConsidered || 0}</span>
                   </div>
                 </div>
               </div>
@@ -505,16 +456,16 @@ const ProjectSelectionManager = () => {
           ) : (
             <div className="text-center py-8">
               <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No selection configuration found. Please configure the selection first.</p>
+              <p className="text-gray-600">No user selection configuration found. Please configure the user selection first.</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Manual Selection Tab */}
+      {/* User Selection Tab */}
       {activeTab === 'manual' && showManualSelection && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-6">Manual Selection</h2>
+          <h2 className="text-xl font-semibold mb-6">User Selection</h2>
           
           <div className="mb-4 flex items-center justify-between">
             <p className="text-gray-600">
@@ -529,7 +480,7 @@ const ProjectSelectionManager = () => {
                 disabled={selectedUsers.length === 0 || loading}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
               >
-                {loading ? 'Processing...' : 'Confirm Selection'}
+                {loading ? 'Processing...' : 'Confirm User Selection'}
               </button>
             </div>
           </div>
@@ -591,12 +542,12 @@ const ProjectSelectionManager = () => {
       {/* Results Tab */}
       {activeTab === 'results' && selection && selection.selectedUsers && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-6">Selection Results</h2>
+          <h2 className="text-xl font-semibold mb-6">User Selection Results</h2>
           
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Final Selection</h3>
+                      <div className="mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Final User Selection</h3>
                 <p className="text-gray-600">
                   {selection.selectedUsers.length} users selected out of {selection.totalBidsConsidered || 0} total bids
                 </p>
