@@ -947,9 +947,8 @@ export const moveFundsToBalance = async (req, res) => {
     userDetails.balance.available += userFunds.totalAmount;
     userDetails.balance.total += userFunds.totalAmount;
 
-    // Update fund status
-    userFunds.lockStatus = 'moved_to_balance';
-    userFunds.movedToBalanceAt = new Date();
+    // Update fund status using model method
+    escrowWallet.moveFundsToBalance(userId);
 
     // Save both documents
     await Promise.all([

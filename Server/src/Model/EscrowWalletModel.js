@@ -355,6 +355,30 @@ EscrowWalletSchema.methods.refundUserFunds = function(userId, bidId, reason = 'c
   return this;
 };
 
+EscrowWalletSchema.methods.moveFundsToBalance = function(userId) {
+  const fund = this.lockedFunds.find(f => 
+    f.userId.toString() === userId.toString()
+  );
+  
+  if (!fund) {
+    throw new Error('No escrow funds found for this user');
+  }
+  
+  if (fund.lockStatus !== 'released') {
+    throw new Error(`Funds cannot be moved to balance. Current status: ${fund.lockStatus}`);
+  }
+  
+  if (fund.lockStatus === 'moved_to_balance') {
+    throw new Error('Funds have already been moved to balance');
+  }
+  
+  // Update fund status
+  fund.lockStatus = 'moved_to_balance';
+  fund.movedToBalanceAt = new Date();
+  
+  return this;
+};
+
 EscrowWalletSchema.methods.addAuditLog = function(action, amount, userId, notes = '', ipAddress = '', userAgent = '') {
   this.security.auditLog.push({
     action,

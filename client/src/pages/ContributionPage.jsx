@@ -908,7 +908,7 @@ const ContributionPage = () => {
       console.log('🔍 Move to balance result:', result);
       
       notificationService.success(
-        result.message || `Successfully moved ₹${userEarnings.totalAmount} to your available balance`
+        result.message || `Successfully moved ₹${userEarnings.totalAmount} to your available balance. You can now withdraw from the Withdrawal page.`
       );
 
       // Refresh escrow data to get updated status

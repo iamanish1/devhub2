@@ -3,6 +3,8 @@ import { usePayment } from '../context/PaymentContext';
 import PaymentModal from '../components/payment/PaymentModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import NavBar from '../components/NavBar';
+import escrowWalletApi from '../services/escrowWalletApi';
+import notificationService from '../services/notificationService';
 import { 
   PAYMENT_TYPES, 
   PAYMENT_AMOUNTS, 
@@ -22,22 +24,36 @@ const WithdrawalPage = () => {
   const { 
     withdrawalHistory, 
     isProcessing, 
-    refreshData,
-    startPayment,
-    completePayment,
-    handlePaymentError 
+    refreshData
   } = usePayment();
 
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [availableBalance, setAvailableBalance] = useState(0);
+  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [pendingBalance, setPendingBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user balance from API
+  const fetchUserBalance = async () => {
+    try {
+      setLoading(true);
+      const balanceData = await escrowWalletApi.getUserBalance();
+      setAvailableBalance(balanceData.balance?.available || 0);
+      setTotalEarnings(balanceData.balance?.total || 0);
+      setPendingBalance(balanceData.balance?.pending || 0);
+    } catch (error) {
+      console.error('Error fetching user balance:', error);
+      notificationService.error('Failed to fetch balance information');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
+    fetchUserBalance();
     refreshData();
-    // Calculate available balance (this would come from your backend)
-    // For now, we'll simulate it
-    setAvailableBalance(5000);
   }, [refreshData]);
 
   const handleWithdrawalAmountChange = (e) => {
@@ -55,14 +71,26 @@ const WithdrawalPage = () => {
     }
 
     try {
-      await startPayment(PAYMENT_TYPES.WITHDRAWAL_FEE, {
-        amount: withdrawalAmount,
-        fee: calculateWithdrawalFee(withdrawalAmount),
-        totalAmount: calculateTotalWithdrawalAmount(withdrawalAmount)
-      });
-      setShowWithdrawalModal(true);
+      // Use the new balance withdrawal API
+      await escrowWalletApi.requestBalanceWithdrawal(
+        withdrawalAmount,
+        'bank_transfer'
+      );
+      
+      notificationService.success('Withdrawal request submitted successfully');
+      
+      // Refresh balance data
+      await fetchUserBalance();
+      
+      // Clear form
+      setWithdrawalAmount('');
+      setShowWithdrawalModal(false);
+      
     } catch (error) {
-      handlePaymentError(error);
+      console.error('Withdrawal error:', error);
+      const errorMessage = error.message || "Failed to process withdrawal request";
+      setValidationError(errorMessage);
+      notificationService.error(errorMessage);
     }
   };
 
@@ -70,8 +98,16 @@ const WithdrawalPage = () => {
   const totalAmount = calculateTotalWithdrawalAmount(withdrawalAmount);
   const validation = validateWithdrawalAmount(withdrawalAmount, availableBalance);
 
-  const pendingWithdrawals = withdrawalHistory?.filter(w => w.status === PAYMENT_STATUS.PENDING) || [];
-  const completedWithdrawals = withdrawalHistory?.filter(w => w.status === PAYMENT_STATUS.SUCCESS) || [];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#121212] text-white">
+        <NavBar />
+        <div className="flex items-center justify-center min-h-screen">
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
@@ -102,10 +138,8 @@ const WithdrawalPage = () => {
           <div className="glass rounded-xl p-6 border border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Total Withdrawn</p>
-                <p className="text-2xl font-bold text-white">
-                  {formatCurrency(completedWithdrawals.reduce((sum, w) => sum + w.amount, 0))}
-                </p>
+                <p className="text-gray-400 text-sm">Total Earnings</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(totalEarnings)}</p>
               </div>
               <div className="text-[#00A8E8]">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,7 +153,7 @@ const WithdrawalPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Pending Withdrawals</p>
-                <p className="text-2xl font-bold text-white">{pendingWithdrawals.length}</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(pendingBalance)}</p>
               </div>
               <div className="text-[#00A8E8]">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,10 +224,10 @@ const WithdrawalPage = () => {
 
                 <button
                   onClick={handleWithdrawal}
-                  disabled={!validation.isValid || isProcessing}
+                  disabled={!validation.isValid || isProcessing || availableBalance === 0}
                   className="w-full btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
                 >
-                  {isProcessing ? 'Processing...' : 'Request Withdrawal'}
+                  {isProcessing ? 'Processing...' : availableBalance === 0 ? 'No Available Balance' : 'Request Withdrawal'}
                 </button>
               </div>
             </div>
