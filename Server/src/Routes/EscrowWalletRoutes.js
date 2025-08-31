@@ -13,7 +13,9 @@ import {
   getUserEscrowStatus,
   requestUserWithdrawal,
   moveFundsToBalance,
-  getUserBalance
+  getUserBalance,
+  updateBankDetails,
+  getBankDetails
 } from '../controller/EscrowWalletController.js';
 
 const escrowWalletRoutes = express.Router();
@@ -58,6 +60,10 @@ escrowWalletRoutes.post('/user/withdraw', authMiddleware, (req, res, next) => {
 }, requestUserWithdrawal);
 
 escrowWalletRoutes.get('/user/balance', authMiddleware, getUserBalance);
+
+// Bank details management
+escrowWalletRoutes.post('/user/bank-details', authMiddleware, updateBankDetails);
+escrowWalletRoutes.get('/user/bank-details', authMiddleware, getBankDetails);
 
 // General user escrow endpoint - must come last
 escrowWalletRoutes.get('/user/:projectId', authMiddleware, getUserEscrowWallet);

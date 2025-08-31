@@ -3,6 +3,7 @@ import { usePayment } from '../context/PaymentContext';
 import PaymentModal from '../components/payment/PaymentModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import NavBar from '../components/NavBar';
+import BankDetailsForm from '../components/BankDetailsForm';
 import escrowWalletApi from '../services/escrowWalletApi';
 import notificationService from '../services/notificationService';
 import { 
@@ -29,13 +30,15 @@ const WithdrawalPage = () => {
 
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [showBankDetailsForm, setShowBankDetailsForm] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [availableBalance, setAvailableBalance] = useState(0);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [pendingBalance, setPendingBalance] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [bankDetails, setBankDetails] = useState(null);
 
-  // Fetch user balance from API
+  // Fetch user balance and bank details from API
   const fetchUserBalance = async () => {
     try {
       setLoading(true);
@@ -43,6 +46,7 @@ const WithdrawalPage = () => {
       setAvailableBalance(balanceData.balance?.available || 0);
       setTotalEarnings(balanceData.balance?.total || 0);
       setPendingBalance(balanceData.balance?.pending || 0);
+      setBankDetails(balanceData.bankDetails);
     } catch (error) {
       console.error('Error fetching user balance:', error);
       notificationService.error('Failed to fetch balance information');
@@ -70,14 +74,27 @@ const WithdrawalPage = () => {
       return;
     }
 
+    // Check if user has bank details
+    if (!bankDetails || !bankDetails.accountNumber) {
+      setShowBankDetailsForm(true);
+      return;
+    }
+
     try {
       // Use the new balance withdrawal API
-      await escrowWalletApi.requestBalanceWithdrawal(
+      const response = await escrowWalletApi.requestBalanceWithdrawal(
         withdrawalAmount,
         'bank_transfer'
       );
       
-      notificationService.success('Withdrawal request submitted successfully');
+      // Show appropriate message based on response
+      if (response.requiresBankDetails) {
+        notificationService.info('Withdrawal submitted. Please update your bank details for faster processing.');
+      } else if (response.payoutResult) {
+        notificationService.success('Withdrawal request submitted successfully!');
+      } else {
+        notificationService.success(response.message || 'Withdrawal request submitted successfully');
+      }
       
       // Refresh balance data
       await fetchUserBalance();
@@ -92,6 +109,11 @@ const WithdrawalPage = () => {
       setValidationError(errorMessage);
       notificationService.error(errorMessage);
     }
+  };
+
+  const handleBankDetailsSuccess = () => {
+    fetchUserBalance(); // Refresh to get updated bank details
+    setShowBankDetailsForm(false);
   };
 
   const withdrawalFee = calculateWithdrawalFee(withdrawalAmount);
@@ -178,6 +200,52 @@ const WithdrawalPage = () => {
           </div>
         </div>
 
+        {/* Bank Details Section */}
+        <div className="glass rounded-xl p-6 border border-gray-700 mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Bank Details</h2>
+            <button
+              onClick={() => setShowBankDetailsForm(true)}
+              className="btn-primary"
+            >
+              {bankDetails ? 'Update Bank Details' : 'Add Bank Details'}
+            </button>
+          </div>
+
+          {bankDetails ? (
+            <div className="bg-[#2A2A2A] rounded-lg p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-400 text-sm">Account Number</p>
+                  <p className="text-white font-medium">****{bankDetails.accountNumber.slice(-4)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm">Bank Name</p>
+                  <p className="text-white font-medium">{bankDetails.bankName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm">Account Holder</p>
+                  <p className="text-white font-medium">{bankDetails.accountHolderName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm">IFSC Code</p>
+                  <p className="text-white font-medium">{bankDetails.ifscCode}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+              </div>
+              <p className="text-gray-400 text-lg mb-2">No bank details added</p>
+              <p className="text-gray-500">Add your bank details to enable faster withdrawals</p>
+            </div>
+          )}
+        </div>
+
         {/* Withdrawal Form */}
         <div className="glass rounded-xl p-6 border border-gray-700 mb-8">
           <h2 className="text-2xl font-bold text-white mb-6">Request Withdrawal</h2>
@@ -227,7 +295,9 @@ const WithdrawalPage = () => {
                   disabled={!validation.isValid || isProcessing || availableBalance === 0}
                   className="w-full btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
                 >
-                  {isProcessing ? 'Processing...' : availableBalance === 0 ? 'No Available Balance' : 'Request Withdrawal'}
+                  {isProcessing ? 'Processing...' : 
+                   availableBalance === 0 ? 'No Available Balance' : 
+                   !bankDetails ? 'Add Bank Details First' : 'Request Withdrawal'}
                 </button>
               </div>
             </div>
@@ -270,6 +340,7 @@ const WithdrawalPage = () => {
                     <li>• Processing time: 2-5 business days</li>
                     <li>• Minimum withdrawal: {formatCurrency(PAYMENT_AMOUNTS.WITHDRAWAL_MIN)}</li>
                     <li>• Fee is automatically deducted from your withdrawal amount</li>
+                    <li>• Bank details required for automatic processing</li>
                   </ul>
                 </div>
               </div>
@@ -354,6 +425,14 @@ const WithdrawalPage = () => {
               setShowWithdrawalModal(false);
               setWithdrawalAmount('');
             }}
+          />
+        )}
+
+        {/* Bank Details Form */}
+        {showBankDetailsForm && (
+          <BankDetailsForm
+            onClose={() => setShowBankDetailsForm(false)}
+            onSuccess={handleBankDetailsSuccess}
           />
         )}
       </div>

@@ -253,6 +253,35 @@ export const escrowWalletApi = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  /**
+   * Update user's bank details
+   */
+  updateBankDetails: async (bankDetails) => {
+    try {
+      const response = await createAuthInstance().post(
+        API_ENDPOINTS.UPDATE_BANK_DETAILS,
+        bankDetails
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Get user's bank details
+   */
+  getBankDetails: async () => {
+    try {
+      const response = await createAuthInstance().get(
+        API_ENDPOINTS.GET_BANK_DETAILS
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
 

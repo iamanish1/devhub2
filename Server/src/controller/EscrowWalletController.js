@@ -1029,13 +1029,6 @@ export const requestUserWithdrawal = async (req, res) => {
       });
     }
 
-    // Check if user has bank details (for bank transfers)
-    if (withdrawalMethod === 'bank_transfer' && (!userDetails.bankDetails || !userDetails.bankDetails.accountNumber)) {
-      return res.status(400).json({ 
-        message: 'Bank account details not found. Please update your bank details before making a withdrawal.' 
-      });
-    }
-
     // Create withdrawal record
     const withdrawal = {
       amount: actualAmountReceived, // Amount user will receive
@@ -1045,8 +1038,54 @@ export const requestUserWithdrawal = async (req, res) => {
       method: withdrawalMethod,
       referenceId: `WD_${userId}_${Date.now()}`,
       createdAt: new Date(),
-      notes: `Withdrawal request via ${withdrawalMethod}. Fee: ₹${withdrawalFee}`
+      notes: `Withdrawal request via ${withdrawalMethod}. Fee: ₹${withdrawalFee}`,
+      razorpayPayoutId: null,
+      payoutStatus: 'pending'
     };
+
+    // Try to process payout via Razorpay if bank details are available
+    let payoutResult = null;
+    let payoutError = null;
+
+    if (userDetails.bankDetails && userDetails.bankDetails.accountNumber) {
+      try {
+        // Create payout via Razorpay
+        const payoutData = {
+          account_number: userDetails.bankDetails.accountNumber,
+          fund_account_id: userDetails.bankDetails.fundAccountId || null,
+          amount: actualAmountReceived * 100, // Convert to paise
+          currency: 'INR',
+          mode: 'IMPS',
+          purpose: 'payout',
+          queue_if_low_balance: true,
+          reference_id: withdrawal.referenceId,
+          narration: `Withdrawal to ${userDetails.bankDetails.accountNumber}`
+        };
+
+        payoutResult = await createPayout(payoutData);
+        
+        // Update withdrawal record with payout details
+        withdrawal.razorpayPayoutId = payoutResult.id;
+        withdrawal.payoutStatus = payoutResult.status;
+        withdrawal.status = payoutResult.status === 'processed' ? 'success' : 'pending';
+        
+        logger.info(`[EscrowWallet] Razorpay payout created for user ${userId}, payout ID: ${payoutResult.id}`);
+        
+      } catch (payoutErr) {
+        payoutError = payoutErr;
+        logger.error(`[EscrowWallet] Razorpay payout failed for user ${userId}: ${payoutErr.message}`);
+        
+        // Set withdrawal status to failed but still allow the request
+        withdrawal.status = 'failed';
+        withdrawal.payoutStatus = 'failed';
+        withdrawal.notes += ` | Payout Error: ${payoutErr.message}`;
+      }
+    } else {
+      // No bank details - set status to pending for manual processing
+      withdrawal.status = 'pending';
+      withdrawal.notes += ' | Manual processing required - no bank details';
+      logger.info(`[EscrowWallet] No bank details for user ${userId}, withdrawal set to manual processing`);
+    }
 
     userDetails.withdrawals.push(withdrawal);
 
@@ -1056,10 +1095,18 @@ export const requestUserWithdrawal = async (req, res) => {
 
     await userDetails.save();
 
-    logger.info(`[EscrowWallet] Withdrawal request created for user ${userId}, amount: ${amount}`);
+    logger.info(`[EscrowWallet] Withdrawal request created for user ${userId}, amount: ${amount}, status: ${withdrawal.status}`);
+
+    // Prepare response based on payout result
+    let responseMessage = 'Withdrawal request submitted successfully';
+    if (payoutError) {
+      responseMessage = 'Withdrawal request submitted but payout processing failed. Our team will contact you.';
+    } else if (!userDetails.bankDetails || !userDetails.bankDetails.accountNumber) {
+      responseMessage = 'Withdrawal request submitted. Please update your bank details for faster processing.';
+    }
 
     res.status(200).json({
-      message: 'Withdrawal request submitted successfully',
+      message: responseMessage,
       withdrawal: {
         id: withdrawal.referenceId,
         amount: withdrawal.amount, // Amount user will receive
@@ -1067,10 +1114,14 @@ export const requestUserWithdrawal = async (req, res) => {
         totalDeducted: withdrawal.totalDeducted, // Total amount deducted from balance
         status: withdrawal.status,
         method: withdrawal.method,
-        createdAt: withdrawal.createdAt
+        createdAt: withdrawal.createdAt,
+        razorpayPayoutId: withdrawal.razorpayPayoutId,
+        payoutStatus: withdrawal.payoutStatus
       },
       newBalance: userDetails.balance.available,
-      pendingWithdrawals: userDetails.balance.pending
+      pendingWithdrawals: userDetails.balance.pending,
+      payoutResult: payoutResult,
+      requiresBankDetails: !userDetails.bankDetails || !userDetails.bankDetails.accountNumber
     });
 
   } catch (error) {
@@ -1104,6 +1155,91 @@ export const getUserBalance = async (req, res) => {
 
   } catch (error) {
     logger.error(`[EscrowWallet] Error in getUserBalance: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+/**
+ * Update user's bank details for withdrawals
+ */
+export const updateBankDetails = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { 
+      accountNumber, 
+      ifscCode, 
+      accountHolderName, 
+      bankName 
+    } = req.body;
+
+    // Validate required fields
+    if (!accountNumber || !ifscCode || !accountHolderName || !bankName) {
+      return res.status(400).json({ 
+        message: 'All bank details are required: account number, IFSC code, account holder name, and bank name' 
+      });
+    }
+
+    // Validate account number format (basic validation)
+    if (!/^\d{9,18}$/.test(accountNumber.replace(/\s/g, ''))) {
+      return res.status(400).json({ 
+        message: 'Invalid account number format' 
+      });
+    }
+
+    // Validate IFSC code format
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.toUpperCase())) {
+      return res.status(400).json({ 
+        message: 'Invalid IFSC code format' 
+      });
+    }
+
+    const userDetails = await user.findById(userId);
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update bank details
+    userDetails.bankDetails = {
+      accountNumber: accountNumber.replace(/\s/g, ''), // Remove spaces
+      ifscCode: ifscCode.toUpperCase(),
+      accountHolderName: accountHolderName,
+      bankName: bankName,
+      updatedAt: new Date()
+    };
+
+    await userDetails.save();
+
+    logger.info(`[EscrowWallet] Bank details updated for user ${userId}`);
+
+    res.status(200).json({
+      message: 'Bank details updated successfully',
+      bankDetails: userDetails.bankDetails
+    });
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in updateBankDetails: ${error.message}`, error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+/**
+ * Get user's bank details
+ */
+export const getBankDetails = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const userDetails = await user.findById(userId);
+    if (!userDetails) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({
+      bankDetails: userDetails.bankDetails || null
+    });
+
+  } catch (error) {
+    logger.error(`[EscrowWallet] Error in getBankDetails: ${error.message}`, error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
