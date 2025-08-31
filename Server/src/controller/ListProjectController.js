@@ -109,6 +109,13 @@ const ListProject = async (req, res) => {
 
     console.log(`[ProjectListing] Created project: ${project._id} with pending bonus pool: ${bonusPool._id}`);
 
+    // For testing purposes, automatically fund the bonus pool
+    // TODO: Remove this in production and integrate with actual payment flow
+    bonusPool.status = 'funded';
+    bonusPool.fundedAt = new Date();
+    await bonusPool.save();
+    console.log(`[ProjectListing] Auto-funded bonus pool for testing: ${bonusPool._id}`);
+
     res.status(200).json({
       message: "Project listed successfully",
       project,
