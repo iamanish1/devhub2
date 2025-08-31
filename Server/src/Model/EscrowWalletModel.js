@@ -279,7 +279,8 @@ EscrowWalletSchema.methods.lockUserFunds = function(userId, bidId, bidAmount, bo
   
   // Update totals
   this.totalBidAmount += bidAmount;
-  this.totalBonusPool += bonusAmount;
+  // Don't add to totalBonusPool here as it's already set when escrow wallet is created
+  // this.totalBonusPool += bonusAmount;
   this.totalEscrowAmount += totalAmount;
   
   // Update status
@@ -343,7 +344,8 @@ EscrowWalletSchema.methods.refundUserFunds = function(userId, bidId, reason = 'c
   
   // Update totals
   this.totalBidAmount -= fund.bidAmount;
-  this.totalBonusPool -= fund.bonusAmount;
+  // Don't subtract from totalBonusPool as it's the total pool amount
+  // this.totalBonusPool -= fund.bonusAmount;
   this.totalEscrowAmount -= fund.totalAmount;
   
   return this;
