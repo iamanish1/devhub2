@@ -74,8 +74,8 @@ const WithdrawalPage = () => {
       return;
     }
 
-    // Check if user has bank details
-    if (!bankDetails || !bankDetails.accountNumber) {
+    // Check if user has complete bank details
+    if (!isBankDetailsComplete()) {
       setShowBankDetailsForm(true);
       return;
     }
@@ -114,6 +114,15 @@ const WithdrawalPage = () => {
   const handleBankDetailsSuccess = () => {
     fetchUserBalance(); // Refresh to get updated bank details
     setShowBankDetailsForm(false);
+  };
+
+  // Helper function to check if bank details are complete
+  const isBankDetailsComplete = () => {
+    return bankDetails && 
+           bankDetails.accountNumber && 
+           bankDetails.ifscCode && 
+           bankDetails.accountHolderName && 
+           bankDetails.bankName;
   };
 
   const withdrawalFee = calculateWithdrawalFee(withdrawalAmount);
@@ -212,28 +221,37 @@ const WithdrawalPage = () => {
             </button>
           </div>
 
-          {bankDetails ? (
-            <div className="bg-[#2A2A2A] rounded-lg p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-400 text-sm">Account Number</p>
-                  <p className="text-white font-medium">****{bankDetails.accountNumber.slice(-4)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Bank Name</p>
-                  <p className="text-white font-medium">{bankDetails.bankName}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Account Holder</p>
-                  <p className="text-white font-medium">{bankDetails.accountHolderName}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-sm">IFSC Code</p>
-                  <p className="text-white font-medium">{bankDetails.ifscCode}</p>
-                </div>
-              </div>
-            </div>
-          ) : (
+                     {bankDetails ? (
+             <div className="bg-[#2A2A2A] rounded-lg p-4">
+               {!isBankDetailsComplete() && (
+                 <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+                   <p className="text-yellow-400 text-sm">
+                     ⚠️ Bank details are incomplete. Please update them for faster withdrawal processing.
+                   </p>
+                 </div>
+               )}
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <p className="text-gray-400 text-sm">Account Number</p>
+                   <p className="text-white font-medium">
+                     {bankDetails.accountNumber ? `****${bankDetails.accountNumber.slice(-4)}` : 'Not provided'}
+                   </p>
+                 </div>
+                 <div>
+                   <p className="text-gray-400 text-sm">Bank Name</p>
+                   <p className="text-white font-medium">{bankDetails.bankName || 'Not provided'}</p>
+                 </div>
+                 <div>
+                   <p className="text-gray-400 text-sm">Account Holder</p>
+                   <p className="text-white font-medium">{bankDetails.accountHolderName || 'Not provided'}</p>
+                 </div>
+                 <div>
+                   <p className="text-gray-400 text-sm">IFSC Code</p>
+                   <p className="text-white font-medium">{bankDetails.ifscCode || 'Not provided'}</p>
+                 </div>
+               </div>
+             </div>
+           ) : (
             <div className="text-center py-8">
               <div className="text-gray-400 mb-4">
                 <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,15 +308,15 @@ const WithdrawalPage = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleWithdrawal}
-                  disabled={!validation.isValid || isProcessing || availableBalance === 0}
-                  className="w-full btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
-                >
-                  {isProcessing ? 'Processing...' : 
-                   availableBalance === 0 ? 'No Available Balance' : 
-                   !bankDetails ? 'Add Bank Details First' : 'Request Withdrawal'}
-                </button>
+                                 <button
+                   onClick={handleWithdrawal}
+                   disabled={!validation.isValid || isProcessing || availableBalance === 0}
+                   className="w-full btn-primary disabled:bg-gray-600 disabled:cursor-not-allowed"
+                 >
+                   {isProcessing ? 'Processing...' : 
+                    availableBalance === 0 ? 'No Available Balance' : 
+                    !bankDetails || !bankDetails.accountNumber ? 'Add Bank Details First' : 'Request Withdrawal'}
+                 </button>
               </div>
             </div>
 
