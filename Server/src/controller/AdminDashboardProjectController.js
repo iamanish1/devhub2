@@ -64,6 +64,32 @@ export const EditProjectController = async (req, res) => {
       ...updatedData
     } = req.body;
 
+    // Handle free project updates
+    if (updatedData.project_category === "free") {
+      // Set appropriate defaults for free projects
+      updatedData.project_starting_bid = 0;
+      updatedData.bonus_pool_amount = 0;
+      updatedData.bonus_pool_contributors = 0;
+      updatedData.is_free_project = true;
+      
+      // Set defaults for optional fields if not provided
+      if (!updatedData.Project_Features) {
+        updatedData.Project_Features = "Free project for resume building";
+      }
+      if (!updatedData.Project_looking) {
+        updatedData.Project_looking = "Open to all developers";
+      }
+      if (!updatedData.Project_Contributor) {
+        updatedData.Project_Contributor = 1;
+      }
+      if (!updatedData.Project_Number_Of_Bids) {
+        updatedData.Project_Number_Of_Bids = 1;
+      }
+    } else {
+      // For non-free projects, ensure is_free_project is false
+      updatedData.is_free_project = false;
+    }
+
     const project = await ProjectListing.findByIdAndUpdate(_id, updatedData, {
       new: true,
     });
@@ -72,8 +98,13 @@ export const EditProjectController = async (req, res) => {
         message: "Project not found",
       });
     }
+    
+    const message = project.project_category === "free" 
+      ? "Free project updated successfully" 
+      : "Project updated successfully";
+      
     res.status(200).json({
-      message: "Project updated successfully",
+      message,
       project,
     });
   } catch (error) {

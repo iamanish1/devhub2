@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/NavBar";
 import ProjectCard from "../components/ProjectCard";
+import FreeProjectCard from "../components/FreeProjectCard";
 import FilterSidebar from "../components/FilterSidebar";
 import SearchBar from "../components/SearchBar";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -35,7 +36,7 @@ const PROJECT_CATEGORIES = [
   {
     id: "basic",
     name: "Basic Projects",
-    description: "Free projects for resume building and practice",
+    description: "Free projects for resume building and practice - including free projects",
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -492,7 +493,11 @@ const CategorizedDashboardPage = () => {
                       const isLast = idx === data.projects.length - 1;
                       return (
                         <div key={project._id} ref={isLast ? lastProjectRef : null} className="mb-1">
-                          <ProjectCard project={project} />
+                          {project.project_category === 'free' ? (
+                            <FreeProjectCard project={project} />
+                          ) : (
+                            <ProjectCard project={project} />
+                          )}
                         </div>
                       );
                     })}

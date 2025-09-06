@@ -284,13 +284,28 @@ const Navbar = () => {
                       Withdrawals
                     </Link>
                     
-                    <Link
-                      to={`/admin`}
-                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      Admin
-                    </Link>
+                    {/* Platform Administrator Options */}
+                    {user?.isPlatformAdmin && (
+                      <>
+                        <Link
+                          to="/listfreeproject"
+                          className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          List Free Project
+                        </Link>
+                        <Link
+                          to={`/admin`}
+                          className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                          onClick={() => setDropdownOpen(false)}
+                        >
+                          Admin Panel
+                        </Link>
+                      </>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-6 py-3 text-white hover:bg-red-500 hover:text-white transition-colors text-[2vmin]"

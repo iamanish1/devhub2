@@ -40,6 +40,7 @@ const TechStackEnum = [
 const ProjectCategoryEnum = [
   "basic",      // Basic projects for resume/practice
   "funded",     // Funded projects with bidding
+  "free",       // Free projects for resume building (no payment required)
   "capsule"     // Advanced company projects
 ];
 

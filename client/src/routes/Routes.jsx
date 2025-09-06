@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import AboutPage from "../pages/Aboutpage";
 import LandingPage from "../pages/LandingPage";
 import ProjectListingPage from "../pages/ProjectListingPage";
+import FreeProjectListingPage from "../pages/FreeProjectListingPage";
 import Authenticationpage from "../pages/AuthenticationPage";
 import CategorizedDashboardPage from "../pages/CategorizedDashboardPage";
 import BidingPage from "../pages/BidingPage";
@@ -47,6 +48,7 @@ const AppRoutes = () => {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/listproject" element={<ProjectListingPage />} />
+        <Route path="/listfreeproject" element={<FreeProjectListingPage />} />
         <Route path="/dashboard" element={<CategorizedDashboardPage />} />
         <Route path="/bidingPage/:_id" element={<BidingPage />} />
         <Route path="/bidingproposal/:_id" element={<BidingProporsalPage />} />
