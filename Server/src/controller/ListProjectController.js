@@ -103,6 +103,22 @@ const ListProject = async (req, res) => {
           message: "All fields are required for funded and basic projects",
         });
       }
+      
+      // Validate bonus pool for non-free projects
+      const bonusAmount = parseInt(bonus_pool_amount) || 200;
+      const bonusContributors = parseInt(bonus_pool_contributors) || 1;
+      
+      if (bonusAmount < 200) {
+        return res.status(400).json({
+          message: "Bonus pool amount must be at least 200 for funded projects",
+        });
+      }
+      
+      if (bonusContributors < 1) {
+        return res.status(400).json({
+          message: "Bonus pool contributors must be at least 1 for funded projects",
+        });
+      }
     }
     // Check for duplicate project
     const existingProject = await ProjectListing.findOne({ project_Title });

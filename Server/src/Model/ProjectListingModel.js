@@ -124,12 +124,12 @@ const ProjectListingSchema = new mongoose.Schema({
   bonus_pool_amount: {
     type: Number,
     default: 200,
-    min: 200
+    min: 0  // Allow 0 for free projects
   },
   bonus_pool_contributors: {
     type: Number,
     default: 1,
-    min: 1
+    min: 0  // Allow 0 for free projects
   },
   // Payment and bonus related fields
   selectedContributors: [{
@@ -170,6 +170,25 @@ const ProjectListingSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true // This will automatically add createdAt and updatedAt fields
+});
+
+// Pre-save validation hook
+ProjectListingSchema.pre('save', function(next) {
+  // For free projects, ensure bonus pool values are 0
+  if (this.project_category === 'free' || this.is_free_project) {
+    this.bonus_pool_amount = 0;
+    this.bonus_pool_contributors = 0;
+    this.project_starting_bid = 0;
+  } else {
+    // For non-free projects, ensure minimum values
+    if (this.bonus_pool_amount < 200) {
+      this.bonus_pool_amount = 200;
+    }
+    if (this.bonus_pool_contributors < 1) {
+      this.bonus_pool_contributors = 1;
+    }
+  }
+  next();
 });
 
 const ProjectListing = mongoose.model("ProjectListing", ProjectListingSchema); // Capital "P" and "L"
