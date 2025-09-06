@@ -8,12 +8,15 @@ import PaymentModal from './PaymentModal';
 import PremiumBadge, { SubscriptionStatusBadge } from '../PremiumBadge';
 import SubscriptionPerks from '../SubscriptionPerks';
 import { CheckIcon } from '../../utils/iconUtils';
+import paymentApi from '../../services/paymentApi';
+import notificationService from '../../services/notificationService';
 
 const SubscriptionStatus = () => {
-  const { subscription } = usePayment();
+  const { subscription, refreshData } = usePayment();
   const { getDaysRemaining, isExpiringSoon, getStatusText } = useSubscription();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showBenefits, setShowBenefits] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Use subscription utilities for calculations
   const daysRemaining = getDaysRemaining();
@@ -24,6 +27,25 @@ const SubscriptionStatus = () => {
     if (daysRemaining === 0) return 'text-red-500';
     if (expiringSoon) return 'text-yellow-500';
     return 'text-green-500';
+  };
+
+  // Handle subscription cancellation
+  const handleCancelSubscription = async () => {
+    if (!window.confirm('Are you sure you want to cancel your subscription? You will retain access until your current period ends.')) {
+      return;
+    }
+
+    try {
+      setIsCancelling(true);
+      await paymentApi.cancelSubscription();
+      await refreshData();
+      notificationService.success('Subscription cancelled successfully. You will retain access until your current period ends.');
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      notificationService.error('Failed to cancel subscription. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const cardVariants = {
@@ -203,11 +225,27 @@ const SubscriptionStatus = () => {
                 </svg>
                 Manage Subscription
               </button>
-              <button className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
-                </svg>
-                Cancel Subscription
+              <button 
+                onClick={handleCancelSubscription}
+                disabled={isCancelling}
+                className="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clipRule="evenodd" />
+                    </svg>
+                    Cancel Subscription
+                  </>
+                )}
               </button>
             </>
           ) : (

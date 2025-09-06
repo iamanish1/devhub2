@@ -307,18 +307,6 @@ export const paymentApi = {
     }
   },
 
-  // Cancel Subscription
-  cancelSubscription: async () => {
-    try {
-      const response = await makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION, {
-        method: 'DELETE'
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Cancel subscription error:', error);
-      throw error;
-    }
-  },
 
   // Update Payment Method
   updatePaymentMethod: async (paymentMethodId) => {
