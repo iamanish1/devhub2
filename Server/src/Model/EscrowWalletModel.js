@@ -284,8 +284,9 @@ EscrowWalletSchema.methods.lockUserFunds = function(userId, bidId, bidAmount, bo
     lockedAt: new Date()
   });
   
-  // Don't update totals here as they should be calculated when escrow wallet is created
-  // The totals are already set correctly during escrow wallet creation
+  // Update totals when funds are locked
+  this.totalBidAmount += bidAmount;
+  this.totalEscrowAmount = this.totalBidAmount + this.totalBonusPool;
   
   // Update status
   if (this.status === 'active') {
@@ -316,7 +317,7 @@ EscrowWalletSchema.methods.releaseUserFunds = function(userId, bidId, reason = '
   
   // Update bonus pool distribution
   this.bonusPoolDistribution.distributedAmount += fund.bonusAmount;
-  this.bonusPoolDistribution.remainingAmount -= fund.bonusAmount;
+  this.bonusPoolDistribution.remainingAmount = this.totalBonusPool - this.bonusPoolDistribution.distributedAmount;
   
   // Check if all funds are released
   const allReleased = this.lockedFunds.every(fund => fund.lockStatus === 'released');

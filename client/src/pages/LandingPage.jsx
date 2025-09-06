@@ -756,7 +756,7 @@ const LandingPage = () => {
         >
           <div className="max-w-6xl mx-auto">
             <motion.h2
-              className="text-3xl md:text-4xl font-bold mb-12 relative inline-block text-white !text-white"
+              className="text-3xl md:text-4xl font-bold mb-12 relative inline-block text-white"
               style={{ color: 'white' }}
               variants={itemFadeIn}
             >

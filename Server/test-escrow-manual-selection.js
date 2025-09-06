@@ -17,9 +17,9 @@ import user from './src/Model/UserModel.js';
 
 // Test configuration
 const TEST_CONFIG = {
-  projectId: 'test-project-id',
-  projectOwnerId: 'test-owner-id',
-  selectedUserIds: ['user1', 'user2', 'user3'],
+  projectId: new mongoose.Types.ObjectId(),
+  projectOwnerId: new mongoose.Types.ObjectId(),
+  selectedUserIds: [new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId(), new mongoose.Types.ObjectId()],
   bidAmounts: [1000, 1500, 2000],
   bonusPoolAmount: 600 // ₹200 per contributor
 };
@@ -49,7 +49,7 @@ async function testEscrowSystem() {
     // Simulate manual selection
     const selectedUsers = TEST_CONFIG.selectedUserIds.map((userId, index) => ({
       userId,
-      bidId: `bid-${userId}`,
+      bidId: new mongoose.Types.ObjectId(),
       bidAmount: TEST_CONFIG.bidAmounts[index],
       selectionScore: 100,
       selectionReason: 'manual',

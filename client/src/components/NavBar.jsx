@@ -245,7 +245,7 @@ const Navbar = () => {
                     {/* Subscription Management */}
                     <Link
                       to="/subscription"
-                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] flex items-center"
+                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
                       onClick={() => setDropdownOpen(false)}
                     >
                       <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -257,7 +257,7 @@ const Navbar = () => {
                     {/* Payment Center */}
                     <Link
                       to="/payments"
-                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] flex items-center"
+                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
                       onClick={() => setDropdownOpen(false)}
                     >
                       <MoneyIcon className="w-4 h-4 mr-2" />
@@ -267,7 +267,7 @@ const Navbar = () => {
                     {/* Payment History */}
                     <Link
                       to="/payment-history"
-                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] flex items-center"
+                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
                       onClick={() => setDropdownOpen(false)}
                     >
                       <DocumentIcon className="w-4 h-4 mr-2" />
@@ -277,7 +277,7 @@ const Navbar = () => {
                     {/* Withdrawals */}
                     <Link
                       to="/withdrawals"
-                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] flex items-center"
+                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
                       onClick={() => setDropdownOpen(false)}
                     >
                       <PaymentMethodIcon type="card" className="w-4 h-4 mr-2" />
