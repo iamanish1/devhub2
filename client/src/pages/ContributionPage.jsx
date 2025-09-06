@@ -156,6 +156,16 @@ const ContributionPage = () => {
   const [showDebug, setShowDebug] = useState(false);
 
   // Tab configuration
+  // Check if project is free
+  const isFreeProject = projectOverview?.project_category === 'free' || projectOverview?.is_free_project;
+
+  // Redirect to overview if user tries to access hidden tabs for free projects
+  useEffect(() => {
+    if (isFreeProject && (activeTab === 'team' || activeTab === 'resources' || activeTab === 'earnings')) {
+      setActiveTab('overview');
+    }
+  }, [isFreeProject, activeTab]);
+
   const tabs = [
     { id: "overview", label: "Overview", icon: Target, color: "blue" },
     {
@@ -165,10 +175,13 @@ const ContributionPage = () => {
       color: "indigo",
     },
     { id: "tasks", label: "Tasks", icon: CheckSquare, color: "green" },
-    { id: "team", label: "Team", icon: Users2, color: "indigo" },
+    // Hide Team, Resources, and Earnings tabs for free projects
+    ...(isFreeProject ? [] : [
+      { id: "team", label: "Team", icon: Users2, color: "indigo" },
+      { id: "resources", label: "Resources", icon: FolderOpen, color: "orange" },
+      { id: "earnings", label: "Earnings", icon: DollarSign, color: "emerald" },
+    ]),
     { id: "chat", label: "Chat", icon: MessageCircle, color: "yellow" },
-    { id: "resources", label: "Resources", icon: FolderOpen, color: "orange" },
-    { id: "earnings", label: "Earnings", icon: DollarSign, color: "emerald" },
     { id: "how-to-work", label: "How to Work", icon: FileText, color: "cyan" },
   ];
 
@@ -193,16 +206,16 @@ const ContributionPage = () => {
     }
   }, [resources]);
 
-  // Load resources when resources tab is selected
+  // Load resources when resources tab is selected (only for non-free projects)
   useEffect(() => {
-    if (activeTab === "resources" && projectId) {
+    if (activeTab === "resources" && projectId && !isFreeProject) {
       console.log('🔍 Resources tab selected, ensuring resources are loaded');
       if (resources.length === 0 && !resourcesLoading) {
         console.log('🔍 No resources loaded, loading them now');
         loadProjectResources();
       }
     }
-  }, [activeTab, projectId, resources.length, resourcesLoading]);
+  }, [activeTab, projectId, resources.length, resourcesLoading, isFreeProject]);
 
   // Load tasks from API only (Firebase temporarily disabled)
   useEffect(() => {
@@ -2047,7 +2060,7 @@ const ContributionPage = () => {
 
 
             {/* Team Tab */}
-            {activeTab === "team" && (
+            {activeTab === "team" && !isFreeProject && (
               <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-white">
@@ -2168,7 +2181,7 @@ const ContributionPage = () => {
             )}
 
             {/* Earnings Tab */}
-            {activeTab === "earnings" && (
+            {activeTab === "earnings" && !isFreeProject && (
               <div className="space-y-6">
                 {/* Project & Escrow Overview */}
                 <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
@@ -2567,7 +2580,7 @@ const ContributionPage = () => {
             )}
 
             {/* Resources Tab */}
-            {activeTab === "resources" && (
+            {activeTab === "resources" && !isFreeProject && (
               <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-lg shadow-lg border border-[#00A8E8]/20 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-white">
