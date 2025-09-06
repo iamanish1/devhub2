@@ -8,6 +8,7 @@ import FileUploadField from "../components/FileUploadField";
 import { usePayment } from "../context/PaymentContext";
 import { PAYMENT_TYPES } from "../constants/paymentConstants";
 import BonusPoolPaymentModal from "../components/payment/BonusPoolPaymentModal";
+import { useAuth } from "../context/AuthContext";
 
 import axios from "axios";
 
@@ -60,6 +61,9 @@ const ProjectListingPage = () => {
   
   // Payment context
   const { hasActiveSubscription } = usePayment();
+  
+  // Auth context
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!editingProject && params.id) {
@@ -1013,7 +1017,9 @@ const ProjectListingPage = () => {
                           }`}
                         >
                           <option value="funded" className="bg-gray-800">Funded Projects - Bid on projects and get selected by owners</option>
-                          <option value="basic" className="bg-gray-800">Basic Projects - For resume building and practice (Platform Only)</option>
+                          {user?.isPlatformAdmin && (
+                            <option value="basic" className="bg-gray-800">Basic Projects - For resume building and practice (Platform Only)</option>
+                          )}
                           <option value="capsule" className="bg-gray-800" disabled>Capsule Projects - Advanced company projects (Coming Soon)</option>
                         </select>
                         <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
@@ -1027,7 +1033,10 @@ const ProjectListingPage = () => {
                         <p className="text-red-400 text-sm mt-1">{validationErrors.project_category}</p>
                       )}
                       <p className="text-gray-400 text-xs mt-2">
-                        Note: Basic projects are only available for platform administrators. Regular users can only create funded projects.
+                        {user?.isPlatformAdmin 
+                          ? "Note: As a platform administrator, you can create both funded and basic projects."
+                          : "Note: Basic projects are only available for platform administrators. Regular users can only create funded projects."
+                        }
                       </p>
                     </div>
                   </div>

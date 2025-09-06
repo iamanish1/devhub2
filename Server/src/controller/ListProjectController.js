@@ -58,6 +58,16 @@ const ListProject = async (req, res) => {
       });
     }
 
+    // Auto-categorize projects based on funding status
+    let finalProjectCategory = project_category;
+    if (is_free_project) {
+      finalProjectCategory = "basic"; // Free projects are always basic
+    } else if (bonus_pool_amount && bonus_pool_amount > 0) {
+      finalProjectCategory = "funded"; // Projects with bonus pool are funded
+    } else if (!project_category || project_category === "funded") {
+      finalProjectCategory = "funded"; // Default to funded for paid projects
+    }
+
     if (
       !project_Title ||
       !project_duration ||
@@ -99,7 +109,7 @@ const ListProject = async (req, res) => {
       project_starting_bid,
       bonus_pool_amount: bonus_pool_amount || 200,
       bonus_pool_contributors: bonus_pool_contributors || 1,
-      project_category: project_category || "funded",
+      project_category: finalProjectCategory,
       is_free_project: is_free_project || false,
     });
     await project.save();

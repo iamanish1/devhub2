@@ -20,22 +20,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 // ===== Project Categories =====
 const PROJECT_CATEGORIES = [
   {
-    id: "basic",
-    name: "Basic Projects",
-    description: "Perfect for building your resume and gaining practice",
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-      </svg>
-    ),
-    color: "from-green-500 to-emerald-600",
-    bgColor: "bg-green-500/10",
-    borderColor: "border-green-500/20"
-  },
-  {
     id: "funded",
     name: "Funded Projects",
-    description: "Bid on projects and get selected by project owners",
+    description: "Projects with bonus pools and bidding system",
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
@@ -44,6 +31,19 @@ const PROJECT_CATEGORIES = [
     color: "from-blue-500 to-cyan-600",
     bgColor: "bg-blue-500/10",
     borderColor: "border-blue-500/20"
+  },
+  {
+    id: "basic",
+    name: "Basic Projects",
+    description: "Free projects for resume building and practice",
+    icon: (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    ),
+    color: "from-green-500 to-emerald-600",
+    bgColor: "bg-green-500/10",
+    borderColor: "border-green-500/20"
   },
   {
     id: "capsule",
