@@ -3,6 +3,10 @@ import BonusPool from "../Model/BonusPoolModel.js";
 
 const ListProject = async (req, res) => {
   try {
+    console.log("Request body:", req.body);
+    console.log("Request files:", req.files);
+    console.log("Request headers:", req.headers);
+    
     const {
       project_Title,
       project_duration,
@@ -50,6 +54,11 @@ const ListProject = async (req, res) => {
     });
 
     console.log("Received project data:", req.body);
+    console.log("User info:", { 
+      userId: req.user?._id, 
+      isPlatformAdmin: req.user?.isPlatformAdmin,
+      project_category 
+    });
 
     // Check if user is trying to list a free project (only platform can do this)
     if (project_category === "free" && !req.user.isPlatformAdmin) {
@@ -120,7 +129,7 @@ const ListProject = async (req, res) => {
     // Add fields based on project type
     if (finalProjectCategory === "free") {
       // Free projects have minimal required fields with defaults
-      projectData.project_duration = project_duration || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+      projectData.project_duration = project_duration ? new Date(project_duration) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
       projectData.project_starting_bid = 0;
       projectData.Project_Contributor = 1;
       projectData.Project_Number_Of_Bids = 1;
@@ -130,18 +139,22 @@ const ListProject = async (req, res) => {
       projectData.bonus_pool_contributors = 0;
     } else {
       // Regular projects require all fields
-      projectData.project_duration = project_duration;
-      projectData.Project_Contributor = Project_Contributor;
-      projectData.Project_Number_Of_Bids = Project_Number_Of_Bids;
+      projectData.project_duration = new Date(project_duration);
+      projectData.Project_Contributor = parseInt(Project_Contributor);
+      projectData.Project_Number_Of_Bids = parseInt(Project_Number_Of_Bids);
       projectData.Project_Features = Project_Features;
       projectData.Project_looking = Project_looking;
-      projectData.project_starting_bid = project_starting_bid;
-      projectData.bonus_pool_amount = bonus_pool_amount || 200;
-      projectData.bonus_pool_contributors = bonus_pool_contributors || 1;
+      projectData.project_starting_bid = parseInt(project_starting_bid);
+      projectData.bonus_pool_amount = parseInt(bonus_pool_amount) || 200;
+      projectData.bonus_pool_contributors = parseInt(bonus_pool_contributors) || 1;
     }
 
+    console.log("Creating project with data:", projectData);
+    
     const project = new ProjectListing(projectData);
     await project.save();
+    
+    console.log("Project created successfully:", project._id);
 
     let bonusPool = null;
     let responseData = {
@@ -185,6 +198,29 @@ const ListProject = async (req, res) => {
 
     res.status(201).json(responseData);
   } catch (error) {
+    console.error("Error in ListProject:", error);
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// Test endpoint for debugging FormData
+export const testFormData = async (req, res) => {
+  try {
+    console.log("Test FormData endpoint called");
+    console.log("Request body:", req.body);
+    console.log("Request files:", req.files);
+    console.log("Request headers:", req.headers);
+    
+    res.status(200).json({
+      message: "FormData test successful",
+      body: req.body,
+      files: req.files,
+      headers: req.headers
+    });
+  } catch (error) {
+    console.error("Test FormData error:", error);
     res.status(500).json({
       message: error.message,
     });
