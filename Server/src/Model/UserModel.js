@@ -37,10 +37,34 @@ const UserSchema = new mongoose.Schema({
     remaining: { type: Number, default: 5 },
     used: { type: Number, default: 0 }
   },
-  // Subscription status
+  // Enhanced subscription system
   subscription: {
     isActive: { type: Boolean, default: false },
-    expiresAt: { type: Date }
+    planType: { 
+      type: String, 
+      enum: ['weekly', 'monthly', 'yearly'], 
+      default: null 
+    },
+    planName: { 
+      type: String, 
+      enum: ['starter', 'pro', 'enterprise'], 
+      default: null 
+    },
+    expiresAt: { type: Date },
+    startedAt: { type: Date },
+    autoRenew: { type: Boolean, default: true },
+    paymentIntentId: { type: String },
+    razorpaySubscriptionId: { type: String },
+    features: {
+      unlimitedBids: { type: Boolean, default: false },
+      prioritySupport: { type: Boolean, default: false },
+      advancedAnalytics: { type: Boolean, default: false },
+      premiumBadge: { type: Boolean, default: false },
+      earlyAccess: { type: Boolean, default: false },
+      customProfile: { type: Boolean, default: false },
+      projectBoosting: { type: Boolean, default: false },
+      teamCollaboration: { type: Boolean, default: false }
+    }
   },
   // Balance and withdrawal system
   balance: {

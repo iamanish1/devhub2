@@ -23,6 +23,7 @@ import Contact from "../pages/ContactPage";
 import PaymentPage from "../pages/PaymentPage";
 import PaymentHistoryPage from "../pages/PaymentHistoryPage";
 import WithdrawalPage from "../pages/WithdrawalPage";
+import SubscriptionPage from "../pages/SubscriptionPage";
 // Project Selection System
 import ProjectSelectionManager from "../components/ProjectSelectionManager";
 // Escrow Wallet System
@@ -54,6 +55,7 @@ const AppRoutes = () => {
         <Route path="/createprofile" element={<EditProfilePage/>}/>
         <Route path="/admin/" element={<AdminPage/>}/>
         <Route path="/editproject/:id" element={<ProjectListingPage />} />
+        <Route path="/subscription" element={<SubscriptionPage />} />
         <Route path = "/contributionPage/:_id" element={<ContributionPage/>}/>
         
         {/* Project Selection System Routes */}

@@ -266,26 +266,37 @@ export const createBonus = async (req, res) => {
   }
 };
 
-// Create subscription payment (₹299/month)
+// Create subscription payment with multiple plans
 export const createSubscription = async (req, res) => {
   try {
-    const { planType = 'monthly' } = req.body;
+    const { planName = 'starter', planType = 'monthly' } = req.body;
     const userId = req.user._id;
+
+    // Import subscription plans configuration
+    const { getPlanConfig, calculateSubscriptionPricing } = await import('../config/subscriptionPlans.js');
+    
+    // Validate plan configuration
+    const planConfig = getPlanConfig(planName, planType);
+    if (!planConfig) {
+      throw new ApiError(400, 'Invalid subscription plan');
+    }
 
     // Check if user already has active subscription
     const existingSubscription = await PaymentIntent.findOne({
       purpose: 'subscription',
       userId,
       status: 'paid',
+      'notes.planName': planName,
       'notes.planType': planType,
-      createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+      createdAt: { $gte: new Date(Date.now() - planConfig.planDetails.duration * 24 * 60 * 60 * 1000) }
     });
 
     if (existingSubscription) {
-      throw new ApiError(400, 'Active subscription already exists');
+      throw new ApiError(400, 'Active subscription already exists for this plan');
     }
 
-    const subscriptionAmount = 299; // ₹299/month
+    const subscriptionAmount = planConfig.planDetails.price;
+    const pricing = calculateSubscriptionPricing(planName, planType);
 
     // Create payment intent
     const intent = await PaymentIntent.create({
@@ -294,7 +305,13 @@ export const createSubscription = async (req, res) => {
       amount: subscriptionAmount,
       userId,
       status: 'created',
-      notes: { planType }
+      notes: { 
+        planName,
+        planType,
+        duration: planConfig.planDetails.duration,
+        features: planConfig.features,
+        limits: planConfig.limits
+      }
     });
 
     // Create Razorpay order
@@ -306,7 +323,7 @@ export const createSubscription = async (req, res) => {
         customer_email: req.user.email, 
         customer_phone: req.user.phone || '9999999999' 
       },
-      notes: 'Premium subscription payment'
+      notes: `${planConfig.displayName} ${planType} subscription payment`
     });
 
     // Update intent with order ID
@@ -317,8 +334,10 @@ export const createSubscription = async (req, res) => {
       intentId: intent._id,
       orderId: order.order_id,
       userId,
+      planName,
       planType,
-      amount: subscriptionAmount
+      amount: subscriptionAmount,
+      duration: planConfig.planDetails.duration
     });
 
     res.status(201).json({
@@ -328,8 +347,13 @@ export const createSubscription = async (req, res) => {
         provider: 'razorpay',
         order,
         intentId: intent._id,
+        planName,
         planType,
-        amount: subscriptionAmount
+        amount: subscriptionAmount,
+        duration: planConfig.planDetails.duration,
+        features: planConfig.features,
+        limits: planConfig.limits,
+        pricing
       }
     });
 
@@ -551,51 +575,209 @@ export const getRefundHistory = async (req, res) => {
   }
 };
 
-// Get subscription status
+// Get subscription status with enhanced features
 export const getSubscriptionStatus = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // Find the most recent subscription payment
-    const subscription = await PaymentIntent.findOne({
-      purpose: 'subscription',
-      userId,
-      status: 'paid'
-    }).sort({ createdAt: -1 });
+    // Get user details with subscription info
+    const User = await user.findById(userId);
+    if (!User) {
+      throw new ApiError(404, 'User not found');
+    }
 
-    if (!subscription) {
+    // Import subscription plans configuration
+    const { getPlanConfig, getSubscriptionBenefits } = await import('../config/subscriptionPlans.js');
+
+    if (!User.subscription || !User.subscription.isActive) {
       return res.status(200).json({
         success: true,
         data: {
           isActive: false,
-          subscription: null
+          subscription: null,
+          features: {},
+          benefits: []
         }
       });
     }
 
-    // Check if subscription is still active (within 30 days)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const isActive = subscription.createdAt >= thirtyDaysAgo;
+    // Check if subscription is still active
+    const now = new Date();
+    const isActive = User.subscription.expiresAt && User.subscription.expiresAt > now;
+
+    // Get plan configuration
+    const planConfig = getPlanConfig(User.subscription.planName, User.subscription.planType);
+    const benefits = getSubscriptionBenefits(User.subscription.planName);
 
     res.status(200).json({
       success: true,
       data: {
         isActive,
         subscription: {
-          id: subscription._id,
-          planType: subscription.notes?.planType || 'monthly',
-          amount: subscription.amount,
-          status: subscription.status,
-          createdAt: subscription.createdAt,
-          expiresAt: new Date(subscription.createdAt.getTime() + 30 * 24 * 60 * 60 * 1000)
-        }
+          id: User.subscription.paymentIntentId,
+          planName: User.subscription.planName,
+          planType: User.subscription.planType,
+          startedAt: User.subscription.startedAt,
+          expiresAt: User.subscription.expiresAt,
+          autoRenew: User.subscription.autoRenew,
+          razorpaySubscriptionId: User.subscription.razorpaySubscriptionId
+        },
+        features: User.subscription.features,
+        benefits,
+        planConfig: planConfig ? {
+          displayName: planConfig.displayName,
+          description: planConfig.description,
+          limits: planConfig.limits
+        } : null
+      }
+    });
+
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Error fetching subscription status'
+    });
+  }
+};
+
+// Get all available subscription plans
+export const getSubscriptionPlans = async (req, res) => {
+  try {
+    const { getAllPlans } = await import('../config/subscriptionPlans.js');
+    const plans = getAllPlans();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        plans
       }
     });
 
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error fetching subscription status'
+      message: 'Error fetching subscription plans'
+    });
+  }
+};
+
+// Activate subscription after payment verification
+export const activateSubscription = async (req, res) => {
+  try {
+    const { paymentIntentId } = req.params;
+    const userId = req.user._id;
+
+    // Find the payment intent
+    const paymentIntent = await PaymentIntent.findOne({
+      _id: paymentIntentId,
+      userId,
+      purpose: 'subscription',
+      status: 'paid'
+    });
+
+    if (!paymentIntent) {
+      throw new ApiError(404, 'Payment intent not found or not paid');
+    }
+
+    const { planName, planType, duration, features, limits } = paymentIntent.notes;
+
+    // Import subscription plans configuration
+    const { getPlanConfig } = await import('../config/subscriptionPlans.js');
+    const planConfig = getPlanConfig(planName, planType);
+
+    if (!planConfig) {
+      throw new ApiError(400, 'Invalid plan configuration');
+    }
+
+    // Calculate expiration date
+    const startedAt = new Date();
+    const expiresAt = new Date(startedAt.getTime() + duration * 24 * 60 * 60 * 1000);
+
+    // Update user subscription
+    const User = await user.findById(userId);
+    if (!User) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    User.subscription = {
+      isActive: true,
+      planName,
+      planType,
+      startedAt,
+      expiresAt,
+      autoRenew: true,
+      paymentIntentId: paymentIntentId,
+      features: features || planConfig.features
+    };
+
+    await User.save();
+
+    logPaymentEvent('subscription_activated', {
+      userId,
+      planName,
+      planType,
+      duration,
+      expiresAt
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Subscription activated successfully',
+      data: {
+        subscription: User.subscription,
+        features: User.subscription.features,
+        expiresAt
+      }
+    });
+
+  } catch (error) {
+    logPaymentEvent('subscription_activation_error', { error: error.message });
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Error activating subscription'
+    });
+  }
+};
+
+// Cancel subscription
+export const cancelSubscription = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const User = await user.findById(userId);
+    if (!User) {
+      throw new ApiError(404, 'User not found');
+    }
+
+    if (!User.subscription || !User.subscription.isActive) {
+      throw new ApiError(400, 'No active subscription found');
+    }
+
+    // Disable auto-renewal
+    User.subscription.autoRenew = false;
+    await User.save();
+
+    logPaymentEvent('subscription_cancelled', {
+      userId,
+      planName: User.subscription.planName,
+      planType: User.subscription.planType,
+      expiresAt: User.subscription.expiresAt
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Subscription cancelled successfully. You will retain access until your current period ends.',
+      data: {
+        expiresAt: User.subscription.expiresAt,
+        autoRenew: false
+      }
+    });
+
+  } catch (error) {
+    logPaymentEvent('subscription_cancellation_error', { error: error.message });
+    res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Error cancelling subscription'
     });
   }
 };
@@ -1006,6 +1188,22 @@ export const verifyPaymentWithRazorpay = async (req, res) => {
         
         // Handle different payment purposes
         switch (intent.purpose) {
+          case 'subscription':
+            // Activate subscription after payment verification
+            try {
+              const { activateSubscription } = await import('./paymentsController.js');
+              await activateSubscription({ 
+                params: { paymentIntentId: intent._id.toString() },
+                user: { _id: intent.userId }
+              }, { 
+                status: () => ({ json: () => {} }) 
+              });
+              console.log(`[Payment Verification] Subscription activated for user: ${intent.userId}`);
+            } catch (activationError) {
+              console.error(`[Payment Verification] Error activating subscription:`, activationError);
+            }
+            break;
+            
           case 'bonus_funding':
             // Create or update bonus pool
             const bonusAmount = intent.amount;

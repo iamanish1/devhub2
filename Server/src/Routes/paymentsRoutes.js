@@ -9,6 +9,9 @@ import {
   getPaymentStatus,
   getPaymentHistory,
   getSubscriptionStatus,
+  getSubscriptionPlans,
+  activateSubscription,
+  cancelSubscription,
   getBonusPools,
   getWithdrawalHistory,
   getPaymentAnalytics,
@@ -103,6 +106,24 @@ paymentsRoutes.get('/summary',
 paymentsRoutes.get('/subscription/status', 
   authMiddleware, 
   getSubscriptionStatus
+);
+
+// Get all subscription plans
+paymentsRoutes.get('/subscription/plans', 
+  authMiddleware, 
+  getSubscriptionPlans
+);
+
+// Activate subscription after payment
+paymentsRoutes.post('/subscription/activate/:paymentIntentId', 
+  authMiddleware, 
+  activateSubscription
+);
+
+// Cancel subscription
+paymentsRoutes.post('/subscription/cancel', 
+  authMiddleware, 
+  cancelSubscription
 );
 
 // Get bonus pools

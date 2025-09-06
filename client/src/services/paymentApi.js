@@ -114,12 +114,12 @@ export const paymentApi = {
   },
 
   // Subscription Payment
-  createSubscriptionPayment: async (planType = 'monthly') => {
+  createSubscriptionPayment: async (planName = 'starter', planType = 'monthly') => {
     try {
       const response = await makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION, {
         method: 'POST',
         body: JSON.stringify({
-          amount: 299,
+          planName,
           planType,
           purpose: 'subscription'
         })
@@ -193,6 +193,43 @@ export const paymentApi = {
       return response.data;
     } catch (error) {
       console.error('Get subscription status error:', error);
+      throw error;
+    }
+  },
+
+  // Get Subscription Plans
+  getSubscriptionPlans: async () => {
+    try {
+      const response = await makeRequest(`${API_BASE_URL}/api/payments/subscription/plans`);
+      return response.data;
+    } catch (error) {
+      console.error('Get subscription plans error:', error);
+      throw error;
+    }
+  },
+
+  // Activate Subscription
+  activateSubscription: async (paymentIntentId) => {
+    try {
+      const response = await makeRequest(`${API_BASE_URL}/api/payments/subscription/activate/${paymentIntentId}`, {
+        method: 'POST'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Activate subscription error:', error);
+      throw error;
+    }
+  },
+
+  // Cancel Subscription
+  cancelSubscription: async () => {
+    try {
+      const response = await makeRequest(`${API_BASE_URL}/api/payments/subscription/cancel`, {
+        method: 'POST'
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
       throw error;
     }
   },
