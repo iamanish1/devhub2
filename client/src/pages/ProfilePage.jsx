@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import userProjectsApi from "../utils/userProjectsApi.js";
 import ProjectStatsSection from "../components/ProjectStatsSection.jsx";
 import UserProjectCard from "../components/UserProjectCard.jsx";
+import PremiumBadge, { SubscriptionStatusBadge } from "../components/PremiumBadge";
 import { db } from "../Config/firebase";
 import { 
   collection, 
@@ -1858,9 +1859,18 @@ const ProfilePage = () => {
                 <div className="flex-1">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
-                      <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                        {userProfile.username?.username || "Developer"}
-                      </h1>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h1 className="text-3xl lg:text-4xl font-bold text-white">
+                          {userProfile.username?.username || "Developer"}
+                        </h1>
+                        {userProfile.subscription?.isActive && (
+                          <PremiumBadge 
+                            planName={userProfile.subscription.planName || 'starter'}
+                            planType={userProfile.subscription.planType || 'monthly'}
+                            size="large"
+                          />
+                        )}
+                      </div>
                       <p className="text-xl text-blue-400 mb-2">
                         {userProfile.username?.usertype ||
                           "Full Stack Developer"}

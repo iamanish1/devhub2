@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { MoneyIcon, DocumentIcon, PaymentMethodIcon } from "../utils/iconUtils";
+import PremiumBadge from "./PremiumBadge";
 
 
 const Navbar = () => {
@@ -11,32 +12,48 @@ const Navbar = () => {
   const [profileExsist, setProfileExist] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const dropdownRef = useRef(null);
 
 
-  // Fetch user profile existence
+  // Fetch user profile existence and subscription status
   useEffect(() => {
-    async function fetchUserProfile() {
+    async function fetchUserData() {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        if (response.data.profile) {
+        const [profileResponse, subscriptionResponse] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/payments/subscription/status`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          })
+        ]);
+        
+        if (profileResponse.data.profile) {
           setProfileExist(true);
-          console.log("User profile exists:", response.data.profile);
+          console.log("User profile exists:", profileResponse.data.profile);
         } else {
           setProfileExist(false);
           console.log("User profile does not exist.");
         }
-        console.log("User profile existence fetched:", response.data);
+        
+        if (subscriptionResponse.data.success) {
+          setSubscriptionStatus(subscriptionResponse.data.data);
+          console.log("Subscription status:", subscriptionResponse.data.data);
+        }
+        
+        console.log("User data fetched:", { profile: profileResponse.data, subscription: subscriptionResponse.data });
       } catch (error) {
-        console.error("Error fetching user profile:", error);
+        console.error("Error fetching user data:", error);
       }
     }
-    fetchUserProfile();
+    fetchUserData();
   }, []);
 
   // Handle scroll effect
@@ -191,8 +208,22 @@ const Navbar = () => {
                     animate="visible"
                     exit="exit"
                     variants={dropdownVariants}
-                    className="absolute right-0 mt-2 w-48 bg-[#232323] rounded-lg shadow-xl border border-[#00A8E8]/30 z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-56 bg-[#232323] rounded-lg shadow-xl border border-[#00A8E8]/30 z-50 overflow-hidden"
                   >
+                    {/* Subscription Status */}
+                    {subscriptionStatus?.isActive && (
+                      <div className="px-6 py-3 border-b border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-300 text-sm">Premium Status</span>
+                          <PremiumBadge 
+                            planName={subscriptionStatus.subscription?.planName || 'starter'}
+                            planType={subscriptionStatus.subscription?.planType || 'monthly'}
+                            size="small"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
                     {profileExsist ? (
                       <Link
                         to="/profile"
@@ -210,6 +241,18 @@ const Navbar = () => {
                         Create Profile
                       </Link>
                     )}
+                    
+                    {/* Subscription Management */}
+                    <Link
+                      to="/subscription"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] flex items-center"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" clipRule="evenodd" />
+                      </svg>
+                      {subscriptionStatus?.isActive ? 'Manage Subscription' : 'Upgrade to Premium'}
+                    </Link>
                     
                     {/* Payment Center */}
                     <Link

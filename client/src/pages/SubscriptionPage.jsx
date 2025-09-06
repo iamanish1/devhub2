@@ -117,65 +117,117 @@ const SubscriptionPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#121212] via-[#1a1a2e] to-[#16213e] text-white">
       <NavBar />
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 mt-[5vmin]">
-          <h1 className="text-4xl font-bold text-white mb-2">Subscription Plans</h1>
-          <p className="text-gray-300">Choose the perfect plan for your development journey</p>
+      
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10"></div>
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-[#00A8E8]/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#0062E6]/20 rounded-full blur-3xl"></div>
         </div>
+        
+        <div className="relative container mx-auto px-4 py-16">
+          <div className="text-center max-w-4xl mx-auto">
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-[#00A8E8] to-[#0062E6] bg-clip-text text-transparent mb-6">
+              Choose Your Plan
+            </h1>
+            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+              Unlock your full potential with premium features designed for developers
+            </p>
+            
+            {/* Current Subscription Status */}
+            {currentSubscription?.isActive && (
+              <div className="inline-flex items-center space-x-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-full px-6 py-3 mb-8">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-green-400 font-medium">Premium Active</span>
+                <PremiumBadge 
+                  planName={currentSubscription.subscription.planName}
+                  planType={currentSubscription.subscription.planType}
+                  size="small"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-        {/* Current Subscription Status */}
+      <div className="container mx-auto px-4 pb-16">
+
+        {/* Current Subscription Management */}
         {currentSubscription?.isActive && (
-          <div className="glass rounded-xl p-6 border border-gray-700 mb-8">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">Current Subscription</h2>
-                <div className="flex items-center space-x-4">
+          <div className="glass rounded-xl p-8 border border-gray-700 mb-12 bg-gradient-to-r from-green-500/5 to-emerald-500/5">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-white mb-4">Current Subscription</h2>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <PremiumBadge 
                     planName={currentSubscription.subscription.planName}
                     planType={currentSubscription.subscription.planType}
                     size="large"
                   />
-                  <div className="text-gray-300">
-                    <p>Expires: {formatPaymentDate(currentSubscription.subscription.expiresAt)}</p>
-                    <p>Auto-renewal: {currentSubscription.subscription.autoRenew ? 'Enabled' : 'Disabled'}</p>
+                  <div className="text-gray-300 space-y-1">
+                    <p className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Expires: {formatPaymentDate(currentSubscription.subscription.expiresAt)}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                      </svg>
+                      Auto-renewal: {currentSubscription.subscription.autoRenew ? 'Enabled' : 'Disabled'}
+                    </p>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={handleCancelSubscription}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Cancel Subscription
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.location.href = '/payment'}
+                  className="bg-[#00A8E8] hover:bg-[#0096D6] text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                >
+                  Manage
+                </button>
+                <button
+                  onClick={handleCancelSubscription}
+                  className="bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/30 px-6 py-3 rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Plan Type Selector */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-[#2A2A2A] rounded-lg p-1 flex">
+        <div className="flex justify-center mb-12">
+          <div className="glass rounded-2xl p-2 border border-gray-700 flex bg-[#1a1a2e]/50">
             {['weekly', 'monthly', 'yearly'].map((type) => (
               <button
                 key={type}
                 onClick={() => setSelectedPlanType(type)}
-                className={`px-6 py-2 rounded-md transition-colors ${
+                className={`px-8 py-3 rounded-xl transition-all duration-300 font-medium ${
                   selectedPlanType === type
-                    ? 'bg-[#00A8E8] text-white'
-                    : 'text-gray-300 hover:text-white'
+                    ? 'bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white shadow-lg shadow-[#00A8E8]/25'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-700/50'
                 }`}
               >
                 {type.charAt(0).toUpperCase() + type.slice(1)}
+                {type === 'yearly' && (
+                  <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+                    Save 17%
+                  </span>
+                )}
               </button>
             ))}
           </div>
         </div>
 
         {/* Subscription Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          {plans.map((plan) => {
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+          {plans.map((plan, index) => {
             const price = getPlanPrice(plan, selectedPlanType);
             const savings = getPlanSavings(plan, selectedPlanType);
             const isCurrent = isCurrentPlan(plan.name, selectedPlanType);
@@ -184,40 +236,50 @@ const SubscriptionPage = () => {
             return (
               <div
                 key={plan.name}
-                className={`glass rounded-xl p-6 border-2 transition-all duration-300 ${
+                className={`relative glass rounded-2xl p-8 border-2 transition-all duration-500 hover:scale-105 ${
                   isPopular 
-                    ? 'border-[#00A8E8] ring-2 ring-[#00A8E8]/20' 
-                    : 'border-gray-700 hover:border-gray-600'
+                    ? 'border-[#00A8E8] ring-4 ring-[#00A8E8]/20 bg-gradient-to-br from-[#00A8E8]/5 to-[#0062E6]/5' 
+                    : 'border-gray-700 hover:border-gray-600 bg-gradient-to-br from-gray-800/20 to-gray-900/20'
                 } ${isCurrent ? 'opacity-75' : ''}`}
               >
                 {isPopular && (
-                  <div className="bg-[#00A8E8] text-white text-center py-1 rounded-t-lg -m-6 mb-6">
-                    <span className="text-sm font-semibold">Most Popular</span>
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
+                      ⭐ Most Popular
+                    </div>
                   </div>
                 )}
 
-                <div className="text-center mb-6">
-                  <PremiumBadge 
-                    planName={plan.name}
-                    size="large"
-                    className="mb-4"
-                  />
-                  <h3 className="text-xl font-bold text-white mb-2">{plan.displayName}</h3>
-                  <p className="text-gray-400 text-sm mb-4">{plan.description}</p>
+                <div className="text-center mb-8">
+                  <div className="mb-6">
+                    <PremiumBadge 
+                      planName={plan.name}
+                      size="large"
+                      className="mb-4"
+                    />
+                    <h3 className="text-2xl font-bold text-white mb-3">{plan.displayName}</h3>
+                    <p className="text-gray-400 text-base leading-relaxed">{plan.description}</p>
+                  </div>
                   
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold text-white">{formatCurrency(price)}</span>
-                    <span className="text-gray-400 ml-2">/{selectedPlanType}</span>
+                  <div className="mb-6">
+                    <div className="flex items-baseline justify-center gap-2">
+                      <span className="text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                        {formatCurrency(price)}
+                      </span>
+                      <span className="text-gray-400 text-lg">/{selectedPlanType}</span>
+                    </div>
                     {savings > 0 && (
-                      <div className="text-green-400 text-sm mt-1">
-                        Save {savings}% with {selectedPlanType} billing
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                          💰 Save {savings}% with {selectedPlanType} billing
+                        </span>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Features */}
-                <div className="space-y-3 mb-6">
+                <div className="space-y-4 mb-8">
                   {plan.features && Object.entries(plan.features).map(([feature, enabled]) => {
                     if (!enabled) return null;
                     
@@ -233,11 +295,13 @@ const SubscriptionPage = () => {
                     };
 
                     return (
-                      <div key={feature} className="flex items-center space-x-2">
-                        <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-gray-300 text-sm">{featureNames[feature]}</span>
+                      <div key={feature} className="flex items-center space-x-3">
+                        <div className="w-5 h-5 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg className="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <span className="text-gray-300 text-sm font-medium">{featureNames[feature]}</span>
                       </div>
                     );
                   })}
@@ -245,12 +309,26 @@ const SubscriptionPage = () => {
 
                 {/* Limits */}
                 {plan.limits && (
-                  <div className="bg-[#2A2A2A] rounded-lg p-3 mb-6">
-                    <h4 className="text-white font-semibold mb-2">Plan Limits</h4>
-                    <div className="space-y-1 text-sm text-gray-300">
-                      <div>Max Projects: {plan.limits.maxProjects === -1 ? 'Unlimited' : plan.limits.maxProjects}</div>
-                      <div>Max Team Members: {plan.limits.maxTeamMembers === -1 ? 'Unlimited' : plan.limits.maxTeamMembers}</div>
-                      <div>Max File Uploads: {plan.limits.maxFileUploads === -1 ? 'Unlimited' : plan.limits.maxFileUploads}</div>
+                  <div className="bg-gradient-to-r from-gray-800/30 to-gray-900/30 rounded-xl p-4 mb-8 border border-gray-700/50">
+                    <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" clipRule="evenodd" />
+                      </svg>
+                      Plan Limits
+                    </h4>
+                    <div className="space-y-2 text-sm text-gray-300">
+                      <div className="flex justify-between">
+                        <span>Max Projects:</span>
+                        <span className="text-white font-medium">{plan.limits.maxProjects === -1 ? 'Unlimited' : plan.limits.maxProjects}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Max Team Members:</span>
+                        <span className="text-white font-medium">{plan.limits.maxTeamMembers === -1 ? 'Unlimited' : plan.limits.maxTeamMembers}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Max File Uploads:</span>
+                        <span className="text-white font-medium">{plan.limits.maxFileUploads === -1 ? 'Unlimited' : plan.limits.maxFileUploads}</span>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -259,15 +337,29 @@ const SubscriptionPage = () => {
                 <button
                   onClick={() => handlePlanSelect(plan, selectedPlanType)}
                   disabled={isCurrent || isProcessing}
-                  className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                  className={`w-full py-4 rounded-xl font-semibold transition-all duration-300 ${
                     isCurrent
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      ? 'bg-gray-600/50 text-gray-400 cursor-not-allowed border border-gray-600'
                       : isPopular
-                      ? 'bg-[#00A8E8] hover:bg-[#0096D6] text-white'
-                      : 'bg-gray-700 hover:bg-gray-600 text-white'
+                      ? 'bg-gradient-to-r from-[#00A8E8] to-[#0062E6] hover:from-[#0096D6] hover:to-[#0056CC] text-white shadow-lg shadow-[#00A8E8]/25 hover:shadow-[#00A8E8]/40'
+                      : 'bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white border border-gray-600 hover:border-gray-500'
                   }`}
                 >
-                  {isCurrent ? 'Current Plan' : `Subscribe ${formatCurrency(price)}/${selectedPlanType}`}
+                  {isCurrent ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Current Plan
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Subscribe {formatCurrency(price)}/{selectedPlanType}
+                    </span>
+                  )}
                 </button>
               </div>
             );
@@ -275,47 +367,55 @@ const SubscriptionPage = () => {
         </div>
 
         {/* Benefits Section */}
-        <div className="glass rounded-xl p-6 border border-gray-700">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">Why Choose Premium?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-[#00A8E8] rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+        <div className="glass rounded-2xl p-12 border border-gray-700 bg-gradient-to-br from-[#1a1a2e]/50 to-[#16213e]/50">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-white via-[#00A8E8] to-[#0062E6] bg-clip-text text-transparent mb-4">
+              Why Choose Premium?
+            </h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Join thousands of developers who have unlocked their full potential with premium features
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#00A8E8] to-[#0062E6] rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h3 className="text-white font-semibold mb-2">Unlimited Bids</h3>
-              <p className="text-gray-400 text-sm">Bid on unlimited projects without restrictions</p>
+              <h3 className="text-white font-bold text-lg mb-3">Unlimited Bids</h3>
+              <p className="text-gray-400 leading-relaxed">Bid on unlimited projects without restrictions and grow your portfolio</p>
             </div>
             
-            <div className="text-center">
-              <div className="w-12 h-12 bg-[#00A8E8] rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#00A8E8] to-[#0062E6] rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h3 className="text-white font-semibold mb-2">Priority Support</h3>
-              <p className="text-gray-400 text-sm">Get help faster with priority customer support</p>
+              <h3 className="text-white font-bold text-lg mb-3">Priority Support</h3>
+              <p className="text-gray-400 leading-relaxed">Get help faster with dedicated priority customer support</p>
             </div>
             
-            <div className="text-center">
-              <div className="w-12 h-12 bg-[#00A8E8] rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#00A8E8] to-[#0062E6] rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h3 className="text-white font-semibold mb-2">Advanced Analytics</h3>
-              <p className="text-gray-400 text-sm">Detailed insights into your project performance</p>
+              <h3 className="text-white font-bold text-lg mb-3">Advanced Analytics</h3>
+              <p className="text-gray-400 leading-relaxed">Detailed insights into your project performance and growth</p>
             </div>
             
-            <div className="text-center">
-              <div className="w-12 h-12 bg-[#00A8E8] rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <div className="text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#00A8E8] to-[#0062E6] rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h3 className="text-white font-semibold mb-2">Premium Badge</h3>
-              <p className="text-gray-400 text-sm">Stand out with a premium profile badge</p>
+              <h3 className="text-white font-bold text-lg mb-3">Premium Badge</h3>
+              <p className="text-gray-400 leading-relaxed">Stand out with a premium profile badge and get recognized</p>
             </div>
           </div>
         </div>
