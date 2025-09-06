@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { usePayment } from '../../context/PaymentContext';
 import { formatCurrency } from '../../utils/paymentUtils.jsx';
 import { useSubscription } from '../../utils/subscriptionUtils';
@@ -10,7 +11,7 @@ import { CheckIcon } from '../../utils/iconUtils';
 
 const SubscriptionStatus = () => {
   const { subscription } = usePayment();
-  const { getDaysRemaining, isExpiringSoon } = useSubscription();
+  const { getDaysRemaining, isExpiringSoon, getStatusText } = useSubscription();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showBenefits, setShowBenefits] = useState(false);
 
