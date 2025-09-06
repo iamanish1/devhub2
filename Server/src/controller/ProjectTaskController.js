@@ -135,13 +135,12 @@ export const updateWorkspace = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Update workspace in Firebase
@@ -182,13 +181,12 @@ export const createTask = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Create task in database
@@ -249,13 +247,12 @@ export const updateTask = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Update task in database
@@ -304,13 +301,12 @@ export const deleteTask = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Delete task from database
@@ -356,13 +352,12 @@ export const completeTask = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Update task status to completed
@@ -481,13 +476,12 @@ export const addTaskComment = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Add comment to Firebase for real-time updates
@@ -541,13 +535,12 @@ export const uploadTaskFile = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Save file info to Firebase
@@ -607,13 +600,12 @@ export const uploadProjectResource = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     let resourceData = {
@@ -706,21 +698,15 @@ export const getProjectResources = async (req, res) => {
 
     console.log('✅ [ProjectTask] Project found:', project.project_Title);
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    console.log('🔍 [ProjectTask] Access check:', {
-      isProjectOwner,
-      isSelectedContributor,
-      projectOwner: project.user.toString(),
-      userId: userId.toString()
-    });
+    console.log('🔍 [ProjectTask] Access check result:', accessResult);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      console.log('❌ [ProjectTask] Access denied for user:', userId);
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      console.log('❌ [ProjectTask] Access denied for user:', userId, '-', accessResult.message);
+      return res.status(403).json({ message: accessResult.message });
     }
 
     console.log('🔍 [ProjectTask] Access granted, fetching resources from Firebase...');
@@ -818,13 +804,12 @@ export const deleteProjectResource = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Get resource from Firebase
@@ -897,13 +882,12 @@ export const updateProjectResource = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Get resource from Firebase
@@ -968,13 +952,12 @@ export const getProjectTasks = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Get tasks from database
@@ -1046,13 +1029,12 @@ export const getProjectStatistics = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Get task statistics
@@ -1131,21 +1113,15 @@ export const getTeamMembers = async (req, res) => {
 
     console.log('✅ [ProjectTask] Project found:', project.project_Title);
 
-    const isProjectOwner = project.user.toString() === userId.toString();
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    console.log('🔍 [ProjectTask] Access check:', {
-      isProjectOwner,
-      isSelectedContributor,
-      projectOwner: project.user.toString(),
-      userId: userId.toString()
-    });
+    console.log('🔍 [ProjectTask] Access check result:', accessResult);
 
-    if (!isProjectOwner && !isSelectedContributor) {
-      console.log('❌ [ProjectTask] Access denied for user:', userId);
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      console.log('❌ [ProjectTask] Access denied for user:', userId, '-', accessResult.message);
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Get project owner
@@ -1252,7 +1228,7 @@ export const checkWorkspaceAccess = async (req, res) => {
       return res.status(200).json(accessResult);
     } else {
       logger.warn(`[ProjectTask] User ${userId} denied access to project ${projectId} - ${accessResult.message}`);
-      return res.status(403).json(accessResult);
+      return res.status(403).json(accessResult); n
     }
 
   } catch (error) {
