@@ -20,6 +20,10 @@ export default defineConfig({
         'dist/',
         'coverage/'
       ]
+    },
+    // Add React 19 compatibility
+    deps: {
+      inline: ['@testing-library/react']
     }
   },
   resolve: {

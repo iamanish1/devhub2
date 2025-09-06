@@ -1,6 +1,17 @@
 import '@testing-library/jest-dom'
 import { vi, beforeEach, afterEach } from 'vitest'
 
+// React 19 compatibility
+import { configure } from '@testing-library/react'
+
+// Configure testing library for React 19
+configure({
+  // React 19 compatibility settings
+  testIdAttribute: 'data-testid',
+  // Disable automatic cleanup to prevent issues with React 19
+  asyncUtilTimeout: 5000,
+})
+
 // Mock environment variables
 Object.defineProperty(import.meta, 'env', {
   value: {
