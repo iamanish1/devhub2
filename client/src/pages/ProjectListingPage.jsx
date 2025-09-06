@@ -44,7 +44,7 @@ const ProjectListingPage = () => {
   const [projectImages, setProjectImages] = useState([]);
 
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = formData.project_category === 'free' ? 3 : 4;
   const [submitButtonClicked, setSubmitButtonClicked] = useState(false);
   
   // Security information toggle states
@@ -253,8 +253,11 @@ const ProjectListingPage = () => {
         if (!formData.project_Title?.trim()) {
           errors.project_Title = "Project title is required";
         }
-        if (!formData.project_starting_bid || formData.project_starting_bid <= 0) {
+        if (formData.project_category !== 'free' && (!formData.project_starting_bid || formData.project_starting_bid <= 0)) {
           errors.project_starting_bid = "Starting bid must be greater than 0";
+        }
+        if (formData.project_category === 'free' && formData.project_starting_bid < 0) {
+          errors.project_starting_bid = "Starting bid cannot be negative";
         }
         if (!formData.project_duration) {
           errors.project_duration = "Project end date is required";
@@ -360,6 +363,11 @@ const ProjectListingPage = () => {
       const stepErrors = validateStep(step);
       Object.assign(allErrors, stepErrors);
     }
+    
+    // For free category projects, skip bonus pool validation
+    if (formData.project_category === 'free') {
+      delete allErrors.bonusPoolFunded;
+    }
 
     if (Object.keys(allErrors).length > 0) {
       setValidationErrors(allErrors);
@@ -391,9 +399,15 @@ const ProjectListingPage = () => {
         formDataToSend.append("Project_images", file);
       });
 
-      // Append bonus pool data
-      formDataToSend.append("bonus_pool_amount", formData.bonus_pool_amount);
-      formDataToSend.append("bonus_pool_contributors", formData.bonus_pool_contributors);
+      // Append bonus pool data (only for non-free projects)
+      if (formData.project_category !== 'free') {
+        formDataToSend.append("bonus_pool_amount", formData.bonus_pool_amount);
+        formDataToSend.append("bonus_pool_contributors", formData.bonus_pool_contributors);
+      } else {
+        // For free projects, set bonus pool to 0
+        formDataToSend.append("bonus_pool_amount", "0");
+        formDataToSend.append("bonus_pool_contributors", "0");
+      }
       
       // Append category data
       formDataToSend.append("project_category", formData.project_category);
@@ -415,8 +429,8 @@ const ProjectListingPage = () => {
           Project_looking: formData.Project_looking,
           project_duration: formData.project_duration,
           Project_gitHub_link: formData.Project_gitHub_link,
-          bonus_pool_amount: formData.bonus_pool_amount,
-          bonus_pool_contributors: formData.bonus_pool_contributors,
+          bonus_pool_amount: formData.project_category === 'free' ? "0" : formData.bonus_pool_amount,
+          bonus_pool_contributors: formData.project_category === 'free' ? "0" : formData.bonus_pool_contributors,
           project_category: formData.project_category,
         };
         
@@ -448,7 +462,11 @@ const ProjectListingPage = () => {
         if (response.status === 201) {
           // Navigate directly to dashboard after successful project creation
           navigate("/dashboard");
-          alert("Project created successfully with bonus pool!");
+          if (formData.project_category === 'free') {
+            alert("Free project created successfully!");
+          } else {
+            alert("Project created successfully with bonus pool!");
+          }
         }
       }
     } catch (error) {
@@ -490,7 +508,7 @@ const ProjectListingPage = () => {
         </svg>
       ),
     },
-    {
+    ...(formData.project_category !== 'free' ? [{
       id: 4,
       title: "Bonus Pool (Required)",
       subtitle: "Fund rewards for contributors to list your project",
@@ -499,7 +517,7 @@ const ProjectListingPage = () => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
         </svg>
       ),
-    },
+    }] : []),
   ];
 
   return (
@@ -750,7 +768,7 @@ const ProjectListingPage = () => {
                       }`}>
                         {step.subtitle}
                       </p>
-                      {step.id === 4 && (
+                      {step.id === 4 && formData.project_category !== 'free' && (
                         <div className="mt-1">
                           <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30">
                             Required
@@ -779,9 +797,14 @@ const ProjectListingPage = () => {
                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                    </svg>
                    <span className="text-white font-medium">Secure Project Submission</span>
-                   {currentStep === 4 && (
+                   {currentStep === 4 && formData.project_category !== 'free' && (
                      <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full border border-red-500/30 ml-2">
                        Bonus Pool Required
+                     </span>
+                   )}
+                   {formData.project_category === 'free' && (
+                     <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full border border-green-500/30 ml-2">
+                       Free Project - No Payment Required
                      </span>
                    )}
                  </div>
@@ -841,18 +864,23 @@ const ProjectListingPage = () => {
                              value={formData.project_starting_bid}
                              onChange={handleChange}
                              onKeyDown={handleKeyDown}
-                             min="1"
+                             min={formData.project_category === 'free' ? "0" : "1"}
                              className={`w-full bg-[#2A2A2A] border rounded-lg p-3 text-white placeholder-gray-400 focus:outline-none transition-colors ${
                                validationErrors.project_starting_bid 
                                  ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" 
                                  : "border-gray-600 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8]"
                              }`}
-                             placeholder="Enter your project budget..."
+                             placeholder={formData.project_category === 'free' ? "Enter starting bid (can be 0 for free projects)..." : "Enter your project budget..."}
                            />
                           <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                         </div>
                         {validationErrors.project_starting_bid && (
                           <p className="text-red-400 text-sm mt-1">{validationErrors.project_starting_bid}</p>
+                        )}
+                        {formData.project_category === 'free' && (
+                          <p className="text-green-400 text-xs mt-1">
+                            💡 Free projects can have a starting bid of $0 - no bonus pool required!
+                          </p>
                         )}
                       </div>
 
@@ -1018,7 +1046,10 @@ const ProjectListingPage = () => {
                         >
                           <option value="funded" className="bg-gray-800">Funded Projects - Bid on projects and get selected by owners</option>
                           {user?.isPlatformAdmin && (
-                            <option value="basic" className="bg-gray-800">Basic Projects - For resume building and practice (Platform Only)</option>
+                            <>
+                              <option value="basic" className="bg-gray-800">Basic Projects - For resume building and practice (Platform Only)</option>
+                              <option value="free" className="bg-gray-800">Free Projects - No bonus pool required, direct submission</option>
+                            </>
                           )}
                           <option value="capsule" className="bg-gray-800" disabled>Capsule Projects - Advanced company projects (Coming Soon)</option>
                         </select>
@@ -1034,8 +1065,8 @@ const ProjectListingPage = () => {
                       )}
                       <p className="text-gray-400 text-xs mt-2">
                         {user?.isPlatformAdmin 
-                          ? "Note: As a platform administrator, you can create both funded and basic projects."
-                          : "Note: Basic projects are only available for platform administrators. Regular users can only create funded projects."
+                          ? "Note: As a platform administrator, you can create funded, basic, and free projects. Free projects skip the bonus pool step and allow zero starting bids."
+                          : "Note: Basic and free projects are only available for platform administrators. Regular users can only create funded projects."
                         }
                       </p>
                     </div>
@@ -1562,10 +1593,10 @@ const ProjectListingPage = () => {
                 ) : (
                   <button
                     type="submit"
-                    disabled={loading || !bonusPoolFunded || paymentVerificationLoading}
+                    disabled={loading || (formData.project_category !== 'free' && !bonusPoolFunded) || paymentVerificationLoading}
                     onClick={() => setSubmitButtonClicked(true)}
                     className={`submit-button px-6 py-2 rounded-lg transition-all shadow-lg flex items-center ${
-                      bonusPoolFunded 
+                      (formData.project_category === 'free' || bonusPoolFunded)
                         ? "bg-gradient-to-r from-[#0062E6] to-[#00A8E8] text-white hover:from-[#00A8E8] hover:to-[#0062E6] shadow-blue-500/20" 
                         : "bg-gray-600 text-gray-300 cursor-not-allowed"
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -1583,7 +1614,7 @@ const ProjectListingPage = () => {
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                         <span>Verifying Payment...</span>
                       </>
-                    ) : bonusPoolFunded ? (
+                    ) : (formData.project_category === 'free' || bonusPoolFunded) ? (
                       <>
                         <span>Submit Project</span>
                         <svg
