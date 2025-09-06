@@ -223,7 +223,7 @@ const PaymentModal = ({
                   {/* Subscription plan details */}
                   {paymentType === PAYMENT_TYPES.SUBSCRIPTION && planName && planType && (
                     <div className="mt-2 text-sm text-gray-400">
-                      {planName.charAt(0).toUpperCase() + planName.slice(1)} Plan - {planType.charAt(0).toUpperCase() + planType.slice(1)}ly billing
+                      {planName.charAt(0).toUpperCase() + planName.slice(1)} Plan - {planType.charAt(0).toUpperCase() + planType.slice(1)} billing
                     </div>
                   )}
                 </div>

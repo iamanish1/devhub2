@@ -85,13 +85,27 @@ class RazorpayService {
   async initializePayment(orderData, paymentData, callbacks = {}) {
     await this.loadScript();
 
+    // Get order ID from the correct structure
+    const orderId = orderData.data?.order?.order_id || orderData.order?.order_id;
+    const intentId = orderData.data?.intentId || orderData.intentId;
+    
+    console.log('🔍 Initializing payment with:', {
+      orderId,
+      intentId,
+      orderData
+    });
+
+    if (!orderId) {
+      throw new Error('Order ID not found in response');
+    }
+
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_1DP5mmOlF5G5ag',
       amount: Math.round(paymentData.amount * 100), // Convert to paise
       currency: 'INR',
       name: 'DeveloperProduct',
       description: this.getPaymentDescription(paymentData.type),
-      order_id: orderData.order.order_id,
+      order_id: orderId,
       handler: async (response) => {
         console.log('Payment success:', response);
         if (callbacks.onSuccess) {
@@ -104,9 +118,9 @@ class RazorpayService {
         contact: localStorage.getItem('phone') || '9999999999'
       },
       notes: {
-        orderId: orderData.order.order_id,
+        orderId: orderId,
         purpose: paymentData.type,
-        intentId: orderData.intentId
+        intentId: intentId
       },
       theme: {
         color: '#00A8E8'
@@ -223,19 +237,25 @@ class RazorpayService {
     try {
       // Create payment order
       const orderData = await this.createPaymentOrder(paymentData);
+      
+      console.log('🔍 Order data received:', orderData);
 
       // Initialize Razorpay payment
       const razorpay = await this.initializePayment(orderData, paymentData, {
         onSuccess: async (response, orderData, paymentData) => {
           try {
+            // Get order ID from the correct structure
+            const orderId = orderData.data?.order?.order_id || orderData.order?.order_id;
+            console.log('🔍 Order ID for verification:', orderId);
+            
             // Verify payment
-            const verifyResult = await this.verifyPayment(orderData.order.order_id);
+            const verifyResult = await this.verifyPayment(orderId);
             
             if (verifyResult.success) {
               const result = {
                 ...paymentData,
                 status: 'success',
-                orderId: orderData.order.order_id,
+                orderId: orderId,
                 paymentId: response.razorpay_payment_id,
                 signature: response.razorpay_signature,
                 createdAt: new Date().toISOString()
