@@ -180,8 +180,74 @@ const DashboardPage = () => {
     budget: searchParams.get("budget") || "",
     contributor: searchParams.get("contributor") || "",
   });
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+
+  // Get current category from URL
+  const currentCategory = searchParams.get("category") || "all";
+
+  // Get title and description based on category
+  const getCategoryInfo = (category) => {
+    switch (category) {
+      case "funded":
+        return {
+          title: "Funded Projects",
+          description: "Bid on projects and get selected by project owners."
+        };
+      case "web-development":
+        return {
+          title: "Web Development Projects",
+          description: "Explore web development opportunities and showcase your skills."
+        };
+      case "mobile-app":
+        return {
+          title: "Mobile App Projects",
+          description: "Find mobile app development projects and build amazing apps."
+        };
+      case "ai-ml":
+        return {
+          title: "AI/ML Projects",
+          description: "Discover artificial intelligence and machine learning projects."
+        };
+      case "blockchain":
+        return {
+          title: "Blockchain Projects",
+          description: "Explore blockchain and cryptocurrency development opportunities."
+        };
+      case "iot":
+        return {
+          title: "IoT Projects",
+          description: "Connect the world with Internet of Things development projects."
+        };
+      case "game-dev":
+        return {
+          title: "Game Development Projects",
+          description: "Create immersive gaming experiences and interactive entertainment."
+        };
+      case "data-science":
+        return {
+          title: "Data Science Projects",
+          description: "Analyze data and extract valuable insights from complex datasets."
+        };
+      case "cybersecurity":
+        return {
+          title: "Cybersecurity Projects",
+          description: "Protect digital assets and secure systems from cyber threats."
+        };
+      case "devops":
+        return {
+          title: "DevOps Projects",
+          description: "Streamline development workflows and optimize deployment processes."
+        };
+      default:
+        return {
+          title: "Explore Projects",
+          description: "Discover amazing projects and opportunities to showcase your skills."
+        };
+    }
+  };
+
+  const categoryInfo = getCategoryInfo(currentCategory);
 
   // Debounce
   const debouncedSearch = useDebounce(searchTerm, SEARCH_DEBOUNCE_DELAY);
@@ -254,8 +320,16 @@ const DashboardPage = () => {
 
   const handleCategorySelect = useCallback((categoryId) => {
     setSelectedCategory(categoryId);
-    // You can add category-based filtering logic here if needed
-  }, []);
+    
+    // Update URL with the selected category
+    const params = new URLSearchParams(searchParams);
+    if (categoryId === "all") {
+      params.delete("category");
+    } else {
+      params.set("category", categoryId);
+    }
+    setSearchParams(params, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   return (
     <ErrorBoundary>
@@ -324,11 +398,13 @@ const DashboardPage = () => {
                   <div className="flex-1">
                     <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-white mb-2">
                       <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">
-                        Explore
-                      </span>{" "}
-                      Projects
+                        {categoryInfo.title}
+                      </span>
                     </h1>
-                    <p className="text-gray-400 text-base lg:text-lg">
+                    <p className="text-gray-400 text-base lg:text-lg mb-2">
+                      {categoryInfo.description}
+                    </p>
+                    <p className="text-gray-500 text-sm">
                       {data.total > 0
                         ? `Found ${data.total} project${data.total === 1 ? "" : "s"}`
                         : "No projects found"}

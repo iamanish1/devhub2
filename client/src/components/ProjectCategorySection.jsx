@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 const ProjectCategorySection = ({ onCategorySelect, selectedCategory }) => {
   const categories = [
     { id: 'all', name: 'All Projects', icon: '📋', count: 0 },
+    { id: 'funded', name: 'Funded Projects', icon: '💰', count: 0 },
     { id: 'web-development', name: 'Web Development', icon: '🌐', count: 0 },
     { id: 'mobile-app', name: 'Mobile App', icon: '📱', count: 0 },
     { id: 'ai-ml', name: 'AI/ML', icon: '🤖', count: 0 },
