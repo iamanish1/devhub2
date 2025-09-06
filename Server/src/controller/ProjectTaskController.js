@@ -10,6 +10,73 @@ import { doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, onSnaps
 import { db } from "../config/firebase.js";
 
 /**
+ * Helper function to check if user has access to a project
+ * @param {Object} project - The project object
+ * @param {string} userId - The user ID to check
+ * @param {Object} selection - Optional ProjectSelection object
+ * @returns {Object} - { hasAccess: boolean, accessLevel: string, message: string }
+ */
+const checkProjectAccess = async (project, userId, selection = null) => {
+  // Check if user is project owner
+  if (project.user.toString() === userId.toString()) {
+    return { 
+      hasAccess: true, 
+      accessLevel: 'owner',
+      message: 'User is project owner' 
+    };
+  }
+
+  // Special access for free projects - any user can access for resume building
+  if (project.project_category === 'free' || project.is_free_project) {
+    return { 
+      hasAccess: true, 
+      accessLevel: 'free_contributor',
+      message: 'User has access to free project for resume building' 
+    };
+  }
+
+  // Check if user is a selected contributor
+  if (selection && selection.selectedUsers && selection.selectedUsers.length > 0) {
+    const isSelectedContributor = selection.selectedUsers.some(
+      selectedUser => selectedUser.userId?.toString() === userId.toString()
+    );
+    
+    if (isSelectedContributor) {
+      return { 
+        hasAccess: true, 
+        accessLevel: 'contributor',
+        message: 'User is selected contributor' 
+      };
+    }
+  }
+
+  // Check if user has an accepted bid
+  try {
+    const acceptedBid = await Bidding.findOne({
+      project_id: project._id,
+      user_id: userId,
+      bid_status: 'Accepted'
+    });
+
+    if (acceptedBid) {
+      return { 
+        hasAccess: true, 
+        accessLevel: 'contributor',
+        message: 'User has accepted bid' 
+      };
+    }
+  } catch (biddingError) {
+    logger.error(`[ProjectTask] Error checking Bidding: ${biddingError.message}`, biddingError);
+  }
+
+  return { 
+    hasAccess: false, 
+    accessLevel: 'none',
+    message: 'Access denied: User is not a selected contributor or project owner' 
+  };
+};
+
+/**
  * Create project workspace
  */
 export const createWorkspace = async (req, res) => {
@@ -1174,79 +1241,19 @@ export const checkWorkspaceAccess = async (req, res) => {
       });
     }
 
-    // Check if user is project owner
-    if (project.user.toString() === userId.toString()) {
-      logger.info(`[ProjectTask] User ${userId} is project owner`);
-      return res.status(200).json({ 
-        hasAccess: true, 
-        accessLevel: 'owner',
-        message: 'User is project owner' 
-      });
+    // Get project selection for access check
+    const selection = await ProjectSelection.findOne({ projectId });
+    
+    // Use helper function to check access
+    const accessResult = await checkProjectAccess(project, userId, selection);
+    
+    if (accessResult.hasAccess) {
+      logger.info(`[ProjectTask] User ${userId} granted access to project ${projectId} - ${accessResult.message}`);
+      return res.status(200).json(accessResult);
+    } else {
+      logger.warn(`[ProjectTask] User ${userId} denied access to project ${projectId} - ${accessResult.message}`);
+      return res.status(403).json(accessResult);
     }
-
-    // Check if user is a selected contributor
-    try {
-      const selection = await ProjectSelection.findOne({ projectId });
-      logger.info(`[ProjectTask] ProjectSelection query result: ${selection ? 'Found' : 'Not found'}`);
-      
-      if (selection && selection.selectedUsers && selection.selectedUsers.length > 0) {
-        logger.info(`[ProjectTask] Found ${selection.selectedUsers.length} selected users`);
-        
-        const isSelectedContributor = selection.selectedUsers.some(
-          selectedUser => {
-            const selectedUserId = selectedUser.userId?.toString();
-            const currentUserId = userId.toString();
-            logger.info(`[ProjectTask] Comparing: ${selectedUserId} with ${currentUserId}`);
-            return selectedUserId === currentUserId;
-          }
-        );
-        
-        if (isSelectedContributor) {
-          logger.info(`[ProjectTask] User ${userId} is selected contributor`);
-          return res.status(200).json({ 
-            hasAccess: true, 
-            accessLevel: 'contributor',
-            message: 'User is selected contributor' 
-          });
-        } else {
-          logger.info(`[ProjectTask] User ${userId} is not in selected users list`);
-        }
-      } else {
-        logger.info(`[ProjectTask] No selection found or no selected users for project ${projectId}`);
-      }
-    } catch (selectionError) {
-      logger.error(`[ProjectTask] Error checking ProjectSelection: ${selectionError.message}`, selectionError);
-      // Continue to check other access methods
-    }
-
-    // Check if user has an accepted bid
-    try {
-      const acceptedBid = await Bidding.findOne({
-        project_id: projectId,
-        user_id: userId,
-        bid_status: 'Accepted'
-      });
-
-      if (acceptedBid) {
-        logger.info(`[ProjectTask] User ${userId} has accepted bid`);
-        return res.status(200).json({ 
-          hasAccess: true, 
-          accessLevel: 'contributor',
-          message: 'User has accepted bid' 
-        });
-      } else {
-        logger.info(`[ProjectTask] User ${userId} does not have an accepted bid`);
-      }
-    } catch (biddingError) {
-      logger.error(`[ProjectTask] Error checking Bidding: ${biddingError.message}`, biddingError);
-      // Continue to deny access
-    }
-
-    logger.warn(`[ProjectTask] User ${userId} denied access to project ${projectId}`);
-    return res.status(403).json({ 
-      hasAccess: false, 
-      message: 'Access denied: User is not a selected contributor or project owner' 
-    });
 
   } catch (error) {
     logger.error(`[ProjectTask] Error checking workspace access: ${error.message}`, error);
