@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { usePayment } from '../../context/PaymentContext';
 import { formatCurrency } from '../../utils/paymentUtils.jsx';
 import { PAYMENT_AMOUNTS, PAYMENT_TYPES } from '../../constants/paymentConstants';
@@ -7,6 +7,7 @@ import PaymentLoadingSpinner from './PaymentLoadingSpinner';
 import PaymentSuccessModal from './PaymentSuccessModal';
 import PaymentErrorModal from './PaymentErrorModal';
 import { CloseIcon, LockIcon } from '../../utils/iconUtils';
+import razorpayService from '../../services/razorpayService';
 
 const PaymentModal = ({ 
   isOpen, 
@@ -112,24 +113,27 @@ const PaymentModal = ({
 
       startPayment(paymentData);
 
-      // Simulate payment processing (replace with actual payment gateway integration)
-      setTimeout(() => {
-        const result = {
-          ...paymentData,
-          status: 'success',
-          orderId: `order_${Date.now()}`,
-          createdAt: new Date().toISOString()
-        };
-        
-        completePayment(result);
-        onSuccess?.(result);
-        onClose();
-      }, 2000);
+      // Process payment using Razorpay service
+      await razorpayService.processPayment(paymentData, {
+        onSuccess: (result) => {
+          completePayment(result);
+          onSuccess?.(result);
+          onClose();
+        },
+        onError: (error) => {
+          handlePaymentError(error);
+        },
+        onDismiss: () => {
+          handlePaymentError(new Error('Payment cancelled by user'));
+        }
+      });
 
     } catch (error) {
+      console.error('Payment submission error:', error);
       handlePaymentError(error);
     }
   };
+
 
   // Modal variants for animation
   const modalVariants = {

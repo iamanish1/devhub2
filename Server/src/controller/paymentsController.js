@@ -700,16 +700,36 @@ export const activateSubscription = async (req, res) => {
       throw new ApiError(404, 'User not found');
     }
 
-    User.subscription = {
-      isActive: true,
-      planName,
-      planType,
-      startedAt,
-      expiresAt,
-      autoRenew: true,
-      paymentIntentId: paymentIntentId,
-      features: features || planConfig.features
-    };
+    // Check if user already has an active subscription
+    if (User.subscription && User.subscription.isActive && User.subscription.expiresAt > new Date()) {
+      // Extend existing subscription
+      const currentExpiry = new Date(User.subscription.expiresAt);
+      const newExpiry = new Date(currentExpiry.getTime() + duration * 24 * 60 * 60 * 1000);
+      
+      User.subscription = {
+        ...User.subscription,
+        planName,
+        planType,
+        expiresAt: newExpiry,
+        autoRenew: true,
+        lastPaymentIntentId: paymentIntentId,
+        features: features || planConfig.features,
+        limits: limits || planConfig.limits
+      };
+    } else {
+      // Create new subscription
+      User.subscription = {
+        isActive: true,
+        planName,
+        planType,
+        startedAt,
+        expiresAt,
+        autoRenew: true,
+        paymentIntentId: paymentIntentId,
+        features: features || planConfig.features,
+        limits: limits || planConfig.limits
+      };
+    }
 
     await User.save();
 
@@ -718,7 +738,8 @@ export const activateSubscription = async (req, res) => {
       planName,
       planType,
       duration,
-      expiresAt
+      expiresAt: User.subscription.expiresAt,
+      isExtension: User.subscription.lastPaymentIntentId ? true : false
     });
 
     res.status(200).json({
@@ -727,7 +748,8 @@ export const activateSubscription = async (req, res) => {
       data: {
         subscription: User.subscription,
         features: User.subscription.features,
-        expiresAt
+        limits: User.subscription.limits,
+        expiresAt: User.subscription.expiresAt
       }
     });
 
@@ -1192,14 +1214,55 @@ export const verifyPaymentWithRazorpay = async (req, res) => {
           case 'subscription':
             // Activate subscription after payment verification
             try {
-              const { activateSubscription } = await import('./paymentsController.js');
-              await activateSubscription({ 
-                params: { paymentIntentId: intent._id.toString() },
-                user: { _id: intent.userId }
-              }, { 
-                status: () => ({ json: () => {} }) 
-              });
-              console.log(`[Payment Verification] Subscription activated for user: ${intent.userId}`);
+              const { planName, planType, duration, features, limits } = intent.notes;
+              
+              // Import subscription plans configuration
+              const { getPlanConfig } = await import('../config/subscriptionPlans.js');
+              const planConfig = getPlanConfig(planName, planType);
+
+              if (planConfig) {
+                // Calculate expiration date
+                const startedAt = new Date();
+                const expiresAt = new Date(startedAt.getTime() + duration * 24 * 60 * 60 * 1000);
+
+                // Update user subscription
+                const User = await user.findById(intent.userId);
+                if (User) {
+                  // Check if user already has an active subscription
+                  if (User.subscription && User.subscription.isActive && User.subscription.expiresAt > new Date()) {
+                    // Extend existing subscription
+                    const currentExpiry = new Date(User.subscription.expiresAt);
+                    const newExpiry = new Date(currentExpiry.getTime() + duration * 24 * 60 * 60 * 1000);
+                    
+                    User.subscription = {
+                      ...User.subscription,
+                      planName,
+                      planType,
+                      expiresAt: newExpiry,
+                      autoRenew: true,
+                      lastPaymentIntentId: intent._id.toString(),
+                      features: features || planConfig.features,
+                      limits: limits || planConfig.limits
+                    };
+                  } else {
+                    // Create new subscription
+                    User.subscription = {
+                      isActive: true,
+                      planName,
+                      planType,
+                      startedAt,
+                      expiresAt,
+                      autoRenew: true,
+                      paymentIntentId: intent._id.toString(),
+                      features: features || planConfig.features,
+                      limits: limits || planConfig.limits
+                    };
+                  }
+
+                  await User.save();
+                  console.log(`[Payment Verification] Subscription activated for user: ${intent.userId}`);
+                }
+              }
             } catch (activationError) {
               console.error(`[Payment Verification] Error activating subscription:`, activationError);
             }

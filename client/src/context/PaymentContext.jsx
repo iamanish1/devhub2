@@ -214,8 +214,22 @@ export const PaymentProvider = ({ children }) => {
   // Load subscription status
   const loadSubscriptionStatus = async () => {
     try {
-      const subscription = await paymentApi.getSubscriptionStatus();
-      dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: subscription || { isActive: false } });
+      const response = await paymentApi.getSubscriptionStatus();
+      const subscription = response?.data || response;
+      
+      // Normalize subscription data
+      const normalizedSubscription = {
+        isActive: subscription?.isActive || false,
+        planName: subscription?.subscription?.planName || null,
+        planType: subscription?.subscription?.planType || null,
+        expiresAt: subscription?.subscription?.expiresAt || null,
+        autoRenew: subscription?.subscription?.autoRenew || false,
+        features: subscription?.features || {},
+        benefits: subscription?.benefits || [],
+        planConfig: subscription?.planConfig || null
+      };
+      
+      dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: normalizedSubscription });
     } catch (error) {
       console.error('Error loading subscription status:', error);
       dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: { isActive: false } });
