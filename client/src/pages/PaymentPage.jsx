@@ -7,7 +7,7 @@ import PaymentHistoryPage from './PaymentHistoryPage';
 import PaymentAnalytics from '../components/payment/PaymentAnalytics';
 import SubscriptionStatus from '../components/payment/SubscriptionStatus';
 import DataExplanationCard from '../components/payment/DataExplanationCard';
-import { formatCurrency } from '../utils/paymentUtils.jsx';
+import { formatCurrency } from '../utils/paymentUtils';
 import { PAYMENT_STATUS } from '../constants/paymentConstants';
 
 const PaymentPage = () => {

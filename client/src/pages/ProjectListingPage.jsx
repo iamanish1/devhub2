@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import FileUploadField from "../components/FileUploadField.jsx";
+import FileUploadField from "../components/FileUploadField";
 import { usePayment } from "../context/PaymentContext";
 import { PAYMENT_TYPES } from "../constants/paymentConstants";
 import BonusPoolPaymentModal from "../components/payment/BonusPoolPaymentModal";

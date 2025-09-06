@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_ENDPOINTS } from '../Config/api.js';
+import { API_ENDPOINTS } from '../Config/api';
 
 // Get auth token
 const getAuthToken = () => localStorage.getItem('token');

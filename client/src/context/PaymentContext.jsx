@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import paymentApi from '../services/paymentApi.js';
-import { PAYMENT_STATUS, PAYMENT_ERRORS } from '../constants/paymentConstants.js';
-import { validatePaymentData } from '../utils/paymentUtils.jsx';
-import { db } from '../Config/firebase.js';
+import paymentApi from '../services/paymentApi';
+import { PAYMENT_STATUS, PAYMENT_ERRORS } from '../constants/paymentConstants';
+import { validatePaymentData } from '../utils/paymentUtils';
+import { db } from '../Config/firebase';
 import { doc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
 
 // Initial state

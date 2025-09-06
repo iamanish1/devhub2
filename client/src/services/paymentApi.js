@@ -1,5 +1,5 @@
-import API_BASE_URL from '../Config/api.js';
-import { PAYMENT_ERRORS } from '../constants/paymentConstants.js';
+import API_BASE_URL from '../Config/api';
+import { PAYMENT_ERRORS } from '../constants/paymentConstants';
 
 // Payment API endpoints
 const PAYMENT_ENDPOINTS = {

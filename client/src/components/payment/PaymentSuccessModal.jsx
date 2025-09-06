@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatCurrency } from '../../utils/paymentUtils.jsx';
-import { getPaymentTypeDisplayName } from '../../utils/paymentUtils.jsx';
+import { formatCurrency } from '../../utils/paymentUtils';
+import { getPaymentTypeDisplayName } from '../../utils/paymentUtils';
 import { CheckIcon } from '../../utils/iconUtils';
 
 const PaymentSuccessModal = ({ 

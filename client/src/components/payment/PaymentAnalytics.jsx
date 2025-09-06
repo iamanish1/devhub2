@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { usePayment } from "../../context/PaymentContext";
-import { formatCurrency } from "../../utils/paymentUtils.jsx";
+import { formatCurrency } from "../../utils/paymentUtils";
 import {
   PAYMENT_ANALYTICS_PERIODS,
   PAYMENT_TYPES,

@@ -1,4 +1,4 @@
-import { PAYMENT_AMOUNTS } from '../constants/paymentConstants.js';
+import { PAYMENT_AMOUNTS } from '../constants/paymentConstants';
 
 // Format currency for display
 export const formatCurrency = (amount, currency = 'INR') => {

@@ -1,9 +1,9 @@
 import Navbar from "../components/NavBar";
 import axios from "axios";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import userProjectsApi from "../utils/userProjectsApi.js";
-import ProjectStatsSection from "../components/ProjectStatsSection.jsx";
-import UserProjectCard from "../components/UserProjectCard.jsx";
+import userProjectsApi from "../utils/userProjectsApi";
+import ProjectStatsSection from "../components/ProjectStatsSection";
+import UserProjectCard from "../components/UserProjectCard";
 import PremiumBadge, { SubscriptionStatusBadge } from "../components/PremiumBadge";
 import { db } from "../Config/firebase";
 import { 

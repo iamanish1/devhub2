@@ -4,7 +4,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import Navbar from "../components/NavBar";
-import RazorpayPaymentModal from "../components/payment/RazorpayPaymentModal.jsx";
+import RazorpayPaymentModal from "../components/payment/RazorpayPaymentModal";
 
 // Animation variants
 const fadeInUp = {

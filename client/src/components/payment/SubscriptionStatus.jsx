@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePayment } from '../../context/PaymentContext';
-import { formatCurrency } from '../../utils/paymentUtils.jsx';
+import { formatCurrency } from '../../utils/paymentUtils';
 import { useSubscription } from '../../utils/subscriptionUtils';
 import { PAYMENT_AMOUNTS } from '../../constants/paymentConstants';
 import PaymentModal from './PaymentModal';

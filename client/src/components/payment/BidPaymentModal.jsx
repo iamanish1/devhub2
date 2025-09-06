@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import { CloseIcon, LockIcon } from "../../utils/iconUtils.jsx";
+import { CloseIcon, LockIcon } from "../../utils/iconUtils";
 
 const BidPaymentModal = ({ isOpen, onClose, paymentData, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
