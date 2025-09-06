@@ -16,7 +16,7 @@ import { db } from "../config/firebase.js";
  * @param {Object} selection - Optional ProjectSelection object
  * @returns {Object} - { hasAccess: boolean, accessLevel: string, message: string }
  */
-const checkProjectAccess = async (project, userId, selection = null) => {
+export const checkProjectAccess = async (project, userId, selection = null) => {
   // Check if user is project owner
   if (project.user.toString() === userId.toString()) {
     return { 
