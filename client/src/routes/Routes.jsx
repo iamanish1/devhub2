@@ -3,7 +3,6 @@ import AboutPage from "../pages/Aboutpage";
 import LandingPage from "../pages/LandingPage";
 import ProjectListingPage from "../pages/ProjectListingPage";
 import Authenticationpage from "../pages/AuthenticationPage";
-import DashboardPage from "../pages/DashBoardPage";
 import CategorizedDashboardPage from "../pages/CategorizedDashboardPage";
 import BidingPage from "../pages/BidingPage";
 import BidingProporsalPage from "../pages/BidingProporsalPage";
