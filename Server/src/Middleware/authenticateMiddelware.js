@@ -4,6 +4,12 @@ import user from "../Model/UserModel.js";
 
 const authMiddleware = async (req, res, next) => {
   try {
+    console.log('🔍 Auth middleware called for:', {
+      url: req.url,
+      method: req.method,
+      headers: req.headers
+    });
+    
     // Check if JWT_SECRET is configured
     if (!process.env.JWT_SECRET) {
       console.error("❌ JWT_SECRET environment variable is not set!");

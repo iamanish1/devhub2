@@ -270,7 +270,13 @@ export const createBonus = async (req, res) => {
 // Create subscription payment with multiple plans
 export const createSubscription = async (req, res) => {
   try {
-    const { planName = 'starter', planType = 'monthly' } = req.body;
+    console.log('🔍 Subscription request received:', {
+      body: req.body,
+      user: req.user ? req.user.username : 'No user',
+      userId: req.user ? req.user._id : 'No user ID'
+    });
+    
+    const { amount, planName = 'starter', planType = 'monthly' } = req.body;
     const userId = req.user._id;
 
     // Import subscription plans configuration
@@ -280,6 +286,12 @@ export const createSubscription = async (req, res) => {
     const planConfig = getPlanConfig(planName, planType);
     if (!planConfig) {
       throw new ApiError(400, 'Invalid subscription plan');
+    }
+
+    // Validate amount matches plan configuration
+    const expectedAmount = planConfig.planDetails.price;
+    if (amount !== expectedAmount) {
+      throw new ApiError(400, `Invalid amount. Expected ₹${expectedAmount} for ${planName} ${planType} plan`);
     }
 
     // Check if user already has active subscription
@@ -296,7 +308,7 @@ export const createSubscription = async (req, res) => {
       throw new ApiError(400, 'Active subscription already exists for this plan');
     }
 
-    const subscriptionAmount = planConfig.planDetails.price;
+    const subscriptionAmount = amount;
     const pricing = calculateSubscriptionPricing(planName, planType);
 
     // Create payment intent

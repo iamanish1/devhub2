@@ -3,13 +3,22 @@ import { ApiError } from './error.js';
 
 export const validateRequest = (schema) => {
   return (req, res, next) => {
+    console.log('🔍 Validation request:', {
+      url: req.url,
+      method: req.method,
+      body: req.body,
+      schema: schema.describe()
+    });
+    
     const { error, value } = schema.validate(req.body);
     
     if (error) {
+      console.log('❌ Validation error:', error.details);
       const errorMessage = error.details.map(detail => detail.message).join(', ');
       return next(new ApiError(400, errorMessage));
     }
     
+    console.log('✅ Validation successful:', value);
     req.body = value;
     next();
   };
@@ -44,7 +53,9 @@ export const bonusSchema = Joi.object({
 });
 
 export const subscriptionSchema = Joi.object({
-  planType: Joi.string().valid('monthly', 'yearly').default('monthly')
+  amount: Joi.number().positive().required(),
+  planName: Joi.string().valid('starter', 'pro', 'enterprise').default('starter'),
+  planType: Joi.string().valid('weekly', 'monthly', 'yearly').default('monthly')
 });
 
 export const withdrawalSchema = Joi.object({

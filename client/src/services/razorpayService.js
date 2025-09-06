@@ -47,18 +47,32 @@ class RazorpayService {
   async createPaymentOrder(paymentData) {
     const endpoint = this.getPaymentEndpoint(paymentData.type);
     const requestBody = this.getPaymentRequestBody(paymentData);
+    const token = localStorage.getItem('token');
+
+    console.log('🔍 Creating payment order:', {
+      endpoint,
+      requestBody,
+      token: token ? `${token.substring(0, 20)}...` : 'No token',
+      apiUrl: import.meta.env.VITE_API_URL
+    });
 
     const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Payment order creation failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+        url: response.url
+      });
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
