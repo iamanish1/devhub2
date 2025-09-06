@@ -10,7 +10,6 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorBoundary from "../components/ErrorBoundary";
 import EmptyState from "../components/EmptyState";
 import SubscriptionStatus from "../components/payment/SubscriptionStatus";
-import { usePayment } from "../context/PaymentContext";
 
 // ===== Constants =====
 const ITEMS_PER_PAGE = 20;

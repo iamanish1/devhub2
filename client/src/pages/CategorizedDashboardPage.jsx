@@ -214,50 +214,6 @@ const useInfiniteProjects = (searchTerm, filters, category) => {
   };
 };
 
-// ===== Category Tab Component =====
-const CategoryTab = ({ category, isActive, onClick, projectCount }) => {
-  const { name, description, icon, color, bgColor, borderColor, comingSoon } = category;
-  
-  return (
-    <button
-      onClick={onClick}
-      disabled={comingSoon}
-      className={`
-        relative p-6 rounded-xl border-2 transition-all duration-300 text-left w-full
-        ${isActive 
-          ? `${bgColor} ${borderColor} border-opacity-50 shadow-lg` 
-          : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
-        }
-        ${comingSoon ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-md'}
-      `}
-    >
-      <div className="flex items-start space-x-4">
-        <div className={`
-          p-3 rounded-lg ${isActive ? `bg-gradient-to-r ${color}` : 'bg-gray-700'}
-          transition-colors duration-300
-        `}>
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2">
-            <h3 className="text-lg font-semibold text-white">{name}</h3>
-            {comingSoon && (
-              <span className="px-2 py-1 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full">
-                Coming Soon
-              </span>
-            )}
-          </div>
-          <p className="text-gray-400 text-sm mt-1">{description}</p>
-          {!comingSoon && (
-            <div className="mt-2 text-xs text-gray-500">
-              {projectCount} project{projectCount !== 1 ? 's' : ''}
-            </div>
-          )}
-        </div>
-      </div>
-    </button>
-  );
-};
 
 // ===== Page =====
 const CategorizedDashboardPage = () => {
@@ -343,9 +299,6 @@ const CategorizedDashboardPage = () => {
     setMobileFilterOpen((p) => !p);
   }, []);
 
-  const handleCategoryChange = useCallback((categoryId) => {
-    setActiveCategory(categoryId);
-  }, []);
 
   const currentCategory = PROJECT_CATEGORIES.find(cat => cat.id === activeCategory);
 
@@ -354,6 +307,47 @@ const CategorizedDashboardPage = () => {
       <div className="min-h-dvh bg-[#121212] text-white flex flex-col">
         {/* Navigation */}
         <Navbar />
+
+        {/* Project Categories Section - Above everything */}
+        <div className="flex-shrink-0 bg-[#121212] px-4 lg:px-6 py-4 lg:py-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-[#1E1E1E] rounded-xl p-4 border border-[#00A8E8]/20 shadow-lg">
+              <h3 className="text-lg font-bold text-[#00A8E8] mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Project Categories
+              </h3>
+              
+              {/* Grid layout for categories */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {PROJECT_CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    disabled={category.comingSoon}
+                    className={`
+                      flex flex-col items-center gap-2 px-3 py-3 rounded-lg font-medium text-sm transition-all duration-300
+                      ${activeCategory === category.id
+                        ? 'bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white shadow-lg shadow-[#00A8E8]/25'
+                        : 'bg-[#2A2A2A] text-gray-300 hover:bg-[#333] hover:text-white border border-[#444] hover:border-[#00A8E8]/30'
+                      }
+                      ${category.comingSoon ? 'opacity-60 cursor-not-allowed' : ''}
+                    `}
+                  >
+                    <div className="text-xl">{category.icon}</div>
+                    <span className="text-xs text-center leading-tight">{category.name}</span>
+                    {category.comingSoon && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300">
+                        Coming Soon
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* OUTER SPLIT: prevent this from scrolling */}
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
@@ -380,35 +374,21 @@ const CategorizedDashboardPage = () => {
           {/* SIDEBAR: its own scroll on large screens; doesn't cause main to scroll */}
           <div className="lg:sticky lg:top-20 lg:h-[calc(100vh-2rem)] lg:overflow-y-auto lg:w-80 lg:flex-shrink-0">
             <div className="p-4">
+              {/* Filters - At the top */}
+              <div className="mb-6">
+                <FilterSidebar
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  onClearFilters={handleClearFilters}
+                  isOpen={mobileFilterOpen}
+                  onClose={() => setMobileFilterOpen(false)}
+                />
+              </div>
+              
               {/* Subscription Status */}
               <div className="mb-6">
                 <SubscriptionStatus />
               </div>
-              
-              {/* Category Tabs */}
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-white mb-4">Project Categories</h2>
-                <div className="space-y-3">
-                  {PROJECT_CATEGORIES.map((category) => (
-                    <CategoryTab
-                      key={category.id}
-                      category={category}
-                      isActive={activeCategory === category.id}
-                      onClick={() => handleCategoryChange(category.id)}
-                      projectCount={category.id === activeCategory ? data.total : 0}
-                    />
-                  ))}
-                </div>
-              </div>
-              
-              {/* Filters */}
-              <FilterSidebar
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onClearFilters={handleClearFilters}
-                isOpen={mobileFilterOpen}
-                onClose={() => setMobileFilterOpen(false)}
-              />
             </div>
           </div>
 
@@ -420,11 +400,12 @@ const CategorizedDashboardPage = () => {
                 <div className="flex-1">
                   <h1 className="text-3xl lg:text-4xl font-bold text-white">
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">
-                      {currentCategory?.name}
-                    </span>
+                      Explore
+                    </span>{" "}
+                    Projects
                   </h1>
                   <p className="text-gray-400 text-base">
-                    {currentCategory?.description}
+                    Discover amazing projects and opportunities to showcase your skills.
                   </p>
                   <p className="text-gray-500 text-sm mt-1">
                     {data.total > 0
