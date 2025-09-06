@@ -19,5 +19,15 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    strictPort: true,
+    open: true,
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom'],
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
   },
 });
