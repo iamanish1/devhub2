@@ -16,6 +16,8 @@ const PaymentModal = ({
   projectId, 
   bidId, 
   contributorCount,
+  planName,
+  planType,
   onSuccess 
 }) => {
   const { isProcessing, paymentError, startPayment, completePayment, handlePaymentError, clearPaymentError } = usePayment();
@@ -32,18 +34,32 @@ const PaymentModal = ({
 
   // Calculate amount based on payment type
   const calculateAmount = () => {
+    let calculatedAmount;
     switch (paymentType) {
       case PAYMENT_TYPES.BID_FEE:
-        return PAYMENT_AMOUNTS.BID_FEE;
+        calculatedAmount = PAYMENT_AMOUNTS.BID_FEE;
+        break;
       case PAYMENT_TYPES.BONUS_FUNDING:
-        return contributorCount * PAYMENT_AMOUNTS.BONUS_PER_CONTRIBUTOR;
+        calculatedAmount = contributorCount * PAYMENT_AMOUNTS.BONUS_PER_CONTRIBUTOR;
+        break;
       case PAYMENT_TYPES.SUBSCRIPTION:
-        return PAYMENT_AMOUNTS.SUBSCRIPTION;
+        // Use the amount prop for subscription payments (dynamic pricing)
+        calculatedAmount = amount || PAYMENT_AMOUNTS.SUBSCRIPTION;
+        console.log('Subscription amount calculation:', {
+          amountProp: amount,
+          fallbackAmount: PAYMENT_AMOUNTS.SUBSCRIPTION,
+          calculatedAmount,
+          planName,
+          planType
+        });
+        break;
       case PAYMENT_TYPES.WITHDRAWAL_FEE:
-        return PAYMENT_AMOUNTS.WITHDRAWAL_FEE;
+        calculatedAmount = PAYMENT_AMOUNTS.WITHDRAWAL_FEE;
+        break;
       default:
-        return amount || 0;
+        calculatedAmount = amount || 0;
     }
+    return calculatedAmount;
   };
 
   // Get payment title
@@ -54,7 +70,7 @@ const PaymentModal = ({
       case PAYMENT_TYPES.BONUS_FUNDING:
         return 'Fund Bonus Pool';
       case PAYMENT_TYPES.SUBSCRIPTION:
-        return 'Subscribe to Premium';
+        return `Subscribe to ${planName ? planName.charAt(0).toUpperCase() + planName.slice(1) : 'Premium'} Plan`;
       case PAYMENT_TYPES.WITHDRAWAL_FEE:
         return 'Withdrawal Fee';
       default:
@@ -70,7 +86,7 @@ const PaymentModal = ({
       case PAYMENT_TYPES.BONUS_FUNDING:
         return `Fund bonus pool for ${contributorCount} contributors`;
       case PAYMENT_TYPES.SUBSCRIPTION:
-        return 'Get unlimited bids and project listings';
+        return `Get premium features with ${planName ? planName.charAt(0).toUpperCase() + planName.slice(1) : 'Premium'} plan (${planType || 'monthly'})`;
       case PAYMENT_TYPES.WITHDRAWAL_FEE:
         return 'Pay ₹15 withdrawal fee';
       default:
@@ -89,7 +105,9 @@ const PaymentModal = ({
         provider: selectedProvider,
         projectId,
         bidId,
-        contributorCount
+        contributorCount,
+        planName,
+        planType
       };
 
       startPayment(paymentData);
@@ -195,6 +213,13 @@ const PaymentModal = ({
                   {paymentType === PAYMENT_TYPES.BONUS_FUNDING && (
                     <div className="mt-2 text-sm text-gray-400">
                       {contributorCount} contributors × ₹200 each
+                    </div>
+                  )}
+                  
+                  {/* Subscription plan details */}
+                  {paymentType === PAYMENT_TYPES.SUBSCRIPTION && planName && planType && (
+                    <div className="mt-2 text-sm text-gray-400">
+                      {planName.charAt(0).toUpperCase() + planName.slice(1)} Plan - {planType.charAt(0).toUpperCase() + planType.slice(1)}ly billing
                     </div>
                   )}
                 </div>

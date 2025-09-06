@@ -164,7 +164,13 @@ const SubscriptionPage = () => {
   }, [refreshData]);
 
   const handlePlanSelect = (plan, planType) => {
-    console.log('Plan selected:', { plan, planType });
+    const price = getPlanPrice(plan, planType);
+    console.log('Plan selected:', { 
+      plan: plan.name, 
+      planType, 
+      price,
+      planDetails: plan.plans.find(p => p.type === planType)
+    });
     setSelectedPlan(plan);
     setSelectedPlanType(planType);
     setShowPaymentModal(true);
