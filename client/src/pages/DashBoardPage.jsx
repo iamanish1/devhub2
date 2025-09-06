@@ -10,7 +10,6 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorBoundary from "../components/ErrorBoundary";
 import EmptyState from "../components/EmptyState";
 import SubscriptionStatus from "../components/payment/SubscriptionStatus";
-import ProjectCategorySection from "../components/ProjectCategorySection";
 import { usePayment } from "../context/PaymentContext";
 
 // ===== Constants =====
@@ -180,7 +179,6 @@ const DashboardPage = () => {
     budget: searchParams.get("budget") || "",
     contributor: searchParams.get("contributor") || "",
   });
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Get current category from URL
@@ -318,18 +316,6 @@ const DashboardPage = () => {
     setMobileFilterOpen((p) => !p);
   }, []);
 
-  const handleCategorySelect = useCallback((categoryId) => {
-    setSelectedCategory(categoryId);
-    
-    // Update URL with the selected category
-    const params = new URLSearchParams(searchParams);
-    if (categoryId === "all") {
-      params.delete("category");
-    } else {
-      params.set("category", categoryId);
-    }
-    setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
 
   return (
     <ErrorBoundary>
@@ -372,12 +358,6 @@ const DashboardPage = () => {
                   onClearFilters={handleClearFilters}
                   isOpen={mobileFilterOpen}
                   onClose={() => setMobileFilterOpen(false)}
-                />
-                
-                {/* Project Categories Section */}
-                <ProjectCategorySection 
-                  onCategorySelect={handleCategorySelect}
-                  selectedCategory={selectedCategory}
                 />
                 
                 {/* Subscription Status */}
