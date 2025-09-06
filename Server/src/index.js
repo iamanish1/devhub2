@@ -22,6 +22,7 @@ import projectsPaymentRoutes from "./Routes/projectsPaymentRoutes.js";
 import projectSelectionRoutes from "./Routes/ProjectSelectionRoutes.js";
 import escrowWalletRoutes from "./Routes/EscrowWalletRoutes.js";
 import projectTaskRoutes from "./Routes/ProjectTaskRoutes.js";
+import platformAdminRoutes from "./Routes/PlatformAdminRoutes.js";
 import path from "path";
 
 
@@ -177,6 +178,11 @@ console.log("✅ Project Task routes registered at /api/project-tasks");
 
 // Project routes (must come after project-tasks to avoid conflicts)
 app.use("/api/project", projectRoutes) ; 
+
+// Platform admin routes
+app.use("/api/platform-admin", platformAdminRoutes);
+console.log("✅ Platform Admin routes registered at /api/platform-admin");
+
 app.use("/api", chatRoutes);
 console.log("✅ Chat routes registered at /api/chat");
 

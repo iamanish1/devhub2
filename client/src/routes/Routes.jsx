@@ -4,6 +4,7 @@ import LandingPage from "../pages/LandingPage";
 import ProjectListingPage from "../pages/ProjectListingPage";
 import Authenticationpage from "../pages/AuthenticationPage";
 import DashboardPage from "../pages/DashBoardPage";
+import CategorizedDashboardPage from "../pages/CategorizedDashboardPage";
 import BidingPage from "../pages/BidingPage";
 import BidingProporsalPage from "../pages/BidingProporsalPage";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -47,7 +48,7 @@ const AppRoutes = () => {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/listproject" element={<ProjectListingPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<CategorizedDashboardPage />} />
         <Route path="/bidingPage/:_id" element={<BidingPage />} />
         <Route path="/bidingproposal/:_id" element={<BidingProporsalPage />} />
         <Route path="/profile" element={<ProfilePage/>}/>

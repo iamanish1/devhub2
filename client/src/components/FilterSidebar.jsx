@@ -109,11 +109,11 @@ const FilterSidebar = ({
   );
 
   const sidebarContent = (
-    <div className="bg-[#1E1E1E] p-6 h-full overflow-y-auto">
+    <div className="bg-[#1E1E1E] p-4 lg:p-6 h-full overflow-y-auto">
       {/* Header */}
       <div className="border-b border-[#333] pb-4 mb-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#00A8E8] flex items-center">
+          <h2 className="text-lg lg:text-xl font-bold text-[#00A8E8] flex items-center">
             <svg
               className="w-5 h-5 mr-2"
               fill="none"
@@ -145,7 +145,7 @@ const FilterSidebar = ({
       </div>
 
       {/* Filter Sections */}
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Technology Stack Filter */}
         <FilterGroup label="Technology Stack">
           <SelectField
@@ -180,10 +180,10 @@ const FilterSidebar = ({
         </FilterGroup>
 
         {/* Action Buttons */}
-        <div className="space-y-3 pt-4 border-t border-[#333]">
+        <div className="pt-4 border-t border-[#333]">
           <button
             onClick={onClearFilters}
-            className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-3 px-4 rounded-lg font-medium hover:from-gray-700 hover:to-gray-800 transition-all duration-300 shadow-lg"
+            className="w-full bg-gradient-to-r from-gray-600 to-gray-700 text-white py-2.5 px-4 rounded-lg font-medium hover:from-gray-700 hover:to-gray-800 transition-all duration-300 shadow-lg"
           >
             Clear All Filters
           </button>
@@ -224,9 +224,9 @@ const FilterSidebar = ({
   }
 
   return (
-    <aside className="hidden lg:block w-80 bg-[#1E1E1E] h-screen fixed top-20 left-0 overflow-y-auto">
+    <div className="w-full">
       {sidebarContent}
-    </aside>
+    </div>
   );
 };
 

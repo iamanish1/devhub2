@@ -37,6 +37,12 @@ const TechStackEnum = [
   "Other",
 ];
 
+const ProjectCategoryEnum = [
+  "basic",      // Basic projects for resume/practice
+  "funded",     // Funded projects with bidding
+  "capsule"     // Advanced company projects
+];
+
 const ProjectListingSchema = new mongoose.Schema({
   _id: {
     type: mongoose.Schema.Types.ObjectId,
@@ -80,6 +86,16 @@ const ProjectListingSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: TechStackEnum,
+  },
+  project_category: {
+    type: String,
+    required: true,
+    enum: ProjectCategoryEnum,
+    default: "funded"
+  },
+  is_free_project: {
+    type: Boolean,
+    default: false
   },
   Project_Features: {
     type: String,

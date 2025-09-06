@@ -32,6 +32,8 @@ const ProjectListingPage = () => {
     // Bonus pool fields
     bonus_pool_amount: "200",
     bonus_pool_contributors: "1",
+    // Category field
+    project_category: "funded",
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -262,6 +264,9 @@ const ProjectListingPage = () => {
         if (!formData.Project_tech_stack) {
           errors.Project_tech_stack = "Technology stack is required";
         }
+        if (!formData.project_category) {
+          errors.project_category = "Project category is required";
+        }
         break;
         
       case 2:
@@ -385,6 +390,9 @@ const ProjectListingPage = () => {
       // Append bonus pool data
       formDataToSend.append("bonus_pool_amount", formData.bonus_pool_amount);
       formDataToSend.append("bonus_pool_contributors", formData.bonus_pool_contributors);
+      
+      // Append category data
+      formDataToSend.append("project_category", formData.project_category);
 
       // Use params.id if editingProject is not available
       const projectId = editingProject?._id || params.id;
@@ -405,6 +413,7 @@ const ProjectListingPage = () => {
           Project_gitHub_link: formData.Project_gitHub_link,
           bonus_pool_amount: formData.bonus_pool_amount,
           bonus_pool_contributors: formData.bonus_pool_contributors,
+          project_category: formData.project_category,
         };
         
         await axios.put(
@@ -985,6 +994,41 @@ const ProjectListingPage = () => {
                       {validationErrors.Project_tech_stack && (
                         <p className="text-red-400 text-sm mt-1">{validationErrors.Project_tech_stack}</p>
                       )}
+                    </div>
+
+                    {/* Project Category */}
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-gray-300 mb-3 group-hover:text-blue-400 transition-colors">
+                        Project Category *
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="project_category"
+                          value={formData.project_category}
+                          onChange={handleChange}
+                          className={`w-full bg-[#2A2A2A] border rounded-lg p-3 text-white focus:outline-none transition-colors ${
+                            validationErrors.project_category 
+                              ? "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500" 
+                              : "border-gray-600 focus:border-[#00A8E8] focus:ring-1 focus:ring-[#00A8E8]"
+                          }`}
+                        >
+                          <option value="funded" className="bg-gray-800">Funded Projects - Bid on projects and get selected by owners</option>
+                          <option value="basic" className="bg-gray-800">Basic Projects - For resume building and practice (Platform Only)</option>
+                          <option value="capsule" className="bg-gray-800" disabled>Capsule Projects - Advanced company projects (Coming Soon)</option>
+                        </select>
+                        <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#00A8E8]/10 to-[#0062E6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"></path>
+                          </svg>
+                        </div>
+                      </div>
+                      {validationErrors.project_category && (
+                        <p className="text-red-400 text-sm mt-1">{validationErrors.project_category}</p>
+                      )}
+                      <p className="text-gray-400 text-xs mt-2">
+                        Note: Basic projects are only available for platform administrators. Regular users can only create funded projects.
+                      </p>
                     </div>
                   </div>
                 </div>

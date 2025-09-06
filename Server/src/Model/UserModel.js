@@ -92,7 +92,12 @@ const UserSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     processedAt: Date,
     notes: String
-  }]
+  }],
+  // Platform administration
+  isPlatformAdmin: {
+    type: Boolean,
+    default: false
+  }
 });
 
 const user = mongoose.model("user", UserSchema);

@@ -18,6 +18,8 @@ const ListProject = async (req, res) => {
       project_starting_bid,
       bonus_pool_amount,
       bonus_pool_contributors,
+      project_category,
+      is_free_project,
     } = req.body;
 
     // Handle uploaded files
@@ -48,6 +50,13 @@ const ListProject = async (req, res) => {
     });
 
     console.log("Received project data:", req.body);
+
+    // Check if user is trying to list a free project (only platform can do this)
+    if (is_free_project && !req.user.isPlatformAdmin) {
+      return res.status(403).json({
+        message: "Only platform administrators can list free projects",
+      });
+    }
 
     if (
       !project_Title ||
@@ -90,6 +99,8 @@ const ListProject = async (req, res) => {
       project_starting_bid,
       bonus_pool_amount: bonus_pool_amount || 200,
       bonus_pool_contributors: bonus_pool_contributors || 1,
+      project_category: project_category || "funded",
+      is_free_project: is_free_project || false,
     });
     await project.save();
 
@@ -136,14 +147,15 @@ export default ListProject;
 
 export const getProject = async (req, res) => {
   try {
-    const { techStack, budget, contributor , search } = req.query;
+    const { techStack, budget, contributor, search, category, page = 1, limit = 20 } = req.query;
 
     // If no query param is provided at all, fetch all projects
-    if (!techStack && !budget && !contributor && !search) {
+    if (!techStack && !budget && !contributor && !search && !category) {
       const allProjects = await ProjectListing.find();
       return res.status(200).json({
         message: "All projects fetched successfully",
         projects: allProjects,
+        total: allProjects.length,
       });
     }
 
@@ -190,11 +202,25 @@ export const getProject = async (req, res) => {
       }
     }
 
-    const projects = await ProjectListing.find(filter);
+    // category filter
+    if (category && category !== "") {
+      filter.project_category = category;
+    }
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    const projects = await ProjectListing.find(filter)
+      .skip(skip)
+      .limit(limitNum)
+      .sort({ createdAt: -1 });
+    const total = await ProjectListing.countDocuments(filter);
 
     res.status(200).json({
       message: "Projects fetched successfully",
       projects,
+      total,
     });
   } catch (error) {
     res.status(500).json({

@@ -109,18 +109,18 @@ const ProjectCard = memo(({ project }) => {
       initial="hidden"
       animate="visible"
       whileHover="hover"
-      className="max-w-3xl mx-auto my-4"
+      className="w-full h-full"
     >
       <div className="relative bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] text-white rounded-xl overflow-hidden border border-[#00A8E8]/20 shadow-lg shadow-[#00A8E8]/10 transition-all duration-300 hover:shadow-[#00A8E8]/20 hover:border-[#00A8E8]/40">
         {/* Gradient accent */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00A8E8] to-[#0062E6]"></div>
 
         {/* Content container */}
-        <div className="p-6 md:p-8">
+        <div className="p-4 lg:p-6 xl:p-8">
           {/* Header section */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 lg:mb-6">
             <motion.h1 
-              className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6] uppercase tracking-wide truncate"
+              className="text-xl lg:text-2xl xl:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6] uppercase tracking-wide truncate"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
@@ -128,7 +128,7 @@ const ProjectCard = memo(({ project }) => {
               {projectData.title}
             </motion.h1>
             <motion.div 
-              className="flex items-center mt-2 md:mt-0"
+              className="flex items-center mt-2 lg:mt-0"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
@@ -141,18 +141,18 @@ const ProjectCard = memo(({ project }) => {
 
           {/* Project description */}
           <motion.div 
-            className="mb-6"
+            className="mb-4 lg:mb-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <h2 className="text-lg font-semibold text-gray-300 mb-2 flex items-center">
+            <h2 className="text-base lg:text-lg font-semibold text-gray-300 mb-2 flex items-center">
               <svg className="w-4 h-4 mr-2 text-[#00A8E8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Project Overview
             </h2>
-            <p className="text-gray-400 text-sm md:text-base leading-relaxed">
+            <p className="text-gray-400 text-sm lg:text-base leading-relaxed">
               {showFull ? projectData.fullDescription : projectData.shortDescription}
             </p>
             {projectData.fullDescription.length > 70 && (
@@ -183,12 +183,12 @@ const ProjectCard = memo(({ project }) => {
 
           {/* Tech stack */}
           <motion.div 
-            className="mb-6"
+            className="mb-4 lg:mb-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <h2 className="text-lg font-semibold text-gray-300 mb-3 flex items-center">
+            <h2 className="text-base lg:text-lg font-semibold text-gray-300 mb-2 lg:mb-3 flex items-center">
               <svg className="w-4 h-4 mr-2 text-[#00A8E8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
@@ -217,13 +217,13 @@ const ProjectCard = memo(({ project }) => {
 
           {/* Project details grid */}
           <motion.div 
-            className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6 lg:mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
             <motion.div 
-              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
+              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-3 lg:p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
               whileHover={{ scale: 1.02 }}
             >
               <h3 className="text-gray-400 text-xs uppercase font-medium mb-1 flex items-center">
@@ -232,11 +232,11 @@ const ProjectCard = memo(({ project }) => {
                 </svg>
                 Starting Bid
               </h3>
-              <p className="text-xl font-bold text-white">{projectData.formattedBudget}</p>
+              <p className="text-lg lg:text-xl font-bold text-white">{projectData.formattedBudget}</p>
             </motion.div>
             
             <motion.div 
-              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
+              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-3 lg:p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
               whileHover={{ scale: 1.02 }}
             >
               <h3 className="text-gray-400 text-xs uppercase font-medium mb-1 flex items-center">
@@ -245,7 +245,7 @@ const ProjectCard = memo(({ project }) => {
                 </svg>
                 Duration
               </h3>
-              <p className="text-xl font-bold text-white">
+              <p className="text-lg lg:text-xl font-bold text-white">
                 {projectData.durationInMonths !== null
                   ? projectData.durationInMonths > 0
                     ? `${projectData.durationInMonths} months`
@@ -255,7 +255,7 @@ const ProjectCard = memo(({ project }) => {
             </motion.div>
             
             <motion.div 
-              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
+              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-3 lg:p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
               whileHover={{ scale: 1.02 }}
             >
               <h3 className="text-gray-400 text-xs uppercase font-medium mb-1 flex items-center">
@@ -264,12 +264,12 @@ const ProjectCard = memo(({ project }) => {
                 </svg>
                 Active Bidders
               </h3>
-              <p className="text-xl font-bold text-white">{projectData.bidCount}</p>
+              <p className="text-lg lg:text-xl font-bold text-white">{projectData.bidCount}</p>
             </motion.div>
 
             {/* Bonus Pool Card */}
             <motion.div 
-              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
+              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-3 lg:p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
               whileHover={{ scale: 1.02 }}
             >
               <h3 className="text-gray-400 text-xs uppercase font-medium mb-1 flex items-center">
@@ -278,7 +278,7 @@ const ProjectCard = memo(({ project }) => {
                 </svg>
                 Bonus Pool
               </h3>
-              <p className="text-xl font-bold text-white">
+              <p className="text-lg lg:text-xl font-bold text-white">
                 {project.bonus_pool_amount && project.bonus_pool_contributors 
                   ? `₹${(parseInt(project.bonus_pool_amount) * parseInt(project.bonus_pool_contributors)).toLocaleString('en-IN')}`
                   : "₹0"}

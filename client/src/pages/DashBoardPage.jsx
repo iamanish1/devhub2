@@ -10,6 +10,7 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import ErrorBoundary from "../components/ErrorBoundary";
 import EmptyState from "../components/EmptyState";
 import SubscriptionStatus from "../components/payment/SubscriptionStatus";
+import ProjectCategorySection from "../components/ProjectCategorySection";
 import { usePayment } from "../context/PaymentContext";
 
 // ===== Constants =====
@@ -179,6 +180,7 @@ const DashboardPage = () => {
     budget: searchParams.get("budget") || "",
     contributor: searchParams.get("contributor") || "",
   });
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Debounce
@@ -250,6 +252,11 @@ const DashboardPage = () => {
     setMobileFilterOpen((p) => !p);
   }, []);
 
+  const handleCategorySelect = useCallback((categoryId) => {
+    setSelectedCategory(categoryId);
+    // You can add category-based filtering logic here if needed
+  }, []);
+
   return (
     <ErrorBoundary>
       {/* dvh prevents mobile browser chrome from squashing height; use min-h-screen if dvh not available */}
@@ -257,8 +264,18 @@ const DashboardPage = () => {
         {/* Navigation */}
         <Navbar />
 
-                 {/* OUTER SPLIT: prevent this from scrolling */}
-         <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+        {/* Project Categories Section - Above everything */}
+        <div className="flex-shrink-0 bg-[#121212] px-4 lg:px-6 py-4 lg:py-6">
+          <div className="max-w-7xl mx-auto">
+            <ProjectCategorySection 
+              onCategorySelect={handleCategorySelect}
+              selectedCategory={selectedCategory}
+            />
+          </div>
+        </div>
+
+        {/* Main Layout Container */}
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
           {/* Mobile Filter Toggle */}
           <button
             onClick={toggleMobileFilter}
@@ -279,15 +296,11 @@ const DashboardPage = () => {
             </svg>
           </button>
 
-                                           {/* SIDEBAR: its own scroll on large screens; doesn't cause main to scroll */}
-            <div className="lg:sticky lg:top-20 lg:h-[calc(100vh-2rem)] lg:overflow-y-auto lg:w-80 lg:flex-shrink-0">
-              <div className="p-4">
-                {/* Subscription Status */}
-                <div className="mb-6">
-                  <SubscriptionStatus />
-                </div>
-                
-                {/* Filters */}
+          {/* Sidebar - Responsive Layout */}
+          <aside className="lg:w-80 lg:flex-shrink-0 lg:bg-[#1A1A1A] lg:border-r lg:border-gray-700">
+            <div className="lg:h-full lg:overflow-y-auto">
+              <div className="p-4 lg:p-6 space-y-6">
+                {/* Filters - Now at the top */}
                 <FilterSidebar
                   filters={filters}
                   onFilterChange={handleFilterChange}
@@ -295,110 +308,133 @@ const DashboardPage = () => {
                   isOpen={mobileFilterOpen}
                   onClose={() => setMobileFilterOpen(false)}
                 />
+                
+                {/* Subscription Status */}
+                <SubscriptionStatus />
               </div>
-          </div>
+            </div>
+          </aside>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               {/* MAIN COLUMN: never scrolls */}
-                <main className="flex-1 min-h-0 p-6 lg:p-10 lg:ml-0 mt-[8vmin] lg:pl-10 flex flex-col overflow-hidden h-[calc(100vh-1rem)]">
-                             {/* Fixed header - never scrolls */}
-               <div className="flex-shrink-0 bg-[#121212] pb-10">
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          {/* Main Content Area */}
+          <main className="flex-1 flex flex-col min-h-0 lg:ml-0">
+            {/* Header Section */}
+            <div className="flex-shrink-0 bg-[#121212] p-6 lg:p-8 lg:pb-6">
+              <div className="max-w-7xl mx-auto">
+                <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
                   <div className="flex-1">
-                    <h1 className="text-3xl lg:text-4xl font-bold text-white ">
+                    <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-white mb-2">
                       <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00A8E8] to-[#0062E6]">
                         Explore
                       </span>{" "}
                       Projects
                     </h1>
-                    <p className="text-gray-400 text-base">
+                    <p className="text-gray-400 text-base lg:text-lg">
                       {data.total > 0
                         ? `Found ${data.total} project${data.total === 1 ? "" : "s"}`
                         : "No projects found"}
                     </p>
                   </div>
 
-                  <SearchBar
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    placeholder="Search projects by title, description, or tech stack..."
-                    className="w-full lg:w-96"
-                    aria-label="Search projects"
-                  />
-                </div>
-              </div>
-
-                                                         {/* ONLY THE PROJECT GRID WRAPPER SCROLLS */}
-               <div className="flex-1 overflow-y-auto pr-4 overscroll-contain pt-4">
-              {/* Loading */}
-              {loading && (
-                <div className="flex items-center justify-center min-h-[400px]">
-                  <LoadingSpinner />
-                </div>
-              )}
-
-              {/* Error */}
-              {error && !loading && (
-                <div className="flex items-center justify-center min-h-[400px]">
-                  <div className="text-center">
-                    <div className="text-red-400 text-6xl mb-4" aria-hidden>
-                      ⚠️
-                    </div>
-                    <h3 className="text-xl font-semibold text-white mb-2">Something went wrong</h3>
-                    <p className="text-gray-400 mb-4">{error}</p>
-                    <button
-                      onClick={handleClearFilters}
-                      className="bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all duration-300"
-                    >
-                      Reset Filters
-                    </button>
+                  <div className="w-full xl:w-auto xl:min-w-[400px]">
+                    <SearchBar
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      placeholder="Search projects by title, description, or tech stack..."
+                      className="w-full"
+                      aria-label="Search projects"
+                    />
                   </div>
                 </div>
-              )}
+              </div>
+            </div>
 
-              {/* Empty */}
-              {!loading && !error && data.projects.length === 0 && (
-                <div className="flex items-center justify-center min-h-[400px]">
-                  <EmptyState
-                    title="No projects found"
-                    description="Try adjusting your search criteria or filters to find more projects."
-                    onClearFilters={handleClearFilters}
-                  />
-                </div>
-              )}
+            {/* Projects Grid Container */}
+            <div className="flex-1 overflow-y-auto bg-[#121212]">
+              <div className="max-w-7xl mx-auto p-6 lg:p-8">
+                {/* Loading */}
+                {loading && (
+                  <div className="flex items-center justify-center min-h-[400px]">
+                    <LoadingSpinner />
+                  </div>
+                )}
 
-              {/* List */}
-              {!loading && !error && data.projects.length > 0 && (
-                <>
-                                     <div className="space-y-6 pb-6">
-                     {data.projects.map((project, idx) => {
-                       const isLast = idx === data.projects.length - 1;
-                       return (
-                         <div key={project._id} ref={isLast ? lastProjectRef : null} className="mb-1">
-                           <ProjectCard project={project} />
-                         </div>
-                       );
-                     })}
-                   </div>
-
-                  {/* Loading More */}
-                  {loadingMore && (
-                    <div className="flex items-center justify-center py-12">
-                      <LoadingSpinner size="small" />
-                      <span className="ml-3 text-gray-400">Loading more projects...</span>
+                {/* Error */}
+                {error && !loading && (
+                  <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="text-center">
+                      <div className="text-red-400 text-6xl mb-4" aria-hidden>
+                        ⚠️
+                      </div>
+                      <h3 className="text-xl font-semibold text-white mb-2">Something went wrong</h3>
+                      <p className="text-gray-400 mb-4">{error}</p>
+                      <button
+                        onClick={handleClearFilters}
+                        className="bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all duration-300"
+                      >
+                        Reset Filters
+                      </button>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* End */}
-                  {!data.hasMore && data.projects.length > 0 && (
-                    <div className="text-center py-12 border-t border-gray-700 mt-8">
-                      <p className="text-gray-400">You've reached the end of all projects!</p>
-                      <p className="text-gray-500 text-sm mt-2">
-                        Showing {data.projects.length} of {data.total} projects
-                      </p>
+                {/* Empty */}
+                {!loading && !error && data.projects.length === 0 && (
+                  <div className="flex items-center justify-center min-h-[400px]">
+                    <EmptyState
+                      title="No projects found"
+                      description="Try adjusting your search criteria or filters to find more projects."
+                      onClearFilters={handleClearFilters}
+                    />
+                  </div>
+                )}
+
+                {/* Projects Grid */}
+                {!loading && !error && data.projects.length > 0 && (
+                  <>
+                    {/* Grid Layout for Laptop/Desktop */}
+                    <div className="hidden lg:grid lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 pb-6">
+                      {data.projects.map((project, idx) => {
+                        const isLast = idx === data.projects.length - 1;
+                        return (
+                          <div key={project._id} ref={isLast ? lastProjectRef : null}>
+                            <ProjectCard project={project} />
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </>
-              )}
+
+                    {/* Mobile Layout - Single Column */}
+                    <div className="lg:hidden space-y-6 pb-6">
+                      {data.projects.map((project, idx) => {
+                        const isLast = idx === data.projects.length - 1;
+                        return (
+                          <div key={project._id} ref={isLast ? lastProjectRef : null}>
+                            <ProjectCard project={project} />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Loading More */}
+                    {loadingMore && (
+                      <div className="flex items-center justify-center py-12">
+                        <LoadingSpinner size="small" />
+                        <span className="ml-3 text-gray-400">Loading more projects...</span>
+                      </div>
+                    )}
+
+                    {/* End */}
+                    {!data.hasMore && data.projects.length > 0 && (
+                      <div className="text-center py-12 border-t border-gray-700 mt-8">
+                        <p className="text-gray-400">You've reached the end of all projects!</p>
+                        <p className="text-gray-500 text-sm mt-2">
+                          Showing {data.projects.length} of {data.total} projects
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </main>
         </div>
