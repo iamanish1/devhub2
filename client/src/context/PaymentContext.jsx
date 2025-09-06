@@ -194,14 +194,17 @@ export const PaymentProvider = ({ children }) => {
             return;
           }
 
-          // Update payment in history
-          dispatch({
-            type: PAYMENT_ACTIONS.UPDATE_PAYMENT_STATUS,
-            payload: {
-              paymentId: paymentData.id,
-              status: paymentData.status
-            }
-          });
+          // Only update if status actually changed to prevent unnecessary re-renders
+          const existingPayment = state.paymentHistory.find(p => p.id === paymentData.id);
+          if (!existingPayment || existingPayment.status !== paymentData.status) {
+            dispatch({
+              type: PAYMENT_ACTIONS.UPDATE_PAYMENT_STATUS,
+              payload: {
+                paymentId: paymentData.id,
+                status: paymentData.status
+              }
+            });
+          }
         }
       });
     }, (error) => {
@@ -209,10 +212,10 @@ export const PaymentProvider = ({ children }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, []); // Keep empty dependency array to prevent infinite loops
 
   // Load subscription status
-  const loadSubscriptionStatus = async () => {
+  const loadSubscriptionStatus = useCallback(async () => {
     try {
       const response = await paymentApi.getSubscriptionStatus();
       const subscription = response?.data || response;
@@ -234,10 +237,10 @@ export const PaymentProvider = ({ children }) => {
       console.error('Error loading subscription status:', error);
       dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: { isActive: false } });
     }
-  };
+  }, []);
 
   // Load payment history
-  const loadPaymentHistory = async () => {
+  const loadPaymentHistory = useCallback(async () => {
     dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY_LOADING, payload: true });
     try {
       const history = await paymentApi.getPaymentHistory();
@@ -259,10 +262,10 @@ export const PaymentProvider = ({ children }) => {
     } finally {
       dispatch({ type: PAYMENT_ACTIONS.SET_PAYMENT_HISTORY_LOADING, payload: false });
     }
-  };
+  }, []);
 
   // Load bonus pools
-  const loadBonusPools = async () => {
+  const loadBonusPools = useCallback(async () => {
     dispatch({ type: PAYMENT_ACTIONS.SET_BONUS_POOLS_LOADING, payload: true });
     try {
       const pools = await paymentApi.getBonusPools();
@@ -273,10 +276,10 @@ export const PaymentProvider = ({ children }) => {
     } finally {
       dispatch({ type: PAYMENT_ACTIONS.SET_BONUS_POOLS_LOADING, payload: false });
     }
-  };
+  }, []);
 
   // Load withdrawal history
-  const loadWithdrawalHistory = async () => {
+  const loadWithdrawalHistory = useCallback(async () => {
     dispatch({ type: PAYMENT_ACTIONS.SET_WITHDRAWAL_HISTORY_LOADING, payload: true });
     try {
       const history = await paymentApi.getWithdrawalHistory();
@@ -287,10 +290,10 @@ export const PaymentProvider = ({ children }) => {
     } finally {
       dispatch({ type: PAYMENT_ACTIONS.SET_WITHDRAWAL_HISTORY_LOADING, payload: false });
     }
-  };
+  }, []);
 
   // Load payment analytics
-  const loadPaymentAnalytics = async () => {
+  const loadPaymentAnalytics = useCallback(async () => {
     dispatch({ type: PAYMENT_ACTIONS.SET_ANALYTICS_LOADING, payload: true });
     try {
       const analytics = await paymentApi.getPaymentAnalytics();
@@ -301,7 +304,7 @@ export const PaymentProvider = ({ children }) => {
     } finally {
       dispatch({ type: PAYMENT_ACTIONS.SET_ANALYTICS_LOADING, payload: false });
     }
-  };
+  }, []);
 
   // Payment actions
   const paymentActions = {
@@ -354,7 +357,7 @@ export const PaymentProvider = ({ children }) => {
       loadWithdrawalHistory();
       loadPaymentAnalytics();
       dispatch({ type: PAYMENT_ACTIONS.SET_LAST_UPDATED, payload: new Date().toISOString() });
-    }, []),
+    }, [loadSubscriptionStatus, loadPaymentHistory, loadBonusPools, loadWithdrawalHistory, loadPaymentAnalytics]),
 
     // Update payment status manually
     updatePaymentStatus: (paymentId, status) => {

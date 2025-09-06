@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePayment } from '../../context/PaymentContext';
 import { formatCurrency } from '../../utils/paymentUtils.jsx';
@@ -34,7 +34,7 @@ const PaymentModal = ({
   }, [isOpen, clearPaymentError]);
 
   // Calculate amount based on payment type
-  const calculateAmount = () => {
+  const calculateAmount = useMemo(() => {
     let calculatedAmount;
     switch (paymentType) {
       case PAYMENT_TYPES.BID_FEE:
@@ -61,10 +61,10 @@ const PaymentModal = ({
         calculatedAmount = amount || 0;
     }
     return calculatedAmount;
-  };
+  }, [paymentType, amount, contributorCount, planName, planType]);
 
   // Get payment title
-  const getPaymentTitle = () => {
+  const getPaymentTitle = useMemo(() => {
     switch (paymentType) {
       case PAYMENT_TYPES.BID_FEE:
         return 'Pay Bid Fee';
@@ -77,10 +77,10 @@ const PaymentModal = ({
       default:
         return 'Payment';
     }
-  };
+  }, [paymentType, planName]);
 
   // Get payment description
-  const getPaymentDescription = () => {
+  const getPaymentDescription = useMemo(() => {
     switch (paymentType) {
       case PAYMENT_TYPES.BID_FEE:
         return 'Pay ₹9 to place your bid on this project';
@@ -93,12 +93,12 @@ const PaymentModal = ({
       default:
         return 'Complete your payment';
     }
-  };
+  }, [paymentType, contributorCount, planName, planType]);
 
   // Handle payment submission
-  const handlePaymentSubmit = async () => {
+  const handlePaymentSubmit = useCallback(async () => {
     try {
-      const paymentAmount = calculateAmount();
+      const paymentAmount = calculateAmount;
       
       const paymentData = {
         type: paymentType,
@@ -132,7 +132,7 @@ const PaymentModal = ({
       console.error('Payment submission error:', error);
       handlePaymentError(error);
     }
-  };
+  }, [calculateAmount, paymentType, selectedProvider, projectId, bidId, contributorCount, planName, planType, startPayment, completePayment, onSuccess, onClose, handlePaymentError]);
 
 
   // Modal variants for animation
@@ -191,7 +191,7 @@ const PaymentModal = ({
             <div className="glass rounded-xl p-6 border border-gray-700 shadow-2xl">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-white">{getPaymentTitle()}</h2>
+                <h2 className="text-xl font-semibold text-white">{getPaymentTitle}</h2>
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-white transition-colors"
@@ -202,14 +202,14 @@ const PaymentModal = ({
 
               {/* Payment Info */}
               <div className="mb-6">
-                <p className="text-gray-400 mb-4">{getPaymentDescription()}</p>
+                <p className="text-gray-400 mb-4">{getPaymentDescription}</p>
                 
                 {/* Amount Display */}
                 <div className="bg-[#2A2A2A] rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-300">Amount:</span>
                     <span className="gradient-text text-2xl font-bold">
-                      {formatCurrency(calculateAmount())}
+                      {formatCurrency(calculateAmount)}
                     </span>
                   </div>
                   
@@ -314,7 +314,7 @@ const PaymentModal = ({
           if (onSuccess) onSuccess();
         }}
         paymentType={paymentType}
-        amount={calculateAmount()}
+        amount={calculateAmount}
         transactionId={paymentData.orderId}
         onContinue={onSuccess}
       />
@@ -328,7 +328,7 @@ const PaymentModal = ({
         }}
         onRetry={handlePaymentSubmit}
         paymentType={paymentType}
-        amount={calculateAmount()}
+        amount={calculateAmount}
         error={paymentError}
         errorCode={paymentData.errorCode}
       />

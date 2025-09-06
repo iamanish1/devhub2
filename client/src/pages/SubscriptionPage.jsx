@@ -160,8 +160,8 @@ const SubscriptionPage = () => {
 
   useEffect(() => {
     fetchSubscriptionData();
-    refreshData();
-  }, [refreshData]);
+    // Only call refreshData once on mount, not on every refreshData change
+  }, []); // Remove refreshData from dependencies
 
   const handlePlanSelect = (plan, planType) => {
     const price = getPlanPrice(plan, planType);
@@ -181,9 +181,8 @@ const SubscriptionPage = () => {
     setShowPaymentModal(false);
     setSelectedPlan(null);
     
-    // Refresh subscription data
+    // Refresh subscription data only once
     await fetchSubscriptionData();
-    await refreshData();
     
     notificationService.success('🎉 Subscription activated successfully! Welcome to premium!');
   };
