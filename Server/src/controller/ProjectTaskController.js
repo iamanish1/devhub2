@@ -1356,23 +1356,12 @@ export const getWorkspace = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    // Check if user is project owner
-    const isProjectOwner = project.user.toString() === userId.toString();
-    
-    // Check if user is selected contributor
+    // Use helper function to check access (includes free project logic)
     const selection = await ProjectSelection.findOne({ projectId });
-    const isSelectedContributor = selection && selection.selectedUsers && 
-      selection.selectedUsers.some(selectedUser => selectedUser.userId.toString() === userId.toString());
+    const accessResult = await checkProjectAccess(project, userId, selection);
 
-    // Check if user has accepted bid
-    const acceptedBid = await Bidding.findOne({
-      project_id: projectId,
-      user_id: userId,
-      bid_status: 'Accepted'
-    });
-
-    if (!isProjectOwner && !isSelectedContributor && !acceptedBid) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (!accessResult.hasAccess) {
+      return res.status(403).json({ message: accessResult.message });
     }
 
     // Get tasks from database
@@ -1413,9 +1402,9 @@ export const getWorkspace = async (req, res) => {
       resources: resources,
       contributors: selection?.selectedUsers || [],
       userAccess: {
-        isProjectOwner,
-        isSelectedContributor,
-        hasAcceptedBid: !!acceptedBid
+        accessLevel: accessResult.accessLevel,
+        hasAccess: accessResult.hasAccess,
+        message: accessResult.message
       }
     };
 
