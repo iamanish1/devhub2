@@ -338,15 +338,6 @@ const DashboardPage = () => {
         {/* Navigation */}
         <Navbar />
 
-        {/* Project Categories Section - Above everything */}
-        <div className="flex-shrink-0 bg-[#121212] px-4 lg:px-6 py-4 lg:py-6">
-          <div className="max-w-7xl mx-auto">
-            <ProjectCategorySection 
-              onCategorySelect={handleCategorySelect}
-              selectedCategory={selectedCategory}
-            />
-          </div>
-        </div>
 
         {/* Main Layout Container */}
         <div className="flex-1 flex flex-col lg:flex-row min-h-0">
@@ -374,13 +365,19 @@ const DashboardPage = () => {
           <aside className="lg:w-80 lg:flex-shrink-0 lg:bg-[#1A1A1A] lg:border-r lg:border-gray-700">
             <div className="lg:h-full lg:overflow-y-auto">
               <div className="p-4 lg:p-6 space-y-6">
-                {/* Filters - Now at the top */}
+                {/* Filters - At the top */}
                 <FilterSidebar
                   filters={filters}
                   onFilterChange={handleFilterChange}
                   onClearFilters={handleClearFilters}
                   isOpen={mobileFilterOpen}
                   onClose={() => setMobileFilterOpen(false)}
+                />
+                
+                {/* Project Categories Section */}
+                <ProjectCategorySection 
+                  onCategorySelect={handleCategorySelect}
+                  selectedCategory={selectedCategory}
                 />
                 
                 {/* Subscription Status */}
