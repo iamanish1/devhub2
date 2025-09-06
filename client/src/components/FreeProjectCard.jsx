@@ -6,10 +6,8 @@ const FreeProjectCard = ({ project }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const handleStartBuilding = () => {
-    // Navigate to project details or GitHub repository
-    if (project.Project_gitHub_link) {
-      window.open(project.Project_gitHub_link, '_blank');
-    }
+    // Navigate to contribution panel for the project
+    navigate(`/contributionPage/${project._id}`);
   };
 
   const getTechStackColor = (tech) => {
