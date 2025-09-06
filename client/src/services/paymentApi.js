@@ -116,6 +116,7 @@ export const paymentApi = {
   // Subscription Payment
   createSubscriptionPayment: async (planName = 'starter', planType = 'monthly') => {
     try {
+      console.log('Creating subscription payment:', { planName, planType });
       const response = await makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION, {
         method: 'POST',
         body: JSON.stringify({
@@ -124,9 +125,11 @@ export const paymentApi = {
           purpose: 'subscription'
         })
       });
+      console.log('Subscription payment response:', response);
       return response.data;
     } catch (error) {
       console.error('Subscription payment error:', error);
+      console.error('Error details:', error.response?.data || error.message);
       throw error;
     }
   },

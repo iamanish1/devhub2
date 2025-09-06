@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { usePayment } from '../context/PaymentContext';
 import NavBar from '../components/NavBar';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -214,7 +215,15 @@ const OverviewTab = ({ stats, subscription, bonusPools }) => {
 
       {/* Subscription Status */}
       <div className="glass rounded-xl p-6 border border-gray-700">
-        <h2 className="text-xl font-semibold text-white mb-4">Subscription Status</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-white">Subscription Status</h2>
+          <Link 
+            to="/subscription"
+            className="text-[#00A8E8] hover:text-[#0096D6] text-sm font-medium transition-colors"
+          >
+            View All Plans →
+          </Link>
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-gray-400 text-sm">Premium Subscription</p>
@@ -239,6 +248,29 @@ const OverviewTab = ({ stats, subscription, bonusPools }) => {
             )}
           </div>
         </div>
+        
+        {/* Quick Plan Options */}
+        {!subscription.isActive && (
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <p className="text-gray-400 text-sm mb-3">Available Plans:</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-3 bg-gray-800/30 rounded-lg">
+                <div className="text-lg font-bold text-[#00A8E8]">₹99</div>
+                <div className="text-gray-400 text-xs">Weekly</div>
+              </div>
+              <div className="text-center p-3 bg-gradient-to-br from-[#00A8E8]/10 to-[#0062E6]/10 rounded-lg border border-[#00A8E8]/30">
+                <div className="text-lg font-bold text-white">₹299</div>
+                <div className="text-gray-400 text-xs">Monthly</div>
+                <div className="text-green-400 text-xs">Popular</div>
+              </div>
+              <div className="text-center p-3 bg-gray-800/30 rounded-lg">
+                <div className="text-lg font-bold text-[#00A8E8]">₹2,999</div>
+                <div className="text-gray-400 text-xs">Yearly</div>
+                <div className="text-green-400 text-xs">Save 17%</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bonus Pools */}

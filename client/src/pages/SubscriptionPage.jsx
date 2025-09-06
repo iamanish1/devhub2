@@ -32,20 +32,127 @@ const SubscriptionPage = () => {
   const [loading, setLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] = useState(null);
 
+  // Fallback plans data in case API fails
+  const fallbackPlans = [
+    {
+      name: 'starter',
+      displayName: 'Starter',
+      description: 'Perfect for beginners and freelancers',
+      plans: [
+        { type: 'weekly', price: 99, popular: false, savings: 0 },
+        { type: 'monthly', price: 299, popular: true, savings: 0 },
+        { type: 'yearly', price: 2999, popular: false, savings: 17 }
+      ],
+      features: {
+        unlimitedBids: true,
+        prioritySupport: false,
+        advancedAnalytics: false,
+        premiumBadge: true,
+        earlyAccess: false,
+        customProfile: false,
+        projectBoosting: false,
+        teamCollaboration: false
+      },
+      limits: {
+        maxProjects: 5,
+        maxTeamMembers: 2,
+        maxFileUploads: 100
+      }
+    },
+    {
+      name: 'pro',
+      displayName: 'Pro',
+      description: 'For serious developers and small teams',
+      plans: [
+        { type: 'weekly', price: 199, popular: false, savings: 0 },
+        { type: 'monthly', price: 599, popular: true, savings: 0 },
+        { type: 'yearly', price: 5999, popular: false, savings: 17 }
+      ],
+      features: {
+        unlimitedBids: true,
+        prioritySupport: true,
+        advancedAnalytics: true,
+        premiumBadge: true,
+        earlyAccess: true,
+        customProfile: true,
+        projectBoosting: true,
+        teamCollaboration: false
+      },
+      limits: {
+        maxProjects: 20,
+        maxTeamMembers: 5,
+        maxFileUploads: 500
+      }
+    },
+    {
+      name: 'enterprise',
+      displayName: 'Enterprise',
+      description: 'For large teams and organizations',
+      plans: [
+        { type: 'weekly', price: 399, popular: false, savings: 0 },
+        { type: 'monthly', price: 1299, popular: false, savings: 0 },
+        { type: 'yearly', price: 12999, popular: true, savings: 17 }
+      ],
+      features: {
+        unlimitedBids: true,
+        prioritySupport: true,
+        advancedAnalytics: true,
+        premiumBadge: true,
+        earlyAccess: true,
+        customProfile: true,
+        projectBoosting: true,
+        teamCollaboration: true
+      },
+      limits: {
+        maxProjects: -1,
+        maxTeamMembers: -1,
+        maxFileUploads: -1
+      }
+    }
+  ];
+
   // Fetch subscription plans and current status
   const fetchSubscriptionData = async () => {
     try {
       setLoading(true);
+      console.log('Fetching subscription data...');
+      
       const [plansResponse, statusResponse] = await Promise.all([
         paymentApi.getSubscriptionPlans(),
         paymentApi.getSubscriptionStatus()
       ]);
       
-      setPlans(plansResponse.plans || []);
-      setCurrentSubscription(statusResponse);
+      console.log('Plans response:', plansResponse);
+      console.log('Status response:', statusResponse);
+      
+      // Handle plans response
+      if (plansResponse && plansResponse.data && plansResponse.data.plans) {
+        setPlans(plansResponse.data.plans);
+      } else if (plansResponse && plansResponse.plans) {
+        setPlans(plansResponse.plans);
+      } else {
+        console.warn('No plans found in response:', plansResponse);
+        setPlans([]);
+      }
+      
+      // Handle status response
+      if (statusResponse && statusResponse.data) {
+        setCurrentSubscription(statusResponse.data);
+      } else if (statusResponse) {
+        setCurrentSubscription(statusResponse);
+      } else {
+        console.warn('No subscription status found in response:', statusResponse);
+        setCurrentSubscription(null);
+      }
     } catch (error) {
       console.error('Error fetching subscription data:', error);
+      console.error('Error details:', error.response?.data || error.message);
       notificationService.error('Failed to fetch subscription information');
+      
+      // Set fallback data to prevent empty state
+      console.log('Using fallback plans data');
+      setPlans(fallbackPlans);
+      setCurrentSubscription(null);
     } finally {
       setLoading(false);
     }
@@ -57,6 +164,7 @@ const SubscriptionPage = () => {
   }, [refreshData]);
 
   const handlePlanSelect = (plan, planType) => {
+    console.log('Plan selected:', { plan, planType });
     setSelectedPlan(plan);
     setSelectedPlanType(planType);
     setShowPaymentModal(true);
@@ -225,9 +333,19 @@ const SubscriptionPage = () => {
           </div>
         </div>
 
+        {/* Debug Information */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-4 bg-gray-800 rounded-lg">
+            <h3 className="text-white font-semibold mb-2">Debug Info:</h3>
+            <p className="text-gray-300 text-sm">Plans loaded: {plans.length}</p>
+            <p className="text-gray-300 text-sm">Selected plan type: {selectedPlanType}</p>
+            <p className="text-gray-300 text-sm">Current subscription: {currentSubscription ? 'Active' : 'None'}</p>
+          </div>
+        )}
+
         {/* Subscription Plans */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-          {plans.map((plan, index) => {
+          {plans.length > 0 ? plans.map((plan, index) => {
             const price = getPlanPrice(plan, selectedPlanType);
             const savings = getPlanSavings(plan, selectedPlanType);
             const isCurrent = isCurrentPlan(plan.name, selectedPlanType);
@@ -363,7 +481,23 @@ const SubscriptionPage = () => {
                 </button>
               </div>
             );
-          })}
+          }) : (
+            <div className="col-span-full text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <h3 className="text-xl font-semibold text-white mb-2">No Plans Available</h3>
+                <p className="text-gray-400 mb-4">Unable to load subscription plans. Please try refreshing the page.</p>
+                <button 
+                  onClick={fetchSubscriptionData}
+                  className="bg-[#00A8E8] hover:bg-[#0096D6] text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  Retry Loading Plans
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Benefits Section */}
@@ -423,7 +557,7 @@ const SubscriptionPage = () => {
         {/* Payment Modal */}
         {showPaymentModal && selectedPlan && (
           <PaymentModal
-            paymentType={PAYMENT_TYPES.SUBSCRIPTION}
+            paymentType="subscription"
             isOpen={showPaymentModal}
             onClose={() => setShowPaymentModal(false)}
             amount={getPlanPrice(selectedPlan, selectedPlanType)}

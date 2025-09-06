@@ -2,6 +2,7 @@ import PaymentIntent from '../Model/PaymentIntentModel.js';
 import ProjectListing from '../Model/ProjectListingModel.js';
 import BonusPool from '../Model/BonusPoolModel.js';
 import Bidding from '../Model/BiddingModel.js';
+import user from '../Model/UserModel.js';
 import { createOrder as rpCreateOrder, createRefund } from '../services/razorpay.js';
 import { BID_FEE, LISTING_FEE, BONUS_PER_CONTRIBUTOR, WITHDRAWAL_FEE } from '../utils/flags.js';
 import { logPaymentEvent } from '../utils/logger.js';
