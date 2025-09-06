@@ -107,6 +107,8 @@ const useInfiniteProjects = (searchTerm, filters, category) => {
   }, [searchTerm, filters.techStack, filters.budget, filters.contributor, category]);
 
   const queryKeyInitial = useQueryKey(searchTerm, filters, 1, category);
+  const basicQueryKey = useQueryKey(searchTerm, filters, 1, "basic");
+  const freeQueryKey = useQueryKey(searchTerm, filters, 1, "free");
 
   // Initial fetch with cancellation to prevent race conditions
   useEffect(() => {
@@ -118,21 +120,61 @@ const useInfiniteProjects = (searchTerm, filters, category) => {
         setLoading(true);
         setError(null);
 
-        const res = await axios.get(
-          `${API_BASE_URL}/api/project/getlistproject?${queryKeyInitial}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            signal: controller.signal,
-          }
-        );
+        let list = [];
+        let totalCount = 0;
 
-        if (cancelled) return;
+        // Special handling for "basic" category - fetch both basic and free projects
+        if (category === "basic") {
+          // Fetch basic projects
+          const basicRes = await axios.get(
+            `${API_BASE_URL}/api/project/getlistproject?${basicQueryKey}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              signal: controller.signal,
+            }
+          );
 
-        const list = res.data?.projects ?? [];
-        const totalCount = Number(res.data?.total ?? 0);
+          // Fetch free projects
+          const freeRes = await axios.get(
+            `${API_BASE_URL}/api/project/getlistproject?${freeQueryKey}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              signal: controller.signal,
+            }
+          );
+
+          if (cancelled) return;
+
+          // Combine results
+          const basicProjects = basicRes.data?.projects ?? [];
+          const freeProjects = freeRes.data?.projects ?? [];
+          list = [...basicProjects, ...freeProjects];
+          totalCount = (basicRes.data?.total ?? 0) + (freeRes.data?.total ?? 0);
+        } else {
+          // Normal fetch for other categories
+          const res = await axios.get(
+            `${API_BASE_URL}/api/project/getlistproject?${queryKeyInitial}`,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              signal: controller.signal,
+            }
+          );
+
+          if (cancelled) return;
+
+          list = res.data?.projects ?? [];
+          totalCount = Number(res.data?.total ?? 0);
+        }
+
         setProjects(list);
         setTotal(totalCount);
 
@@ -154,9 +196,11 @@ const useInfiniteProjects = (searchTerm, filters, category) => {
       cancelled = true;
       controller.abort();
     };
-  }, [queryKeyInitial]);
+  }, [queryKeyInitial, basicQueryKey, freeQueryKey, category]);
 
   const queryKeyMore = useQueryKey(searchTerm, filters, page, category);
+  const basicQueryKeyMore = useQueryKey(searchTerm, filters, page, "basic");
+  const freeQueryKeyMore = useQueryKey(searchTerm, filters, page, "free");
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
@@ -165,19 +209,56 @@ const useInfiniteProjects = (searchTerm, filters, category) => {
     try {
       setLoadingMore(true);
 
-      const res = await axios.get(
-        `${API_BASE_URL}/api/project/getlistproject?${queryKeyMore}`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          signal: controller.signal,
-        }
-      );
+      let list = [];
+      let totalCount = total;
 
-      const list = res.data?.projects ?? [];
-      const totalCount = Number(res.data?.total ?? total);
+      // Special handling for "basic" category - fetch both basic and free projects
+      if (category === "basic") {
+        // Fetch basic projects
+        const basicRes = await axios.get(
+          `${API_BASE_URL}/api/project/getlistproject?${basicQueryKeyMore}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            signal: controller.signal,
+          }
+        );
+
+        // Fetch free projects
+        const freeRes = await axios.get(
+          `${API_BASE_URL}/api/project/getlistproject?${freeQueryKeyMore}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            signal: controller.signal,
+          }
+        );
+
+        // Combine results
+        const basicProjects = basicRes.data?.projects ?? [];
+        const freeProjects = freeRes.data?.projects ?? [];
+        list = [...basicProjects, ...freeProjects];
+        totalCount = (basicRes.data?.total ?? 0) + (freeRes.data?.total ?? 0);
+      } else {
+        // Normal fetch for other categories
+        const res = await axios.get(
+          `${API_BASE_URL}/api/project/getlistproject?${queryKeyMore}`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            signal: controller.signal,
+          }
+        );
+
+        list = res.data?.projects ?? [];
+        totalCount = Number(res.data?.total ?? total);
+      }
 
       // Merge by id to avoid accidental duplicates
       setProjects((prev) => {
@@ -204,7 +285,7 @@ const useInfiniteProjects = (searchTerm, filters, category) => {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, queryKeyMore, page, total]);
+  }, [loadingMore, hasMore, queryKeyMore, basicQueryKeyMore, freeQueryKeyMore, page, total, category]);
 
   return {
     data: { projects, total, hasMore },
@@ -427,7 +508,7 @@ const CategorizedDashboardPage = () => {
             {/* ONLY THE PROJECT GRID WRAPPER SCROLLS */}
             <div className="flex-1 overflow-y-auto pr-4 overscroll-contain pt-4">
               {/* Loading */}
-              {loading && (
+               {loading && (
                 <div className="flex items-center justify-center min-h-[400px]">
                   <LoadingSpinner />
                 </div>

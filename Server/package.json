@@ -7,7 +7,10 @@
   "scripts": {
   "dev": "nodemon --exec \"node -r dotenv/config src/index.js\"",
   "start": "node -r dotenv/config src/index.js",
-  "test": "echo \"Error: no test specified\" && exit 1"
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "test:api": "node -r dotenv/config test-api-endpoints.js",
+  "test:categories": "node -r dotenv/config test-project-categories.js",
+  "test:all": "npm run test:api && npm run test:categories"
 },
   "keywords": [],
   "author": "",

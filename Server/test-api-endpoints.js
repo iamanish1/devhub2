@@ -1,440 +1,327 @@
-/**
- * Comprehensive API Endpoints Test Script
- * Tests all major API endpoints for functionality and error handling
- */
-
 import axios from 'axios';
 import dotenv from 'dotenv';
 
+// Load environment variables
 dotenv.config();
 
-const BASE_URL = process.env.API_URL || 'http://localhost:8000';
-const TEST_USER = {
-  username: 'testuser',
-  email: 'test@example.com',
-  password: 'testpassword123',
-  usertype: 'contributor'
-};
+const BASE_URL = process.env.BASE_URL || 'https://devhubs-final-product-production.up.railway.app';
+const API_BASE = `${BASE_URL}/api`;
 
-let authToken = null;
-let testProjectId = null;
-let testBidId = null;
-
-// Test configuration
-const TEST_CONFIG = {
-  timeout: 10000,
-  retries: 3
-};
-
-/**
- * Utility function to make API requests with error handling
- */
-async function makeRequest(method, endpoint, data = null, headers = {}) {
-  const config = {
-    method,
-    url: `${BASE_URL}${endpoint}`,
-    timeout: TEST_CONFIG.timeout,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers
-    }
-  };
-
-  if (data) {
-    config.data = data;
+class APITester {
+  constructor() {
+    this.results = [];
   }
 
-  try {
-    const response = await axios(config);
-    return { success: true, data: response.data, status: response.status };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.response?.data || error.message,
-      status: error.response?.status || 500
+  // Helper method to make API requests
+  async makeRequest(method, endpoint, data = null) {
+    try {
+      const config = {
+        method,
+        url: `${API_BASE}${endpoint}`,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      };
+
+      if (data) {
+        config.data = data;
+      }
+
+      const response = await axios(config);
+      return { 
+        success: true, 
+        data: response.data, 
+        status: response.status,
+        endpoint,
+        method 
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data || error.message,
+        status: error.response?.status || 500,
+        endpoint,
+        method
+      };
+    }
+  }
+
+  // Test health endpoint
+  async testHealthEndpoint() {
+    console.log('\n🏥 Testing Health Endpoint...');
+    const result = await this.makeRequest('GET', '/health');
+    
+    if (result.success) {
+      console.log('✅ Health endpoint working');
+      console.log('   Status:', result.data.status);
+      console.log('   Database:', result.data.database);
+      console.log('   Environment:', result.data.environment);
+    } else {
+      console.log('❌ Health endpoint failed:', result.error);
+    }
+    
+    this.results.push(result);
+    return result;
+  }
+
+  // Test root endpoint
+  async testRootEndpoint() {
+    console.log('\n🏠 Testing Root Endpoint...');
+    const result = await this.makeRequest('GET', '/');
+    
+    if (result.success) {
+      console.log('✅ Root endpoint working');
+      console.log('   Message:', result.data.message);
+      console.log('   Version:', result.data.version);
+    } else {
+      console.log('❌ Root endpoint failed:', result.error);
+    }
+    
+    this.results.push(result);
+    return result;
+  }
+
+  // Test project listing endpoint (without auth - should work for public data)
+  async testProjectListingEndpoint() {
+    console.log('\n📋 Testing Project Listing Endpoint...');
+    const result = await this.makeRequest('GET', '/project/getlistproject');
+    
+    if (result.success) {
+      console.log('✅ Project listing endpoint working');
+      console.log('   Total projects:', result.data.projects?.length || 0);
+      
+      // Check for different project categories
+      if (result.data.projects) {
+        const categories = {};
+        result.data.projects.forEach(project => {
+          categories[project.project_category] = (categories[project.project_category] || 0) + 1;
+        });
+        console.log('   Project categories:', categories);
+      }
+    } else {
+      console.log('❌ Project listing endpoint failed:', result.error);
+    }
+    
+    this.results.push(result);
+    return result;
+  }
+
+  // Test project filtering by category
+  async testProjectCategoryFiltering() {
+    console.log('\n🔍 Testing Project Category Filtering...');
+    
+    const categories = ['free', 'funded', 'basic', 'capsule'];
+    
+    for (const category of categories) {
+      const result = await this.makeRequest('GET', `/project/getlistproject?category=${category}`);
+      
+      if (result.success) {
+        console.log(`✅ ${category} category filter working: ${result.data.projects?.length || 0} projects`);
+      } else {
+        console.log(`❌ ${category} category filter failed:`, result.error);
+      }
+      
+      this.results.push(result);
+    }
+  }
+
+  // Test budget filtering
+  async testBudgetFiltering() {
+    console.log('\n💵 Testing Budget Filtering...');
+    
+    const budgets = ['Free', 'Micro_Budget', 'Low_Budget', 'Medium_Budget', 'High_Budget'];
+    
+    for (const budget of budgets) {
+      const result = await this.makeRequest('GET', `/project/getlistproject?budget=${budget}`);
+      
+      if (result.success) {
+        console.log(`✅ ${budget} budget filter working: ${result.data.projects?.length || 0} projects`);
+      } else {
+        console.log(`❌ ${budget} budget filter failed:`, result.error);
+      }
+      
+      this.results.push(result);
+    }
+  }
+
+  // Test tech stack filtering
+  async testTechStackFiltering() {
+    console.log('\n⚙️ Testing Tech Stack Filtering...');
+    
+    const techStacks = ['MERN Stack', 'Next.js', 'React', 'Node.js'];
+    
+    for (const techStack of techStacks) {
+      const result = await this.makeRequest('GET', `/project/getlistproject?techStack=${techStack}`);
+      
+      if (result.success) {
+        console.log(`✅ ${techStack} tech stack filter working: ${result.data.projects?.length || 0} projects`);
+      } else {
+        console.log(`❌ ${techStack} tech stack filter failed:`, result.error);
+      }
+      
+      this.results.push(result);
+    }
+  }
+
+  // Test search functionality
+  async testSearchFunctionality() {
+    console.log('\n🔍 Testing Search Functionality...');
+    
+    const searchTerms = ['test', 'project', 'free', 'react'];
+    
+    for (const term of searchTerms) {
+      const result = await this.makeRequest('GET', `/project/getlistproject?search=${term}`);
+      
+      if (result.success) {
+        console.log(`✅ Search for "${term}" working: ${result.data.projects?.length || 0} projects`);
+      } else {
+        console.log(`❌ Search for "${term}" failed:`, result.error);
+      }
+      
+      this.results.push(result);
+    }
+  }
+
+  // Test FormData endpoint (without auth)
+  async testFormDataEndpoint() {
+    console.log('\n📤 Testing FormData Endpoint...');
+    
+    try {
+      const formData = new FormData();
+      formData.append('test_field', 'test_value');
+      formData.append('project_category', 'free');
+      
+      const response = await axios.post(`${API_BASE}/project/test-formdata`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+      
+      console.log('✅ FormData endpoint working');
+      console.log('   Response:', response.data);
+      
+      this.results.push({
+        success: true,
+        data: response.data,
+        status: response.status,
+        endpoint: '/project/test-formdata',
+        method: 'POST'
+      });
+    } catch (error) {
+      console.log('❌ FormData endpoint failed:', error.response?.data || error.message);
+      
+      this.results.push({
+        success: false,
+        error: error.response?.data || error.message,
+        status: error.response?.status || 500,
+        endpoint: '/project/test-formdata',
+        method: 'POST'
+      });
+    }
+  }
+
+  // Test project creation endpoint (without auth - should fail)
+  async testProjectCreationWithoutAuth() {
+    console.log('\n🚫 Testing Project Creation Without Auth (should fail)...');
+    
+    const testProject = {
+      project_Title: 'Test Project',
+      Project_Description: 'Test Description',
+      Project_tech_stack: 'MERN Stack',
+      Project_gitHub_link: 'https://github.com/test/test',
+      project_category: 'free'
     };
-  }
-}
 
-/**
- * Test Authentication Endpoints
- */
-async function testAuthentication() {
-  console.log('\n🔐 Testing Authentication Endpoints...\n');
-
-  // Test 1: User Registration
-  console.log('1️⃣ Testing User Registration...');
-  const registerResult = await makeRequest('POST', '/api/register', TEST_USER);
-  
-  if (registerResult.success) {
-    console.log('   ✅ User registration successful');
-    authToken = registerResult.data.token;
-  } else {
-    console.log('   ⚠️  User registration failed (might already exist)');
-    
-    // Try to login instead
-    console.log('   🔄 Attempting login...');
-    const loginResult = await makeRequest('POST', '/api/login', {
-      email: TEST_USER.email,
-      password: TEST_USER.password
-    });
-    
-    if (loginResult.success) {
-      console.log('   ✅ User login successful');
-      authToken = loginResult.data.token;
-    } else {
-      console.log('   ❌ User login failed:', loginResult.error);
-      return false;
-    }
-  }
-
-  // Test 2: Get User Details
-  console.log('\n2️⃣ Testing Get User Details...');
-  const userResult = await makeRequest('GET', '/api/getuser', null, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (userResult.success) {
-    console.log('   ✅ Get user details successful');
-    console.log(`   - Username: ${userResult.data.username}`);
-    console.log(`   - Email: ${userResult.data.email}`);
-    console.log(`   - User Type: ${userResult.data.usertype}`);
-  } else {
-    console.log('   ❌ Get user details failed:', userResult.error);
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Test Project Listing Endpoints
- */
-async function testProjectListing() {
-  console.log('\n📋 Testing Project Listing Endpoints...\n');
-
-  // Test 1: Create Project
-  console.log('1️⃣ Testing Create Project...');
-  const projectData = {
-    project_Title: 'Test Project for API Testing',
-    Project_Description: 'This is a test project created during API testing',
-    Project_Budget: 5000,
-    Project_Duration: '2 weeks',
-    Required_Skills: ['React', 'Node.js', 'MongoDB'],
-    Project_Type: 'Web Development',
-    Project_Status: 'active'
-  };
-
-  const createResult = await makeRequest('POST', '/api/projects', projectData, {
-    Authorization: `Bearer ${authToken}`
-  });
-
-  if (createResult.success) {
-    console.log('   ✅ Project creation successful');
-    testProjectId = createResult.data.project._id;
-    console.log(`   - Project ID: ${testProjectId}`);
-  } else {
-    console.log('   ❌ Project creation failed:', createResult.error);
-    return false;
-  }
-
-  // Test 2: Get All Projects
-  console.log('\n2️⃣ Testing Get All Projects...');
-  const projectsResult = await makeRequest('GET', '/api/projects');
-  
-  if (projectsResult.success) {
-    console.log('   ✅ Get projects successful');
-    console.log(`   - Total projects: ${projectsResult.data.length}`);
-  } else {
-    console.log('   ❌ Get projects failed:', projectsResult.error);
-  }
-
-  // Test 3: Get Project by ID
-  console.log('\n3️⃣ Testing Get Project by ID...');
-  const projectResult = await makeRequest('GET', `/api/projects/${testProjectId}`);
-  
-  if (projectResult.success) {
-    console.log('   ✅ Get project by ID successful');
-    console.log(`   - Project Title: ${projectResult.data.project_Title}`);
-  } else {
-    console.log('   ❌ Get project by ID failed:', projectResult.error);
-  }
-
-  return true;
-}
-
-/**
- * Test Bidding Endpoints
- */
-async function testBidding() {
-  console.log('\n💰 Testing Bidding Endpoints...\n');
-
-  if (!testProjectId) {
-    console.log('   ⚠️  Skipping bidding tests - no test project ID');
-    return false;
-  }
-
-  // Test 1: Create Bid
-  console.log('1️⃣ Testing Create Bid...');
-  const bidData = {
-    projectId: testProjectId,
-    bidAmount: 3000,
-    proposal: 'This is a test bid proposal for API testing',
-    estimatedDuration: '1 week',
-    skills: ['React', 'Node.js']
-  };
-
-  const bidResult = await makeRequest('POST', '/api/bids', bidData, {
-    Authorization: `Bearer ${authToken}`
-  });
-
-  if (bidResult.success) {
-    console.log('   ✅ Bid creation successful');
-    testBidId = bidResult.data.bid._id;
-    console.log(`   - Bid ID: ${testBidId}`);
-  } else {
-    console.log('   ❌ Bid creation failed:', bidResult.error);
-    return false;
-  }
-
-  // Test 2: Get Bids for Project
-  console.log('\n2️⃣ Testing Get Bids for Project...');
-  const bidsResult = await makeRequest('GET', `/api/bids/project/${testProjectId}`);
-  
-  if (bidsResult.success) {
-    console.log('   ✅ Get bids successful');
-    console.log(`   - Total bids: ${bidsResult.data.length}`);
-  } else {
-    console.log('   ❌ Get bids failed:', bidsResult.error);
-  }
-
-  return true;
-}
-
-/**
- * Test Payment Endpoints
- */
-async function testPayments() {
-  console.log('\n💳 Testing Payment Endpoints...\n');
-
-  // Test 1: Get Subscription Status
-  console.log('1️⃣ Testing Get Subscription Status...');
-  const subscriptionResult = await makeRequest('GET', '/api/payments/subscription', null, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (subscriptionResult.success) {
-    console.log('   ✅ Get subscription status successful');
-    console.log(`   - Is Active: ${subscriptionResult.data.isActive}`);
-    console.log(`   - Plan Type: ${subscriptionResult.data.planType || 'None'}`);
-  } else {
-    console.log('   ❌ Get subscription status failed:', subscriptionResult.error);
-  }
-
-  // Test 2: Get Payment History
-  console.log('\n2️⃣ Testing Get Payment History...');
-  const historyResult = await makeRequest('GET', '/api/payments/history', null, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (historyResult.success) {
-    console.log('   ✅ Get payment history successful');
-    console.log(`   - Total payments: ${historyResult.data.length}`);
-  } else {
-    console.log('   ❌ Get payment history failed:', historyResult.error);
-  }
-
-  // Test 3: Create Payment Intent (without processing)
-  console.log('\n3️⃣ Testing Create Payment Intent...');
-  const paymentData = {
-    amount: 1000,
-    purpose: 'subscription',
-    planType: 'premium'
-  };
-
-  const paymentResult = await makeRequest('POST', '/api/payments/create-intent', paymentData, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (paymentResult.success) {
-    console.log('   ✅ Create payment intent successful');
-    console.log(`   - Order ID: ${paymentResult.data.orderId}`);
-  } else {
-    console.log('   ❌ Create payment intent failed:', paymentResult.error);
-  }
-
-  return true;
-}
-
-/**
- * Test Escrow Wallet Endpoints
- */
-async function testEscrowWallet() {
-  console.log('\n🔒 Testing Escrow Wallet Endpoints...\n');
-
-  if (!testProjectId) {
-    console.log('   ⚠️  Skipping escrow tests - no test project ID');
-    return false;
-  }
-
-  // Test 1: Get Escrow Wallet for Project
-  console.log('1️⃣ Testing Get Escrow Wallet...');
-  const escrowResult = await makeRequest('GET', `/api/escrow-wallet/project/${testProjectId}`, null, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (escrowResult.success) {
-    console.log('   ✅ Get escrow wallet successful');
-    console.log(`   - Status: ${escrowResult.data.status}`);
-    console.log(`   - Total Amount: ₹${escrowResult.data.totalEscrowAmount}`);
-  } else {
-    console.log('   ❌ Get escrow wallet failed:', escrowResult.error);
-  }
-
-  return true;
-}
-
-/**
- * Test Project Selection Endpoints
- */
-async function testProjectSelection() {
-  console.log('\n🎯 Testing Project Selection Endpoints...\n');
-
-  if (!testProjectId) {
-    console.log('   ⚠️  Skipping project selection tests - no test project ID');
-    return false;
-  }
-
-  // Test 1: Get Project Selection Status
-  console.log('1️⃣ Testing Get Project Selection Status...');
-  const selectionResult = await makeRequest('GET', `/api/project-selection/${testProjectId}`, null, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (selectionResult.success) {
-    console.log('   ✅ Get project selection successful');
-    console.log(`   - Status: ${selectionResult.data.status}`);
-    console.log(`   - Selection Mode: ${selectionResult.data.selectionMode}`);
-  } else {
-    console.log('   ❌ Get project selection failed:', selectionResult.error);
-  }
-
-  return true;
-}
-
-/**
- * Test Chat Endpoints
- */
-async function testChat() {
-  console.log('\n💬 Testing Chat Endpoints...\n');
-
-  if (!testProjectId) {
-    console.log('   ⚠️  Skipping chat tests - no test project ID');
-    return false;
-  }
-
-  // Test 1: Get Chat Messages
-  console.log('1️⃣ Testing Get Chat Messages...');
-  const chatResult = await makeRequest('GET', `/api/chat/project/${testProjectId}`, null, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (chatResult.success) {
-    console.log('   ✅ Get chat messages successful');
-    console.log(`   - Total messages: ${chatResult.data.length}`);
-  } else {
-    console.log('   ❌ Get chat messages failed:', chatResult.error);
-  }
-
-  return true;
-}
-
-/**
- * Test Admin Endpoints
- */
-async function testAdmin() {
-  console.log('\n👑 Testing Admin Endpoints...\n');
-
-  // Test 1: Get Admin Dashboard Stats
-  console.log('1️⃣ Testing Get Admin Dashboard Stats...');
-  const adminResult = await makeRequest('GET', '/api/admin/dashboard', null, {
-    Authorization: `Bearer ${authToken}`
-  });
-  
-  if (adminResult.success) {
-    console.log('   ✅ Get admin dashboard successful');
-    console.log(`   - Total Users: ${adminResult.data.totalUsers}`);
-    console.log(`   - Total Projects: ${adminResult.data.totalProjects}`);
-    console.log(`   - Total Bids: ${adminResult.data.totalBids}`);
-  } else {
-    console.log('   ❌ Get admin dashboard failed:', adminResult.error);
-  }
-
-  return true;
-}
-
-/**
- * Main test function
- */
-async function runAllTests() {
-  console.log('🧪 Starting Comprehensive API Endpoints Test...\n');
-  console.log(`🌐 Testing against: ${BASE_URL}\n`);
-
-  const results = {
-    authentication: false,
-    projectListing: false,
-    bidding: false,
-    payments: false,
-    escrowWallet: false,
-    projectSelection: false,
-    chat: false,
-    admin: false
-  };
-
-  try {
-    // Run all tests
-    results.authentication = await testAuthentication();
-    
-    if (results.authentication) {
-      results.projectListing = await testProjectListing();
-      results.bidding = await testBidding();
-      results.payments = await testPayments();
-      results.escrowWallet = await testEscrowWallet();
-      results.projectSelection = await testProjectSelection();
-      results.chat = await testChat();
-      results.admin = await testAdmin();
-    }
-
-    // Print summary
-    console.log('\n📊 Test Results Summary:');
-    console.log('========================');
-    
-    Object.entries(results).forEach(([test, passed]) => {
-      const status = passed ? '✅ PASSED' : '❌ FAILED';
-      console.log(`${test.padEnd(20)}: ${status}`);
+    const formData = new FormData();
+    Object.entries(testProject).forEach(([key, value]) => {
+      formData.append(key, value);
     });
 
-    const passedTests = Object.values(results).filter(Boolean).length;
-    const totalTests = Object.keys(results).length;
-    
-    console.log(`\n🎯 Overall Result: ${passedTests}/${totalTests} tests passed`);
-    
-    if (passedTests === totalTests) {
-      console.log('🎉 All tests passed! The API is working correctly.');
-    } else {
-      console.log('⚠️  Some tests failed. Please check the errors above.');
+    try {
+      const response = await axios.post(`${API_BASE}/project/listproject`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+      
+      console.log('❌ Project creation should have failed without auth');
+      console.log('   Response:', response.data);
+      
+      this.results.push({
+        success: false,
+        error: 'Should have failed without auth',
+        status: response.status,
+        endpoint: '/project/listproject',
+        method: 'POST'
+      });
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('✅ Project creation correctly blocked without auth');
+        console.log('   Status:', error.response.status);
+      } else {
+        console.log('❌ Unexpected error:', error.response?.data || error.message);
+      }
+      
+      this.results.push({
+        success: error.response?.status === 401 || error.response?.status === 403,
+        error: error.response?.data || error.message,
+        status: error.response?.status || 500,
+        endpoint: '/project/listproject',
+        method: 'POST'
+      });
     }
+  }
 
-  } catch (error) {
-    console.error('💥 Test execution failed:', error);
+  // Generate test report
+  generateReport() {
+    console.log('\n' + '=' .repeat(60));
+    console.log('📊 TEST REPORT');
+    console.log('=' .repeat(60));
+    
+    const totalTests = this.results.length;
+    const successfulTests = this.results.filter(r => r.success).length;
+    const failedTests = totalTests - successfulTests;
+    
+    console.log(`Total Tests: ${totalTests}`);
+    console.log(`✅ Successful: ${successfulTests}`);
+    console.log(`❌ Failed: ${failedTests}`);
+    console.log(`Success Rate: ${((successfulTests / totalTests) * 100).toFixed(1)}%`);
+    
+    if (failedTests > 0) {
+      console.log('\n❌ Failed Tests:');
+      this.results.filter(r => !r.success).forEach(result => {
+        console.log(`   ${result.method} ${result.endpoint} - Status: ${result.status}`);
+        console.log(`   Error: ${JSON.stringify(result.error)}`);
+      });
+    }
+    
+    console.log('\n' + '=' .repeat(60));
+  }
+
+  // Run all tests
+  async runAllTests() {
+    console.log('🚀 Starting API Endpoint Tests...');
+    console.log('=' .repeat(60));
+    
+    try {
+      await this.testHealthEndpoint();
+      await this.testRootEndpoint();
+      await this.testProjectListingEndpoint();
+      await this.testProjectCategoryFiltering();
+      await this.testBudgetFiltering();
+      await this.testTechStackFiltering();
+      await this.testSearchFunctionality();
+      await this.testFormDataEndpoint();
+      await this.testProjectCreationWithoutAuth();
+      
+      this.generateReport();
+      
+    } catch (error) {
+      console.error('❌ Test execution failed:', error);
+    }
   }
 }
 
 // Run the tests
-runAllTests().then(() => {
-  console.log('\n🏁 API testing completed');
-  process.exit(0);
-}).catch((error) => {
-  console.error('💥 API testing failed:', error);
-  process.exit(1);
-});
+const tester = new APITester();
+tester.runAllTests().catch(console.error);

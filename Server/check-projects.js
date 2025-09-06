@@ -24,6 +24,7 @@ const checkProjects = async () => {
       const projectsByCategory = {
         funded: [],
         basic: [],
+        free: [],
         capsule: []
       };
       
@@ -58,6 +59,7 @@ const checkProjects = async () => {
       console.log(`   Total Projects: ${projects.length}`);
       console.log(`   Funded Projects: ${projectsByCategory.funded.length}`);
       console.log(`   Basic Projects: ${projectsByCategory.basic.length}`);
+      console.log(`   Free Projects: ${projectsByCategory.free.length}`);
       console.log(`   Capsule Projects: ${projectsByCategory.capsule.length}`);
     }
 
