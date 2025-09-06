@@ -1,42 +1,28 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { usePayment } from '../../context/PaymentContext';
 import { formatCurrency } from '../../utils/paymentUtils.jsx';
+import { useSubscription } from '../../utils/subscriptionUtils';
 import { PAYMENT_AMOUNTS, SUBSCRIPTION_BENEFITS } from '../../constants/paymentConstants';
 import PaymentModal from './PaymentModal';
 import PremiumBadge, { SubscriptionStatusBadge } from '../PremiumBadge';
+import SubscriptionPerks from '../SubscriptionPerks';
 import { CheckIcon } from '../../utils/iconUtils';
 
 const SubscriptionStatus = () => {
-  const { subscription, hasActiveSubscription } = usePayment();
+  const { subscription } = usePayment();
+  const { getDaysRemaining, isExpiringSoon } = useSubscription();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showBenefits, setShowBenefits] = useState(false);
 
-  // Calculate days remaining
-  const getDaysRemaining = () => {
-    if (!subscription.expiresAt) return 0;
-    const expiryDate = new Date(subscription.expiresAt);
-    const now = new Date();
-    const diffTime = expiryDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
+  // Use subscription utilities for calculations
+  const daysRemaining = getDaysRemaining();
+  const expiringSoon = isExpiringSoon();
 
   // Get subscription status color
   const getStatusColor = () => {
-    const daysRemaining = getDaysRemaining();
     if (daysRemaining === 0) return 'text-red-500';
-    if (daysRemaining <= 7) return 'text-yellow-500';
+    if (expiringSoon) return 'text-yellow-500';
     return 'text-green-500';
-  };
-
-  // Get subscription status text
-  const getStatusText = () => {
-    if (!subscription.isActive) return 'Inactive';
-    const daysRemaining = getDaysRemaining();
-    if (daysRemaining === 0) return 'Expired';
-    if (daysRemaining <= 7) return 'Expiring Soon';
-    return 'Active';
   };
 
   const cardVariants = {
@@ -294,6 +280,9 @@ const SubscriptionStatus = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Subscription Perks */}
+      <SubscriptionPerks className="mt-6" />
 
       {/* Payment Modal */}
       <PaymentModal

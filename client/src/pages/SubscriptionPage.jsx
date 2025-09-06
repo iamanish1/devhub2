@@ -181,8 +181,9 @@ const SubscriptionPage = () => {
     setShowPaymentModal(false);
     setSelectedPlan(null);
     
-    // Refresh subscription data only once
+    // Refresh subscription data and payment context
     await fetchSubscriptionData();
+    await refreshData();
     
     notificationService.success('🎉 Subscription activated successfully! Welcome to premium!');
   };

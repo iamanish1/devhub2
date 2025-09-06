@@ -114,14 +114,15 @@ export const paymentApi = {
   },
 
   // Subscription Payment
-  createSubscriptionPayment: async (planName = 'starter', planType = 'monthly') => {
+  createSubscriptionPayment: async (planName = 'starter', planType = 'monthly', amount) => {
     try {
-      console.log('Creating subscription payment:', { planName, planType });
+      console.log('Creating subscription payment:', { planName, planType, amount });
       const response = await makeRequest(PAYMENT_ENDPOINTS.SUBSCRIPTION, {
         method: 'POST',
         body: JSON.stringify({
           planName,
           planType,
+          amount,
           purpose: 'subscription'
         })
       });

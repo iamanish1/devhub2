@@ -220,6 +220,8 @@ export const PaymentProvider = ({ children }) => {
       const response = await paymentApi.getSubscriptionStatus();
       const subscription = response?.data || response;
       
+      console.log('🔍 Subscription status response:', subscription);
+      
       // Normalize subscription data
       const normalizedSubscription = {
         isActive: subscription?.isActive || false,
@@ -232,6 +234,7 @@ export const PaymentProvider = ({ children }) => {
         planConfig: subscription?.planConfig || null
       };
       
+      console.log('🔍 Normalized subscription:', normalizedSubscription);
       dispatch({ type: PAYMENT_ACTIONS.SET_SUBSCRIPTION, payload: normalizedSubscription });
     } catch (error) {
       console.error('Error loading subscription status:', error);
@@ -330,7 +333,8 @@ export const PaymentProvider = ({ children }) => {
       dispatch({ type: PAYMENT_ACTIONS.ADD_PAYMENT_TO_HISTORY, payload: paymentResult });
       
       // Reload subscription status if it was a subscription payment
-      if (paymentResult.purpose === 'subscription') {
+      if (paymentResult.purpose === 'subscription' || paymentResult.type === 'subscription') {
+        console.log('🔄 Reloading subscription status after payment completion');
         loadSubscriptionStatus();
       }
     },
