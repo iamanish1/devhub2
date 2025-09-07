@@ -87,15 +87,15 @@ const AdminContributionBoard = ({
     assignedTo: "",
     estimatedHours: 0
   });
+  // Initialize auth hook first to avoid initialization order issues
+  const authContext = useAuth();
+  const user = authContext?.user || null;
+  
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
-  
-  // Initialize auth hook after other state variables
-  const authContext = useAuth();
-  const user = authContext?.user || null;
   
   // Add loading state for component initialization
   const [componentLoading, setComponentLoading] = useState(true);
@@ -108,6 +108,9 @@ const AdminContributionBoard = ({
       if (authContext && user !== undefined) {
         setComponentLoading(false);
         setComponentError(null);
+      } else if (authContext === null) {
+        // Auth context is null, which is normal during loading
+        setComponentLoading(true);
       }
     } catch (error) {
       console.error('Component initialization error:', error);
@@ -1539,7 +1542,7 @@ const AdminContributionBoard = ({
   };
 
   // Show loading state during initialization
-  if (componentLoading) {
+  if (componentLoading || !authContext) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
         <div className="max-w-7xl mx-auto">
