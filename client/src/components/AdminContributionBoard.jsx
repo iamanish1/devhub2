@@ -66,7 +66,6 @@ import { projectTaskApi } from "../services/projectTaskApi";
 import { notificationService } from "../services/notificationService";
 import { projectSelectionApi } from "../services/projectSelectionApi";
 import ProjectChat from "./ProjectChat";
-import chatService from "../services/chatService";
 const Socket_URl =
   import.meta.env.VITE_SOCKET_SERVER || `${import.meta.env.VITE_API_URL}`;
 
@@ -177,7 +176,7 @@ const AdminContributionBoard = ({
   // Initialize auth hook first - must be called unconditionally
   const authContext = useAuth();
   const user = authContext?.user || null;
-  const { joinProject, getOnlineUsersCount, onlineUsers } = useChat();
+  const { joinProject, getOnlineUsersCount, onlineUsers, isConnected } = useChat();
 
   // State
   const [tasks, setTasks] = useState(initialTasks);
@@ -641,7 +640,11 @@ const AdminContributionBoard = ({
         // Set up user activity tracking with optimized frequency
         const activityInterval = setInterval(() => {
           try {
-            chatService.sendUserActivity();
+            // Only send activity if connected to chat
+            if (isConnected) {
+              // User activity is handled by the ChatContext automatically
+              console.log("✅ User activity tracked");
+            }
           } catch (error) {
             console.error("❌ Error sending user activity:", error);
           }
@@ -672,7 +675,7 @@ const AdminContributionBoard = ({
         cleanupFunction();
       }
     };
-  }, [selectedProjectId, user, joinProject]);
+  }, [selectedProjectId, user, joinProject, isConnected]);
 
   // Enhanced task management with Firebase real-time updates
   const handleEnhancedTaskSubmit = async (e) => {
@@ -944,30 +947,182 @@ const AdminContributionBoard = ({
         setResources(data.workspace.resources);
       }
 
-      // Load statistics
+      // Load statistics directly here to avoid circular dependency
       try {
-        await loadEnhancedStatistics();
+        console.log(
+          "🔄 Loading enhanced statistics for project:",
+          selectedProjectId
+        );
+
+        // Load from API
+        const response = await projectTaskApi.getProjectStatistics(
+          selectedProjectId
+        );
+
+        if (response.statistics) {
+          // Enhance statistics with real-time data
+          const enhancedStats = {
+            ...response.statistics,
+            tasks: {
+              ...response.statistics.tasks,
+              // Add real-time task counts from local state
+              total: tasks.length,
+              completed: tasks.filter(
+                (t) => t.status === "completed" || t.task_status === "done"
+              ).length,
+              inProgress: tasks.filter(
+                (t) =>
+                  t.status === "in_progress" || t.task_status === "inprogress"
+              ).length,
+              pending: tasks.filter(
+                (t) => t.status === "pending" || t.task_status === "todo"
+              ).length,
+              review: tasks.filter(
+                (t) => t.status === "review" || t.task_status === "review"
+              ).length,
+              progressPercentage:
+                tasks.length > 0
+                  ? Math.round(
+                      (tasks.filter(
+                        (t) =>
+                          t.status === "completed" || t.task_status === "done"
+                      ).length /
+                        tasks.length) *
+                        100
+                    )
+                  : 0,
+            },
+            team: {
+              ...response.statistics.team,
+              // Add real-time team data
+              totalMembers: teamMembers.length,
+              activeContributors: teamMembers.filter(
+                (member) => member.status === "active"
+              ).length,
+            },
+            time: {
+              ...response.statistics.time,
+              // Add real-time time tracking data
+              totalEstimatedHours: tasks.reduce(
+                (sum, t) => sum + (t.estimatedHours || 0),
+                0
+              ),
+              totalActualHours: tasks.reduce(
+                (sum, t) => sum + (t.actualHours || 0),
+                0
+              ),
+              efficiency: 0,
+            },
+          };
+
+          setStatistics(enhancedStats);
+          console.log("✅ Enhanced statistics loaded:", enhancedStats);
+        } else {
+          // Set default statistics if no data from API
+          setStatistics({
+            project: { id: selectedProjectId, title: "Project", description: "" },
+            tasks: {
+              total: tasks.length,
+              completed: tasks.filter(
+                (t) => t.status === "completed" || t.task_status === "done"
+              ).length,
+              inProgress: tasks.filter(
+                (t) =>
+                  t.status === "in_progress" || t.task_status === "inprogress"
+              ).length,
+              pending: tasks.filter(
+                (t) => t.status === "pending" || t.task_status === "todo"
+              ).length,
+              review: tasks.filter(
+                (t) => t.status === "review" || t.task_status === "review"
+              ).length,
+              progressPercentage:
+                tasks.length > 0
+                  ? Math.round(
+                      (tasks.filter(
+                        (t) =>
+                          t.status === "completed" || t.task_status === "done"
+                      ).length /
+                        tasks.length) *
+                        100
+                    )
+                  : 0,
+            },
+            team: {
+              totalMembers: teamMembers.length,
+              activeContributors: teamMembers.filter(
+                (member) => member.status === "active"
+              ).length,
+            },
+            time: {
+              totalEstimatedHours: tasks.reduce(
+                (sum, t) => sum + (t.estimatedHours || 0),
+                0
+              ),
+              totalActualHours: tasks.reduce(
+                (sum, t) => sum + (t.actualHours || 0),
+                0
+              ),
+              efficiency: 0,
+            },
+          });
+        }
       } catch (statsError) {
         console.error("Failed to load statistics:", statsError);
         // Set default statistics if API fails
         setStatistics({
           project: { id: selectedProjectId, title: "Project", description: "" },
           tasks: {
-            total: 0,
-            completed: 0,
-            inProgress: 0,
-            pending: 0,
-            progressPercentage: 0,
+            total: tasks.length,
+            completed: tasks.filter(
+              (t) => t.status === "completed" || t.task_status === "done"
+            ).length,
+            inProgress: tasks.filter(
+              (t) =>
+                t.status === "in_progress" || t.task_status === "inprogress"
+            ).length,
+            pending: tasks.filter(
+              (t) => t.status === "pending" || t.task_status === "todo"
+            ).length,
+            review: tasks.filter(
+              (t) => t.status === "review" || t.task_status === "review"
+            ).length,
+            progressPercentage:
+              tasks.length > 0
+                ? Math.round(
+                    (tasks.filter(
+                      (t) =>
+                        t.status === "completed" || t.task_status === "done"
+                    ).length /
+                      tasks.length) *
+                      100
+                  )
+                : 0,
           },
-          team: { totalMembers: 0, activeContributors: 0 },
-          time: { totalEstimatedHours: 0, totalActualHours: 0, efficiency: 0 },
+          team: {
+            totalMembers: teamMembers.length,
+            activeContributors: teamMembers.filter(
+              (member) => member.status === "active"
+            ).length,
+          },
+          time: {
+            totalEstimatedHours: tasks.reduce(
+              (sum, t) => sum + (t.estimatedHours || 0),
+              0
+            ),
+            totalActualHours: tasks.reduce(
+              (sum, t) => sum + (t.actualHours || 0),
+              0
+            ),
+            efficiency: 0,
+          },
         });
       }
     } catch (err) {
       console.error("Failed to load workspace:", err);
       // Don't show error for workspace loading as it's optional
     }
-  }, [selectedProjectId, resourcesLoading, loadEnhancedStatistics]);
+  }, [selectedProjectId, resourcesLoading, tasks, teamMembers]);
 
   // Load team members from API (memoized to prevent infinite loops)
   const loadTeamMembers = useCallback(async () => {
@@ -1049,126 +1204,6 @@ const AdminContributionBoard = ({
     }
   };
 
-  // Enhanced statistics loading with real-time updates (memoized to prevent infinite loops)
-  const loadEnhancedStatistics = useCallback(async () => {
-    if (!selectedProjectId) return;
-
-    try {
-      console.log(
-        "🔄 Loading enhanced statistics for project:",
-        selectedProjectId
-      );
-
-      // Load from API
-      const response = await projectTaskApi.getProjectStatistics(
-        selectedProjectId
-      );
-
-      if (response.statistics) {
-        // Enhance statistics with real-time data
-        const enhancedStats = {
-          ...response.statistics,
-          tasks: {
-            ...response.statistics.tasks,
-            // Add real-time task counts from local state
-            total: tasks.length,
-            completed: tasks.filter(
-              (t) => t.status === "completed" || t.task_status === "done"
-            ).length,
-            inProgress: tasks.filter(
-              (t) =>
-                t.status === "in_progress" || t.task_status === "inprogress"
-            ).length,
-            pending: tasks.filter(
-              (t) => t.status === "pending" || t.task_status === "todo"
-            ).length,
-            review: tasks.filter(
-              (t) => t.status === "review" || t.task_status === "review"
-            ).length,
-            progressPercentage:
-              tasks.length > 0
-                ? (tasks.filter(
-                    (t) => t.status === "completed" || t.task_status === "done"
-                  ).length /
-                    tasks.length) *
-                  100
-                : 0,
-          },
-          team: {
-            ...response.statistics.team,
-            totalMembers: teamMembers.length,
-            activeContributors: teamMembers.length,
-            onlineUsers: getOnlineUsersCount(selectedProjectId),
-          },
-          realTime: {
-            lastUpdated: new Date(),
-            onlineUsers: getOnlineUsersCount(selectedProjectId),
-            recentNotifications: notifications.length,
-            activeTimeTracking: Object.keys(activeTimeTracking).length,
-          },
-        };
-
-        setStatistics(enhancedStats);
-        console.log("✅ Enhanced statistics loaded:", enhancedStats);
-      }
-    } catch (error) {
-      console.error("❌ Failed to load enhanced statistics:", error);
-      // Fallback to local data
-      const fallbackStats = {
-        project: { id: selectedProjectId, title: "Project", description: "" },
-        tasks: {
-          total: tasks.length,
-          completed: tasks.filter(
-            (t) => t.status === "completed" || t.task_status === "done"
-          ).length,
-          inProgress: tasks.filter(
-            (t) => t.status === "in_progress" || t.task_status === "inprogress"
-          ).length,
-          pending: tasks.filter(
-            (t) => t.status === "pending" || t.task_status === "todo"
-          ).length,
-          review: tasks.filter(
-            (t) => t.status === "review" || t.task_status === "review"
-          ).length,
-          progressPercentage:
-            tasks.length > 0
-              ? (tasks.filter(
-                  (t) => t.status === "completed" || t.task_status === "done"
-                ).length /
-                  tasks.length) *
-                100
-              : 0,
-        },
-        team: {
-          totalMembers: teamMembers.length,
-          activeContributors: teamMembers.length,
-          onlineUsers: getOnlineUsersCount(selectedProjectId),
-        },
-        time: {
-          totalEstimatedHours: tasks.reduce(
-            (sum, t) => sum + (t.estimatedHours || 0),
-            0
-          ),
-          totalActualHours: tasks.reduce(
-            (sum, t) => sum + (t.actualHours || 0),
-            0
-          ),
-          efficiency: 0,
-        },
-        realTime: {
-          lastUpdated: new Date(),
-          onlineUsers: getOnlineUsersCount(selectedProjectId),
-          recentNotifications: notifications.length,
-          activeTimeTracking: Object.keys(activeTimeTracking).length,
-        },
-      };
-
-      setStatistics(fallbackStats);
-      notificationService.warning(
-        "Using local data for statistics (API unavailable)"
-      );
-    }
-  }, [selectedProjectId, tasks, teamMembers, getOnlineUsersCount, notifications, activeTimeTracking]);
 
   // Load workspace when project changes
   useEffect(() => {
@@ -2932,7 +2967,7 @@ const AdminContributionBoard = ({
                     </h2>
                     <div className="flex items-center gap-4">
                       <button
-                        onClick={loadEnhancedStatistics}
+                        onClick={loadWorkspace}
                         className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition-colors text-sm"
                       >
                         <FaSync className="text-xs" />
@@ -3592,7 +3627,7 @@ const AdminContributionBoard = ({
                           Add Resource
                         </button>
                         <button
-                          onClick={loadEnhancedStatistics}
+                          onClick={loadWorkspace}
                           className="w-full flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors"
                         >
                           <FaSync className="text-sm" />

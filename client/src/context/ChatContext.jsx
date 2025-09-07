@@ -92,7 +92,7 @@ export const ChatProvider = ({ children }) => {
       
       if (!isConnected) {
         console.error('Failed to establish chat connection');
-        return;
+        throw new Error('Socket not connected');
       }
     }
 
@@ -117,6 +117,7 @@ export const ChatProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Failed to join project:', error);
+      throw error; // Re-throw the error so components can handle it
     }
   }, [user, isConnected, currentProjectId]);
 
