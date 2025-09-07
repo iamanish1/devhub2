@@ -1707,15 +1707,25 @@ const AdminPage = () => {
         {/* Admin Contribution Board Section */}
         {view === "contribution" && (
           <section>
-            <AdminContributionBoard
-              tasks={adminTasks}
-              chat={adminChat}
-              mentor={adminMentor}
-              notes={adminNotes}
-              onTaskStatusChange={handleAdminTaskStatusChange}
-              onSendMessage={handleAdminSendMessage}
-              onNotesChange={handleAdminNotesChange}
-            />
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2 text-blue-400">
+                Project Management
+              </h1>
+              <p className="text-gray-300 text-lg">
+                Manage project tasks, contributions, and team collaboration
+              </p>
+            </div>
+            <div className="bg-[#181b23]/80 backdrop-blur-md rounded-2xl shadow-xl border border-blue-500/10 p-6">
+              <AdminContributionBoard
+                tasks={adminTasks}
+                chat={adminChat}
+                mentor={adminMentor}
+                notes={adminNotes}
+                onTaskStatusChange={handleAdminTaskStatusChange}
+                onSendMessage={handleAdminSendMessage}
+                onNotesChange={handleAdminNotesChange}
+              />
+            </div>
           </section>
         )}
 

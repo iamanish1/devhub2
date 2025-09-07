@@ -92,7 +92,29 @@ const AdminContributionBoard = ({
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState(null);
-  const { user } = useAuth();
+  
+  // Initialize auth hook after other state variables
+  const authContext = useAuth();
+  const user = authContext?.user || null;
+  
+  // Add loading state for component initialization
+  const [componentLoading, setComponentLoading] = useState(true);
+  const [componentError, setComponentError] = useState(null);
+  
+  // Initialize component safely
+  useEffect(() => {
+    try {
+      // Ensure all dependencies are loaded
+      if (authContext && user !== undefined) {
+        setComponentLoading(false);
+        setComponentError(null);
+      }
+    } catch (error) {
+      console.error('Component initialization error:', error);
+      setComponentError(error.message);
+      setComponentLoading(false);
+    }
+  }, [authContext, user]);
 
   // Enhanced Contribution State
   const [activeTab, setActiveTab] = useState('tasks');
@@ -1515,6 +1537,43 @@ const AdminContributionBoard = ({
       </div>
     );
   };
+
+  // Show loading state during initialization
+  if (componentLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+              <p className="text-blue-400 text-lg">Initializing Project Management...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if initialization failed
+  if (componentError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
+            <div className="text-red-400 text-lg mb-3">Initialization Error</div>
+            <p className="text-gray-300 mb-4">{componentError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+            >
+              <FaSync className="w-4 h-4" />
+              Reload Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
