@@ -379,11 +379,11 @@ export const completeTask = async (req, res) => {
 
     logger.info(`[ProjectTask] Current task status: ${existingTask.status}`);
 
-    // Update task status to completed
+    // Update task status to review (waiting for admin approval)
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
       { 
-        status: 'completed',
+        status: 'review',
         completionNotes: completionNotes || '',
         actualHours: actualHours || existingTask.actualHours || 0,
         completedAt: new Date(),
@@ -405,7 +405,7 @@ export const completeTask = async (req, res) => {
       if (db) {
         const taskRef = doc(db, 'project_tasks', taskId);
         await setDoc(taskRef, {
-          status: 'completed',
+          status: 'review',
           completionNotes: completionNotes || '',
           actualHours: actualHours || existingTask.actualHours || 0,
           completedAt: serverTimestamp(),
@@ -473,11 +473,12 @@ export const reviewTask = async (req, res) => {
       return res.status(403).json({ message: 'Only project owner can review tasks' });
     }
 
-    // Update task status to reviewed
+    // Update task status to completed (admin approved) or back to review (admin rejected)
+    const newStatus = approved ? 'completed' : 'review';
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
       { 
-        status: 'reviewed',
+        status: newStatus,
         reviewNotes,
         approved,
         reviewedAt: new Date(),
@@ -493,7 +494,7 @@ export const reviewTask = async (req, res) => {
     // Sync to Firebase for real-time updates
     const taskRef = doc(db, 'project_tasks', taskId);
     await setDoc(taskRef, {
-      status: 'reviewed',
+      status: newStatus,
       reviewNotes,
       approved,
       reviewedAt: serverTimestamp(),

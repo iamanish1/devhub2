@@ -1739,6 +1739,23 @@ const ContributionPage = () => {
                       </div>
                     </div>
 
+                    <div className="bg-[#1A1A1A] border border-purple-500/20 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <Eye className="w-6 h-6 text-purple-400 mr-3" />
+                        <div>
+                          <p className="text-sm font-medium text-purple-400">
+                            Review
+                          </p>
+                          <p className="text-xl font-bold text-white">
+                            {
+                              tasks.filter((t) => t.status === "review")
+                                .length
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="bg-[#1A1A1A] border border-yellow-500/20 rounded-lg p-4">
                       <div className="flex items-center">
                         <Loader2 className="w-6 h-6 text-yellow-400 mr-3" />
@@ -2013,10 +2030,10 @@ const ContributionPage = () => {
                               </button>
                             )}
 
-                            {/* Show status info for completed/reviewed tasks */}
-                            {(task.status === "completed" || task.status === "reviewed") && (
+                            {/* Show status info for review/completed tasks */}
+                            {(task.status === "review" || task.status === "completed") && (
                               <span className="text-xs text-gray-400 px-2 py-1 bg-gray-500/20 border border-gray-500/30 rounded-md">
-                                {task.status === "completed" ? "Waiting for review" : "Task reviewed"}
+                                {task.status === "review" ? "Waiting for review" : "Task completed"}
                               </span>
                             )}
                           </div>
@@ -3222,9 +3239,9 @@ const ContributionPage = () => {
                   </button>
                 )}
 
-                {(selectedTask.status === "completed" || selectedTask.status === "reviewed") && (
+                {(selectedTask.status === "review" || selectedTask.status === "completed") && (
                   <span className="text-sm text-gray-400 px-3 py-2 bg-gray-500/20 border border-gray-500/30 rounded-md">
-                    {selectedTask.status === "completed" ? "Waiting for admin review" : "Task has been reviewed"}
+                    {selectedTask.status === "review" ? "Waiting for admin review" : "Task has been completed"}
                   </span>
                 )}
               </div>

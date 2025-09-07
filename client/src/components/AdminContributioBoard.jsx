@@ -36,6 +36,7 @@ import {
   FaExternalLinkAlt,
   FaCheckCircle,
   FaHistory,
+  FaUndo,
 } from "react-icons/fa";
 import axios from "axios";
 import { 
@@ -767,7 +768,7 @@ const AdminContributionBoard = ({
       // Set default statistics if API fails
       setStatistics({
         project: { id: selectedProjectId, title: 'Project', description: '' },
-        tasks: { total: tasks.length, completed: tasks.filter(t => t.status === 'completed').length, inProgress: tasks.filter(t => t.status === 'in_progress').length, pending: tasks.filter(t => t.status === 'pending').length, progressPercentage: tasks.length > 0 ? (tasks.filter(t => t.status === 'completed').length / tasks.length) * 100 : 0 },
+        tasks: { total: tasks.length, completed: tasks.filter(t => t.status === 'completed').length, inProgress: tasks.filter(t => t.status === 'in_progress').length, pending: tasks.filter(t => t.status === 'pending').length, review: tasks.filter(t => t.status === 'review').length, progressPercentage: tasks.length > 0 ? (tasks.filter(t => t.status === 'completed').length / tasks.length) * 100 : 0 },
         team: { totalMembers: teamMembers.length, activeContributors: teamMembers.length },
         time: { totalEstimatedHours: tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0), totalActualHours: tasks.reduce((sum, t) => sum + (t.actualHours || 0), 0), efficiency: 0 }
       });
@@ -796,6 +797,7 @@ const AdminContributionBoard = ({
             completed: tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length,
             inProgress: tasks.filter(t => t.status === 'in_progress' || t.task_status === 'inprogress').length,
             pending: tasks.filter(t => t.status === 'pending' || t.task_status === 'todo').length,
+            review: tasks.filter(t => t.status === 'review' || t.task_status === 'review').length,
             progressPercentage: tasks.length > 0 ? 
               (tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length / tasks.length) * 100 : 0
           },
@@ -826,6 +828,7 @@ const AdminContributionBoard = ({
           completed: tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length,
           inProgress: tasks.filter(t => t.status === 'in_progress' || t.task_status === 'inprogress').length,
           pending: tasks.filter(t => t.status === 'pending' || t.task_status === 'todo').length,
+          review: tasks.filter(t => t.status === 'review' || t.task_status === 'review').length,
           progressPercentage: tasks.length > 0 ? 
             (tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length / tasks.length) * 100 : 0
         },
@@ -872,6 +875,7 @@ const AdminContributionBoard = ({
             completed: tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length,
             inProgress: tasks.filter(t => t.status === 'in_progress' || t.task_status === 'inprogress').length,
             pending: tasks.filter(t => t.status === 'pending' || t.task_status === 'todo').length,
+            review: tasks.filter(t => t.status === 'review' || t.task_status === 'review').length,
             progressPercentage: tasks.length > 0 ? 
               (tasks.filter(t => t.status === 'completed' || t.task_status === 'done').length / tasks.length) * 100 : 0
           },
@@ -1132,7 +1136,7 @@ const AdminContributionBoard = ({
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                 task.status === 'pending' || task.task_status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
                 task.status === 'in_progress' || task.task_status === 'inprogress' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                task.status === 'review' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                task.status === 'review' || task.task_status === 'review' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
                 task.status === 'completed' || task.task_status === 'done' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
                 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
               }`}>
@@ -1213,17 +1217,28 @@ const AdminContributionBoard = ({
               </button>
             )}
             
-            {(task.status === 'in_progress' || task.task_status === 'inprogress') && (
-              <button
-                onClick={() => onStatusUpdate(task.id, 'review')}
-                className="p-2 text-purple-400 hover:text-purple-300 disabled:opacity-50 transition-colors"
-                title="Mark for Review"
-              >
-                <FaEye className="w-3 h-3" />
-              </button>
+            {/* Show review buttons for tasks in review status */}
+            {(task.status === 'review' || task.task_status === 'review') && (
+              <>
+                <button
+                  onClick={() => onStatusUpdate(task.id, 'completed')}
+                  className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
+                  title="Approve Task"
+                >
+                  <FaCheckCircle className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => onStatusUpdate(task.id, 'in_progress')}
+                  className="p-2 text-yellow-400 hover:text-yellow-300 disabled:opacity-50 transition-colors"
+                  title="Reject and Send Back"
+                >
+                  <FaUndo className="w-3 h-3" />
+                </button>
+              </>
             )}
             
-            {(task.status !== 'completed' && task.task_status !== 'done') && (
+            {/* Show complete button for in-progress tasks */}
+            {(task.status === 'in_progress' || task.task_status === 'inprogress') && (
               <button
                 onClick={() => onStatusUpdate(task.id, 'completed')}
                 className="p-2 text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors"
@@ -2293,6 +2308,27 @@ const AdminContributionBoard = ({
                             <span className="text-xs text-gray-400">
                               {statistics?.tasks?.total > 0 ? 
                                 `${Math.round((statistics.tasks.completed / statistics.tasks.total) * 100)}%` : 
+                                '0%'
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Review Tasks */}
+                      <div className="bg-[#181b23] rounded-lg p-4 border border-purple-500/20">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                            <span className="text-gray-300">Review</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-semibold">
+                              {statistics?.tasks?.review || 0}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {statistics?.tasks?.total > 0 ? 
+                                `${Math.round((statistics.tasks.review / statistics.tasks.total) * 100)}%` : 
                                 '0%'
                               }
                             </span>
