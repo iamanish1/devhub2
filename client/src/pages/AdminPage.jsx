@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdminContributionBoard from "../components/AdminContributionBoard";
 import axios from "axios";
 import {
@@ -124,6 +124,7 @@ const AdminPage = () => {
   const [realTimeUpdates, setRealTimeUpdates] = useState({});
   const [workspaceAccess, setWorkspaceAccess] = useState({});
   const [firebaseListeners, setFirebaseListeners] = useState([]);
+  const firebaseListenersRef = useRef([]);
 
   // Escrow Wallet System State
   const [escrowWallets, setEscrowWallets] = useState([]);
@@ -207,30 +208,44 @@ const AdminPage = () => {
     return () => {
       // Cleanup function will be called when component unmounts
       console.log("Cleaning up Firebase listeners on unmount");
-      firebaseListeners.forEach(unsubscribe => {
-        if (typeof unsubscribe === 'function') {
-          unsubscribe();
+      try {
+        if (firebaseListenersRef.current && Array.isArray(firebaseListenersRef.current)) {
+          firebaseListenersRef.current.forEach(unsubscribe => {
+            if (typeof unsubscribe === 'function') {
+              unsubscribe();
+            }
+          });
         }
-      });
-      setFirebaseListeners([]);
-      
+        firebaseListenersRef.current = [];
+      } catch (error) {
+        console.error('Error during Firebase listeners cleanup:', error);
+      }
     };
   }, []); // Empty dependency array - only runs on unmount
 
   // Cleanup Firebase listeners when view changes
   useEffect(() => {
     // Cleanup previous listeners when view changes
-    firebaseListeners.forEach(unsubscribe => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
+    try {
+      if (firebaseListenersRef.current && Array.isArray(firebaseListenersRef.current)) {
+        firebaseListenersRef.current.forEach(unsubscribe => {
+          if (typeof unsubscribe === 'function') {
+            unsubscribe();
+          }
+        });
       }
-    });
-    setFirebaseListeners([]);
+      firebaseListenersRef.current = [];
+      setFirebaseListeners([]);
+    } catch (error) {
+      console.error('Error during Firebase listeners cleanup on view change:', error);
+    }
   }, [view]);
 
 
   // Firebase real-time listeners setup
   const setupFirebaseListeners = (groupedApplicants) => {
+    const listeners = [];
+    
     Object.keys(groupedApplicants).forEach(projectId => {
       // Listen for applicant status changes (simplified query without orderBy)
       const applicantStatusRef = collection(db, 'applicant_status');
@@ -308,11 +323,13 @@ const AdminPage = () => {
       });
 
       // Store unsubscribe functions for cleanup
-      return () => {
-        unsubscribe();
-        selectionUnsubscribe();
-      };
+      listeners.push(unsubscribe);
+      listeners.push(selectionUnsubscribe);
     });
+    
+    // Store listeners in both state and ref
+    setFirebaseListeners(listeners);
+    firebaseListenersRef.current = listeners;
   };
 
 
