@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import AdminContributionBoard from "../components/AdminContributioBoard";
 import axios from "axios";
 import {
@@ -142,8 +142,6 @@ const AdminPage = () => {
   const [selectedEscrowForCompletion, setSelectedEscrowForCompletion] = useState(null);
   const [escrowActionLoading, setEscrowActionLoading] = useState(false);
   
-  // Debounce mechanism to prevent rapid successive calls
-  const [escrowLoadTimeout, setEscrowLoadTimeout] = useState(null);
 
   const handleAdminTaskStatusChange = (id, newStatus) => {
     setAdminTasks((prev) =>
@@ -216,29 +214,20 @@ const AdminPage = () => {
       });
       setFirebaseListeners([]);
       
-      // Clean up any pending timeout
-      if (escrowLoadTimeout) {
-        clearTimeout(escrowLoadTimeout);
-      }
     };
   }, []); // Empty dependency array - only runs on unmount
 
   // Cleanup Firebase listeners when view changes
   useEffect(() => {
     // Cleanup previous listeners when view changes
-    cleanupFirebaseListeners();
-  }, [view, cleanupFirebaseListeners]);
-
-  // Centralized cleanup function for Firebase listeners
-  const cleanupFirebaseListeners = useCallback(() => {
-    console.log("🧹 Cleaning up Firebase listeners...");
     firebaseListeners.forEach(unsubscribe => {
       if (typeof unsubscribe === 'function') {
         unsubscribe();
       }
     });
     setFirebaseListeners([]);
-  }, [firebaseListeners]);
+  }, [view]);
+
 
   // Firebase real-time listeners setup
   const setupFirebaseListeners = (groupedApplicants) => {
@@ -359,19 +348,6 @@ const AdminPage = () => {
           setEscrowStats(calculatedStats);
           setEscrowError(null);
           
-          // Clean up existing listeners before setting up new ones
-          firebaseListeners.forEach(unsubscribe => {
-            if (typeof unsubscribe === 'function') {
-              unsubscribe();
-            }
-          });
-          setFirebaseListeners([]);
-          
-          // Set up Firebase real-time listeners for escrow updates
-          setupEscrowFirebaseListeners(escrowWallets);
-          // Set up Firebase real-time listeners for task updates
-          setupTaskFirebaseListeners(escrowWallets);
-          
         } catch (error) {
           if (!isMounted) return; // Component unmounted, don't update state
           
@@ -403,28 +379,8 @@ const AdminPage = () => {
     }
   }, [view]); // Only depend on view
 
-  // Load escrow data function with proper cleanup and debouncing
-  const loadEscrowData = useCallback(async (skipListeners = false, debounceMs = 0) => {
-    // Clear any existing timeout
-    if (escrowLoadTimeout) {
-      clearTimeout(escrowLoadTimeout);
-    }
-
-    // If debounce is requested, delay the execution
-    if (debounceMs > 0) {
-      const timeoutId = setTimeout(() => {
-        performEscrowDataLoad(skipListeners);
-      }, debounceMs);
-      setEscrowLoadTimeout(timeoutId);
-      return;
-    }
-
-    // Execute immediately
-    await performEscrowDataLoad(skipListeners);
-  }, [escrowLoadTimeout, performEscrowDataLoad]);
-
-  // Actual escrow data loading function
-  const performEscrowDataLoad = useCallback(async (skipListeners = false) => {
+  // Simplified escrow data loading function
+  const loadEscrowData = async () => {
     try {
       setEscrowLoading(true);
       setEscrowError(null);
@@ -447,17 +403,6 @@ const AdminPage = () => {
       setEscrowStats(calculatedStats);
       setEscrowError(null);
       
-      // Only set up listeners if not skipping (prevents recursive listener setup)
-      if (!skipListeners) {
-        // Clean up existing listeners before setting up new ones
-        cleanupFirebaseListeners();
-        
-        // Set up Firebase real-time listeners for escrow updates
-        setupEscrowFirebaseListeners(escrowWallets);
-        // Set up Firebase real-time listeners for task updates
-        setupTaskFirebaseListeners(escrowWallets);
-      }
-      
     } catch (error) {
       console.error("Error loading escrow data:", error);
       
@@ -475,7 +420,7 @@ const AdminPage = () => {
     } finally {
       setEscrowLoading(false);
     }
-  }, [cleanupFirebaseListeners, setupEscrowFirebaseListeners, setupTaskFirebaseListeners]);
+  };
 
   // Calculate escrow stats from wallets data
   const calculateEscrowStats = (wallets) => {
@@ -512,81 +457,8 @@ const AdminPage = () => {
     return stats;
   };
 
-  // Setup Firebase listeners for escrow real-time updates
-  const setupEscrowFirebaseListeners = useCallback((escrowWallets) => {
-    escrowWallets.forEach(wallet => {
-      const escrowRef = doc(db, 'escrow_wallets', wallet._id);
-      const unsubscribe = onSnapshot(escrowRef, (doc) => {
-        if (doc.exists()) {
-          const updatedWallet = { id: doc.id, ...doc.data() };
-          setEscrowWallets(prev => {
-            const updatedWallets = prev.map(w => w._id === wallet._id ? updatedWallet : w);
-            // Recalculate stats when wallets are updated
-            const newStats = calculateEscrowStats(updatedWallets);
-            setEscrowStats(newStats);
-            return updatedWallets;
-          });
-        }
-      });
-      
-      // Store unsubscribe function for cleanup
-      setFirebaseListeners(prev => [...prev, unsubscribe]);
-    });
-  }, []);
-
-  // Setup Firebase listeners for task updates
-  const setupTaskFirebaseListeners = useCallback((escrowWallets) => {
-    escrowWallets.forEach(wallet => {
-      // Listen for task updates in the project
-      const taskQuery = query(
-        collection(db, 'project_tasks'),
-        where('projectId', '==', wallet.projectId?._id || wallet.projectId)
-      );
-      
-      const taskUnsubscribe = onSnapshot(taskQuery, (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'modified' || change.type === 'added') {
-            const taskData = change.doc.data();
-            console.log(`🔄 Task update for project ${wallet.projectId?._id || wallet.projectId}:`, taskData);
-            
-            // Update escrow stats if needed - but don't reload data to prevent infinite loop
-            if (taskData.status === 'completed') {
-              // Instead of calling loadEscrowData(), just update the stats locally
-              // This prevents the infinite loop while still providing real-time updates
-              console.log('📊 Task completed, updating escrow stats locally...');
-              
-              // Update the specific wallet's stats without triggering a full reload
-              setEscrowWallets(prev => {
-                const updatedWallets = prev.map(w => {
-                  if (w._id === wallet._id || w.projectId?._id === wallet.projectId?._id) {
-                    // Update the wallet's completion status
-                    return {
-                      ...w,
-                      projectCompletion: {
-                        ...w.projectCompletion,
-                        isCompleted: true,
-                        completedAt: new Date().toISOString()
-                      }
-                    };
-                  }
-                  return w;
-                });
-                
-                // Recalculate stats with updated wallets
-                const newStats = calculateEscrowStats(updatedWallets);
-                setEscrowStats(newStats);
-                
-                return updatedWallets;
-              });
-            }
-          }
-        });
-      });
-      
-      // Store unsubscribe function for cleanup
-      setFirebaseListeners(prev => [...prev, taskUnsubscribe]);
-    });
-  }, []);
+  // Firebase listeners temporarily disabled to fix TDZ error
+  // TODO: Re-enable after fixing the initialization issue
 
   // Handle escrow wallet creation
   const handleCreateEscrowWallet = async () => {
