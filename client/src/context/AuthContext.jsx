@@ -36,9 +36,23 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  // Ensure proper redirection after loading
+  // Ensure proper redirection after loading (only for protected routes)
   useEffect(() => {
-    if (!loading && !user && window.location.pathname !== "/") {
+    const publicRoutes = [
+      "/",
+      "/createaccount", 
+      "/loginaccount",
+      "/about",
+      "/privacy-policy",
+      "/terms-and-service", 
+      "/cookie-policy",
+      "/community-guidelines",
+      "/careers",
+      "/blog",
+      "/contact"
+    ];
+    
+    if (!loading && !user && !publicRoutes.includes(window.location.pathname)) {
       navigate("/loginaccount", { replace: true });
     }
   }, [user, loading]);
@@ -63,8 +77,25 @@ export const AuthProvider = ({ children }) => {
       (response) => response,
       (error) => {
         if (error.response && error.response.status === 401) {
+          const publicRoutes = [
+            "/",
+            "/createaccount", 
+            "/loginaccount",
+            "/about",
+            "/privacy-policy",
+            "/terms-and-service", 
+            "/cookie-policy",
+            "/community-guidelines",
+            "/careers",
+            "/blog",
+            "/contact"
+          ];
+          
+          // Only show session expired alert for protected routes
+          if (!publicRoutes.includes(window.location.pathname)) {
+            alert("Session expired. Please log in again.");
+          }
           logoutUser();
-          alert("Session expired. Please log in again.");
         }
         return Promise.reject(error);
       }
