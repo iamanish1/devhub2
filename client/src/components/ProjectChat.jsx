@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import chatService from '../services/chatService';
 import { notificationService } from '../services/notificationService';
+import ChatErrorBoundary from './ChatErrorBoundary';
 
 const ProjectChat = ({ projectId, projectTitle, onClose }) => {
   // Initialize auth hook - must be called unconditionally
@@ -40,6 +41,43 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  // Handle new messages
+  const handleNewMessage = useCallback((message, type = 'new') => {
+    if (type === 'edited') {
+      setMessages(prev => prev.map(msg => 
+        msg._id === message._id ? message : msg
+      ));
+    } else if (type === 'deleted') {
+      setMessages(prev => prev.filter(msg => msg._id !== message.messageId));
+    } else {
+      setMessages(prev => [...prev, message]);
+    }
+  }, []);
+
+  // Handle typing indicators
+  const handleTyping = useCallback((data) => {
+    if (data.isTyping) {
+      setTypingUsers(prev => new Set(prev).add(data.username));
+    } else {
+      setTypingUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(data.username);
+        return newSet;
+      });
+    }
+  }, []);
+
+  // Handle user events with optimized updates
+  const handleUserEvent = useCallback((data, eventType) => {
+    console.log('🔄 ProjectChat: User event received:', { data, eventType });
+    if (eventType === 'joined') {
+      notificationService.success(`${data.username} joined the chat`);
+    } else if (eventType === 'left') {
+      notificationService.info(`${data.username} left the chat`);
+    }
+    // Online status is now handled by the shared ChatContext
+  }, []);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -92,43 +130,6 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
 
     initializeChat();
   }, [projectId, user, joinProject, handleNewMessage, handleTyping, handleUserEvent]);
-
-  // Handle new messages
-  const handleNewMessage = useCallback((message, type = 'new') => {
-    if (type === 'edited') {
-      setMessages(prev => prev.map(msg => 
-        msg._id === message._id ? message : msg
-      ));
-    } else if (type === 'deleted') {
-      setMessages(prev => prev.filter(msg => msg._id !== message.messageId));
-    } else {
-      setMessages(prev => [...prev, message]);
-    }
-  }, []);
-
-  // Handle typing indicators
-  const handleTyping = useCallback((data) => {
-    if (data.isTyping) {
-      setTypingUsers(prev => new Set(prev).add(data.username));
-    } else {
-      setTypingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(data.username);
-        return newSet;
-      });
-    }
-  }, []);
-
-  // Handle user events with optimized updates
-  const handleUserEvent = useCallback((data, eventType) => {
-    console.log('🔄 ProjectChat: User event received:', { data, eventType });
-    if (eventType === 'joined') {
-      notificationService.success(`${data.username} joined the chat`);
-    } else if (eventType === 'left') {
-      notificationService.info(`${data.username} left the chat`);
-    }
-    // Online status is now handled by the shared ChatContext
-  }, []);
 
   // Handle typing
   const handleTypingChange = useCallback((e) => {
@@ -268,7 +269,8 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0f1419] border border-blue-500/20 rounded-xl overflow-hidden">
+    <ChatErrorBoundary>
+      <div className="flex flex-col h-full bg-[#0f1419] border border-blue-500/20 rounded-xl overflow-hidden">
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 bg-[#181b23] border-b border-blue-500/10">
         <div className="flex items-center gap-3">
@@ -503,7 +505,8 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ChatErrorBoundary>
   );
 };
 

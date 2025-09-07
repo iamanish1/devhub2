@@ -22,17 +22,25 @@ export const ChatProvider = ({ children }) => {
   useEffect(() => {
     if (!user) return;
 
+    let isMounted = true;
+
     const initializeChat = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+          console.warn('No auth token found for chat initialization');
+          return;
+        }
 
         await chatService.connect(token);
-        setIsConnected(true);
+        
+        if (isMounted) {
+          setIsConnected(true);
+        }
 
         // Set up global online users handler
         const unsubscribeOnlineUsers = chatService.onUserEvent((data, eventType) => {
-          if (eventType === 'online' && currentProjectId) {
+          if (eventType === 'online' && currentProjectId && isMounted) {
             setOnlineUsers(prev => {
               const newMap = new Map(prev);
               newMap.set(currentProjectId, data);
@@ -46,13 +54,20 @@ export const ChatProvider = ({ children }) => {
         };
       } catch (error) {
         console.error('Failed to initialize chat:', error);
-        setIsConnected(false);
+        if (isMounted) {
+          setIsConnected(false);
+        }
       }
     };
 
-    initializeChat();
+    // Add a small delay to ensure proper initialization order
+    const timeoutId = setTimeout(() => {
+      initializeChat();
+    }, 100);
 
     return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
       chatService.disconnect();
       setIsConnected(false);
     };
@@ -60,11 +75,30 @@ export const ChatProvider = ({ children }) => {
 
   // Join project room
   const joinProject = useCallback(async (projectId) => {
-    if (!user || !isConnected || projectId === currentProjectId) return;
+    if (!user || !projectId) {
+      console.warn('Cannot join project: missing user or projectId');
+      return;
+    }
+
+    // Wait for connection if not connected yet
+    if (!isConnected) {
+      console.log('Waiting for chat connection...');
+      // Wait up to 5 seconds for connection
+      let attempts = 0;
+      while (!isConnected && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      
+      if (!isConnected) {
+        console.error('Failed to establish chat connection');
+        return;
+      }
+    }
 
     try {
       // Leave current project if any
-      if (currentProjectId) {
+      if (currentProjectId && currentProjectId !== projectId) {
         chatService.leaveProject();
       }
 

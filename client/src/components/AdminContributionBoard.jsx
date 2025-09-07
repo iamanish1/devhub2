@@ -672,7 +672,7 @@ const AdminContributionBoard = ({
         cleanupFunction();
       }
     };
-  }, [selectedProjectId, user]);
+  }, [selectedProjectId, user, joinProject]);
 
   // Enhanced task management with Firebase real-time updates
   const handleEnhancedTaskSubmit = async (e) => {
@@ -967,7 +967,7 @@ const AdminContributionBoard = ({
       console.error("Failed to load workspace:", err);
       // Don't show error for workspace loading as it's optional
     }
-  }, [selectedProjectId, resourcesLoading]);
+  }, [selectedProjectId, resourcesLoading, loadEnhancedStatistics]);
 
   // Load team members from API (memoized to prevent infinite loops)
   const loadTeamMembers = useCallback(async () => {
@@ -1168,7 +1168,7 @@ const AdminContributionBoard = ({
         "Using local data for statistics (API unavailable)"
       );
     }
-  }, [selectedProjectId]);
+  }, [selectedProjectId, tasks, teamMembers, getOnlineUsersCount, notifications, activeTimeTracking]);
 
   // Load workspace when project changes
   useEffect(() => {
@@ -1226,7 +1226,7 @@ const AdminContributionBoard = ({
 
       updateStats();
     }
-  }, [selectedProjectId, activeTab]);
+  }, [selectedProjectId, activeTab, statistics, tasks, teamMembers, getOnlineUsersCount, notifications, activeTimeTracking]);
 
   // Update selected project if projects change
   useEffect(() => {
