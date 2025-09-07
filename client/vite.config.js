@@ -13,7 +13,12 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          firebase: ['firebase/app', 'firebase/firestore', 'firebase/auth'],
+          charts: ['chart.js', 'react-chartjs-2'],
+          icons: ['react-icons/fa', 'lucide-react']
+        },
         // Ensure proper file extensions and naming
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -35,7 +40,16 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
+    include: [
+      'react', 
+      'react-dom', 
+      'react-router-dom',
+      'chart.js',
+      'react-chartjs-2',
+      'firebase/app',
+      'firebase/firestore',
+      'firebase/auth'
+    ],
   },
   resolve: {
     alias: {
