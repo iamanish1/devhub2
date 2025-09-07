@@ -553,6 +553,23 @@ const ContributionPage = () => {
     }
   }, [projectId, checkWorkspaceAccess]);
 
+  // Load tasks from API (memoized)
+  const loadTasks = useCallback(async () => {
+    try {
+      console.log('🔍 Loading tasks for projectId:', projectId);
+      const responseData = await projectTaskApi.getProjectTasks(projectId);
+      console.log('✅ Tasks loaded successfully:', responseData);
+      setTasks(responseData.tasks || []);
+    } catch (error) {
+      console.error("❌ Failed to load tasks:", error);
+      console.error("❌ Error message:", error.message);
+      if (error.response) {
+        console.error("❌ Error response:", error.response.data);
+      }
+      setTasks([]);
+    }
+  }, [projectId]);
+
   // Load workspace data
   useEffect(() => {
     if (projectId) {
@@ -653,23 +670,6 @@ const ContributionPage = () => {
   //       console.error('🔍 Error setting up task listener:', error);
   //     }
   //   };
-
-  // Load tasks from API (memoized)
-  const loadTasks = useCallback(async () => {
-    try {
-      console.log('🔍 Loading tasks for projectId:', projectId);
-      const responseData = await projectTaskApi.getProjectTasks(projectId);
-      console.log('✅ Tasks loaded successfully:', responseData);
-      setTasks(responseData.tasks || []);
-    } catch (error) {
-      console.error("❌ Failed to load tasks:", error);
-      console.error("❌ Error message:", error.message);
-      if (error.response) {
-        console.error("❌ Error response:", error.response.data);
-      }
-      setTasks([]);
-    }
-  }, [projectId]);
 
   // Handle project completion status changes
   const handleProjectCompletionChange = useCallback((escrowData) => {
