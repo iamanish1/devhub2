@@ -345,10 +345,19 @@ export const completeTask = async (req, res) => {
     const { completionNotes, actualHours } = req.body;
 
     logger.info(`[ProjectTask] Completing task ${taskId} for project ${projectId}`);
+    logger.info(`[ProjectTask] User ID: ${userId}`);
+    logger.info(`[ProjectTask] Request body:`, req.body);
+
+    // Validate required parameters
+    if (!projectId || !taskId) {
+      logger.error(`[ProjectTask] Missing required parameters: projectId=${projectId}, taskId=${taskId}`);
+      return res.status(400).json({ message: 'Project ID and Task ID are required' });
+    }
 
     // Check if user has access
     const project = await ProjectListing.findById(projectId);
     if (!project) {
+      logger.error(`[ProjectTask] Project not found: ${projectId}`);
       return res.status(404).json({ message: 'Project not found' });
     }
 
@@ -357,35 +366,60 @@ export const completeTask = async (req, res) => {
     const accessResult = await checkProjectAccess(project, userId, selection);
 
     if (!accessResult.hasAccess) {
+      logger.error(`[ProjectTask] Access denied for user ${userId} on project ${projectId}: ${accessResult.message}`);
       return res.status(403).json({ message: accessResult.message });
     }
+
+    // Check if task exists before updating
+    const existingTask = await ProjectTask.findById(taskId);
+    if (!existingTask) {
+      logger.error(`[ProjectTask] Task not found: ${taskId}`);
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    logger.info(`[ProjectTask] Current task status: ${existingTask.status}`);
 
     // Update task status to completed
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
       { 
         status: 'completed',
-        completionNotes,
-        actualHours,
+        completionNotes: completionNotes || '',
+        actualHours: actualHours || existingTask.actualHours || 0,
         completedAt: new Date(),
-        completedBy: userId
+        completedBy: userId,
+        updatedAt: new Date()
       },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     if (!updatedTask) {
-      return res.status(404).json({ message: 'Task not found' });
+      logger.error(`[ProjectTask] Failed to update task: ${taskId}`);
+      return res.status(500).json({ message: 'Failed to update task' });
     }
 
-    // Sync to Firebase for real-time updates
-    const taskRef = doc(db, 'project_tasks', taskId);
-    await setDoc(taskRef, {
-      status: 'completed',
-      completionNotes,
-      actualHours,
-      completedAt: serverTimestamp(),
-      completedBy: userId.toString()
-    }, { merge: true });
+    logger.info(`[ProjectTask] Task updated successfully: ${updatedTask._id}, new status: ${updatedTask.status}`);
+
+    // Sync to Firebase for real-time updates (with error handling)
+    try {
+      if (db) {
+        const taskRef = doc(db, 'project_tasks', taskId);
+        await setDoc(taskRef, {
+          status: 'completed',
+          completionNotes: completionNotes || '',
+          actualHours: actualHours || existingTask.actualHours || 0,
+          completedAt: serverTimestamp(),
+          completedBy: userId.toString(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        logger.info(`[ProjectTask] Firebase sync successful for task: ${taskId}`);
+      } else {
+        logger.warn(`[ProjectTask] Firebase not available, skipping sync for task: ${taskId}`);
+      }
+    } catch (firebaseError) {
+      logger.error(`[ProjectTask] Firebase sync failed for task ${taskId}:`, firebaseError);
+      // Don't fail the entire operation if Firebase sync fails
+    }
 
     res.status(200).json({ 
       success: true,
@@ -395,7 +429,26 @@ export const completeTask = async (req, res) => {
 
   } catch (error) {
     logger.error(`[ProjectTask] Error completing task: ${error.message}`, error);
-    res.status(500).json({ message: 'Internal server error' });
+    logger.error(`[ProjectTask] Error stack:`, error.stack);
+    
+    // Return more specific error messages
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        details: error.message 
+      });
+    }
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({ 
+        message: 'Invalid ID format' 
+      });
+    }
+
+    res.status(500).json({ 
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
