@@ -570,10 +570,23 @@ const AdminContributionBoard = ({
   useEffect(() => {
     if (!selectedProjectId || !user?._id) return;
 
+    let cleanupFunction = null;
+
     const initializeSocketConnection = async () => {
       try {
+        // Add safety check to prevent temporal dead zone errors
+        if (!user || !user._id || !selectedProjectId) {
+          console.error("❌ Missing required data for socket connection");
+          return;
+        }
+
         // Connect to socket if not already connected
         const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("❌ No authentication token found");
+          return;
+        }
+
         if (!chatService.isConnected) {
           await chatService.connect(token);
         }
@@ -604,20 +617,40 @@ const AdminContributionBoard = ({
 
         // Set up user activity tracking
         const activityInterval = setInterval(() => {
-          chatService.sendUserActivity();
+          try {
+            chatService.sendUserActivity();
+          } catch (error) {
+            console.error("❌ Error sending user activity:", error);
+          }
         }, 30000); // Send activity every 30 seconds
 
-        return () => {
-          unsubscribeOnlineUsers();
-          clearInterval(activityInterval);
-          chatService.leaveProject();
+        cleanupFunction = () => {
+          try {
+            unsubscribeOnlineUsers();
+            clearInterval(activityInterval);
+            chatService.leaveProject();
+          } catch (error) {
+            console.error("❌ Error during socket cleanup:", error);
+          }
         };
       } catch (error) {
         console.error("❌ Error initializing socket connection:", error);
+        // Don't throw the error to prevent component crash
       }
     };
 
-    initializeSocketConnection();
+    // Initialize socket connection with a small delay to ensure proper initialization order
+    const timeoutId = setTimeout(() => {
+      initializeSocketConnection();
+    }, 100);
+
+    // Return cleanup function
+    return () => {
+      clearTimeout(timeoutId);
+      if (cleanupFunction) {
+        cleanupFunction();
+      }
+    };
   }, [selectedProjectId, user]);
 
   // Enhanced task management with Firebase real-time updates

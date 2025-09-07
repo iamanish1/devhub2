@@ -20,32 +20,56 @@ class ChatService {
     }
 
     return new Promise((resolve, reject) => {
-      this.socket = io(API_BASE_URL, {
-        auth: {
-          token
-        },
-        transports: ['websocket', 'polling']
-      });
+      try {
+        // Add safety check for token
+        if (!token) {
+          reject(new Error('No authentication token provided'));
+          return;
+        }
 
-      this.socket.on('connect', () => {
-        console.log('✅ Socket.IO connected');
-        this.isConnected = true;
-        resolve();
-      });
+        this.socket = io(API_BASE_URL, {
+          auth: {
+            token
+          },
+          transports: ['websocket', 'polling'],
+          timeout: 10000, // 10 second timeout
+          forceNew: true // Force new connection
+        });
 
-      this.socket.on('disconnect', () => {
-        console.log('❌ Socket.IO disconnected');
-        this.isConnected = false;
-      });
+        // Set up connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (!this.isConnected) {
+            console.error('❌ Socket.IO connection timeout');
+            this.socket?.disconnect();
+            reject(new Error('Connection timeout'));
+          }
+        }, 10000);
 
-      this.socket.on('connect_error', (error) => {
-        console.error('❌ Socket.IO connection error:', error);
-        this.isConnected = false;
+        this.socket.on('connect', () => {
+          console.log('✅ Socket.IO connected');
+          clearTimeout(connectionTimeout);
+          this.isConnected = true;
+          resolve();
+        });
+
+        this.socket.on('disconnect', () => {
+          console.log('❌ Socket.IO disconnected');
+          this.isConnected = false;
+        });
+
+        this.socket.on('connect_error', (error) => {
+          console.error('❌ Socket.IO connection error:', error);
+          clearTimeout(connectionTimeout);
+          this.isConnected = false;
+          reject(error);
+        });
+
+        // Set up message handlers
+        this.setupMessageHandlers();
+      } catch (error) {
+        console.error('❌ Error creating socket connection:', error);
         reject(error);
-      });
-
-      // Set up message handlers
-      this.setupMessageHandlers();
+      }
     });
   }
 
@@ -65,8 +89,18 @@ class ChatService {
       throw new Error('Socket not connected');
     }
 
-    this.currentProjectId = projectId;
-    this.socket.emit('joinRoom', { projectId, userId, username });
+    // Add safety checks
+    if (!projectId || !userId) {
+      throw new Error('Missing required parameters for joining project');
+    }
+
+    try {
+      this.currentProjectId = projectId;
+      this.socket.emit('joinRoom', { projectId, userId, username });
+    } catch (error) {
+      console.error('❌ Error joining project room:', error);
+      throw error;
+    }
   }
 
   // Test database connection
