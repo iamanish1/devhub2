@@ -91,11 +91,15 @@ export const AuthProvider = ({ children }) => {
             "/contact"
           ];
           
-          // Only show session expired alert for protected routes
+          // Only show session expired alert and redirect for protected routes
           if (!publicRoutes.includes(window.location.pathname)) {
             alert("Session expired. Please log in again.");
+            logoutUser();
+          } else {
+            // For public routes, just clear the token without redirecting
+            localStorage.removeItem("token");
+            setUser(null);
           }
-          logoutUser();
         }
         return Promise.reject(error);
       }
