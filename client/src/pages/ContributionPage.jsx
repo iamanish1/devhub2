@@ -50,7 +50,7 @@ import { db } from "../Config/firebase";
 import {
   doc,
   getDoc,
-  onSnapshot, // eslint-disable-line no-unused-vars
+  onSnapshot,
   collection, // eslint-disable-line no-unused-vars
   query, // eslint-disable-line no-unused-vars
   where, // eslint-disable-line no-unused-vars
@@ -303,6 +303,15 @@ const ContributionPage = () => {
     }
   }, [projectId]);
 
+  // Handle project completion status changes
+  const handleProjectCompletionChange = useCallback((escrowData) => {
+    if (escrowData.projectCompletion?.isCompleted && !escrowWallet?.projectCompletion?.isCompleted) {
+      notificationService.info(
+        "🎯 Project has been completed! Your payment will be released soon."
+      );
+    }
+  }, [escrowWallet]);
+
   // Real-time escrow updates
   useEffect(() => {
     if (escrowWallet?.id) {
@@ -376,7 +385,7 @@ const ContributionPage = () => {
 
       return () => unsubscribe();
     }
-  }, [escrowWallet?.id, user?._id]);
+  }, [escrowWallet?.id, user?._id, handleProjectCompletionChange, escrowWallet]);
 
   // Load project overview and financial data (memoized)
   const loadProjectOverview = useCallback(async () => {
@@ -406,15 +415,6 @@ const ContributionPage = () => {
       console.error("Failed to load project overview:", error);
     }
   }, [projectId]);
-
-  // Handle project completion status changes
-  const handleProjectCompletionChange = (escrowData) => {
-    if (escrowData.projectCompletion?.isCompleted && !escrowWallet?.projectCompletion?.isCompleted) {
-      notificationService.info(
-        "🎯 Project has been completed! Your payment will be released soon."
-      );
-    }
-  };
 
   // Load escrow wallet data (memoized)
   const loadEscrowWalletData = useCallback(async () => {
@@ -726,10 +726,10 @@ const ContributionPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, checkWorkspaceAccess]);
 
   // Check Firebase workspace access
-  const checkWorkspaceAccess = async () => {
+  const checkWorkspaceAccess = useCallback(async () => {
     try {
       if (!user?._id) {
         throw new Error("User not authenticated");
@@ -822,7 +822,7 @@ const ContributionPage = () => {
       console.error("Workspace access check failed:", error);
       throw new Error("Access denied: " + error.message);
     }
-  };
+  }, [user?._id, projectId]);
 
   // Create new task
   const handleCreateTask = async () => {
