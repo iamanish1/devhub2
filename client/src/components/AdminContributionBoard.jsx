@@ -78,6 +78,15 @@ class AdminContributionBoardErrorBoundary extends Component {
   componentDidCatch(error, errorInfo) {
     // Log the error details
     console.error('AdminContributionBoard Error:', error, errorInfo);
+    
+    // Check if this is the 'Me' initialization error
+    if (error.message && error.message.includes('Cannot access') && error.message.includes('before initialization')) {
+      console.error('Detected temporal dead zone error - likely minified variable issue');
+      // Add additional logging for debugging
+      console.error('Error stack:', error.stack);
+      console.error('Component stack:', errorInfo.componentStack);
+    }
+    
     this.setState({
       error: error,
       errorInfo: errorInfo
@@ -188,7 +197,7 @@ const AdminContributionBoard = ({
     };
 
     // Use setTimeout to ensure proper initialization order and avoid temporal dead zone
-    const timeoutId = setTimeout(initializeComponent, 100);
+    const timeoutId = setTimeout(initializeComponent, 200);
     return () => clearTimeout(timeoutId);
   }, [authContext, user]);
 
@@ -1619,11 +1628,16 @@ const AdminContributionBoard = ({
     return null;
   }
 
-  // Additional safety check to prevent 'Me' initialization errors
+  // Add global error handler to catch any remaining initialization issues
   try {
     // Ensure all critical variables are properly initialized
     if (authContext === undefined || authContext === null) {
       throw new Error('Auth context not properly initialized');
+    }
+    
+    // Additional check for user object
+    if (user === undefined) {
+      throw new Error('User object not properly initialized');
     }
   } catch (error) {
     console.error('Critical initialization error:', error);
@@ -1647,6 +1661,7 @@ const AdminContributionBoard = ({
       </div>
     );
   }
+
 
   // Show loading state during initialization
   if (componentLoading || !authContext || authContext === undefined) {
@@ -3183,13 +3198,37 @@ const AdminContributionBoard = ({
   );
 };
 
-// Wrap the component with error boundary
+// Wrap the component with error boundary and additional safety checks
 const AdminContributionBoardWithErrorBoundary = (props) => {
-  return (
-    <AdminContributionBoardErrorBoundary>
-      <AdminContributionBoard {...props} />
-    </AdminContributionBoardErrorBoundary>
-  );
+  // Add additional safety check to prevent initialization errors
+  try {
+    return (
+      <AdminContributionBoardErrorBoundary>
+        <AdminContributionBoard {...props} />
+      </AdminContributionBoardErrorBoundary>
+    );
+  } catch (error) {
+    console.error('Critical error in AdminContributionBoard wrapper:', error);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
+            <div className="text-red-400 text-lg mb-3">Critical Error</div>
+            <p className="text-gray-300 mb-4">
+              A critical error occurred while loading the Project Management component. Please refresh the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+            >
+              <FaSync className="w-4 h-4" />
+              Reload Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default AdminContributionBoardWithErrorBoundary;
