@@ -124,7 +124,9 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
 
   // Handle user events
   const handleUserEvent = useCallback((data, eventType) => {
+    console.log('🔄 ProjectChat: User event received:', { data, eventType });
     if (eventType === 'online') {
+      console.log('🔄 ProjectChat: Setting online users:', data);
       setOnlineUsers(data);
     } else if (eventType === 'joined') {
       notificationService.success(`${data.username} joined the chat`);

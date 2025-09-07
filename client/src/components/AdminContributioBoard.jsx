@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   FaCheck,
   FaEdit,
@@ -59,6 +59,7 @@ import { projectTaskApi } from "../services/projectTaskApi";
 import { notificationService } from "../services/notificationService";
 import { projectSelectionApi } from "../services/projectSelectionApi";
 import ProjectChat from "./ProjectChat";
+import chatService from "../services/chatService";
 const Socket_URl =
   import.meta.env.VITE_SOCKET_SERVER || `${import.meta.env.VITE_API_URL}`;
 
@@ -119,26 +120,7 @@ const AdminContributionBoard = ({
   const [teamMembersError, setTeamMembersError] = useState(null);
   const [taskComments, setTaskComments] = useState({});
   const [taskFiles, setTaskFiles] = useState({});
-  const [onlineUsers, setOnlineUsers] = useState([
-    {
-      id: 1,
-      userId: "admin",
-      username: "Admin User",
-      lastSeen: new Date()
-    },
-    {
-      id: 2,
-      userId: "contributor1",
-      username: "John Developer",
-      lastSeen: new Date(Date.now() - 300000) // 5 minutes ago
-    },
-    {
-      id: 3,
-      userId: "contributor2",
-      username: "Sarah Designer",
-      lastSeen: new Date(Date.now() - 600000) // 10 minutes ago
-    }
-  ]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
   // Task filters state
@@ -311,29 +293,8 @@ const AdminContributionBoard = ({
     });
     listeners.push(filesUnsubscribe);
 
-    // 5. Real-time online users listener (simplified query)
-    const onlineQuery = query(
-      collection(db, "online_users"),
-      where("projectId", "==", selectedProjectId)
-    );
-    
-    const onlineUnsubscribe = onSnapshot(onlineQuery, (snapshot) => {
-      console.log("🔄 Firebase online users update:", snapshot.docChanges().length, 'changes');
-      const onlineData = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filter online users in JavaScript instead of Firebase
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const lastSeen = data.lastSeen?.toDate?.() || new Date(data.lastSeen);
-        if (lastSeen > fiveMinutesAgo) {
-          onlineData.push({ id: doc.id, ...data });
-        }
-      });
-      setOnlineUsers(onlineData);
-    }, (error) => {
-      console.error("❌ Firebase online users listener error:", error);
-    });
-    listeners.push(onlineUnsubscribe);
+    // 5. Socket.IO online users tracking (replaces Firebase)
+    // This will be handled by the Socket.IO connection setup below
 
     // 6. Real-time notifications listener (simplified query)
     const notificationsQuery = query(
@@ -397,8 +358,10 @@ const AdminContributionBoard = ({
       setResources(resourcesData);
     }, (error) => {
       console.error("❌ Firebase resources listener error:", error);
-      // Fallback to API if Firebase fails
-      loadResourcesFromAPI();
+      // Fallback to API if Firebase fails (only if not already loading)
+      if (!resourcesLoading) {
+        loadResourcesFromAPI();
+      }
     });
     listeners.push(resourcesUnsubscribe);
 
@@ -411,41 +374,46 @@ const AdminContributionBoard = ({
     };
   }, [selectedProjectId]);
 
-  // Update user's online status
+  // Socket.IO connection and online status management
   useEffect(() => {
     if (!selectedProjectId || !user?._id) return;
 
-    const updateOnlineStatus = async () => {
+    const initializeSocketConnection = async () => {
       try {
-        const onlineRef = doc(db, "online_users", `${selectedProjectId}_${user._id}`);
-        await setDoc(onlineRef, {
-          projectId: selectedProjectId,
-          userId: user._id,
-          username: user.username || user.name,
-          lastSeen: serverTimestamp(),
-          isOnline: true
-        }, { merge: true });
+        // Connect to socket if not already connected
+        const token = localStorage.getItem('token');
+        if (!chatService.isConnected) {
+          await chatService.connect(token);
+        }
+        
+        // Join project room
+        chatService.joinProject(selectedProjectId, user._id, user.username || user.name);
+        
+        // Set up online users handler
+        const unsubscribeOnlineUsers = chatService.onUserEvent((data, eventType) => {
+          console.log('🔄 AdminContributioBoard: User event received:', { data, eventType });
+          if (eventType === 'online') {
+            console.log('🔄 AdminContributioBoard: Setting online users:', data);
+            setOnlineUsers(data);
+          }
+        });
+        
+        // Set up user activity tracking
+        const activityInterval = setInterval(() => {
+          chatService.sendUserActivity();
+        }, 30000); // Send activity every 30 seconds
+        
+        return () => {
+          unsubscribeOnlineUsers();
+          clearInterval(activityInterval);
+          chatService.leaveProject();
+        };
       } catch (error) {
-        console.error("Error updating online status:", error);
+        console.error("❌ Error initializing socket connection:", error);
       }
     };
 
-    updateOnlineStatus();
-    
-    // Update every 30 seconds
-    const interval = setInterval(updateOnlineStatus, 30000);
-    
-    return () => {
-      clearInterval(interval);
-      // Mark as offline when component unmounts
-      if (selectedProjectId && user?._id) {
-        const onlineRef = doc(db, "online_users", `${selectedProjectId}_${user._id}`);
-        setDoc(onlineRef, {
-          isOnline: false,
-          lastSeen: serverTimestamp()
-        }, { merge: true }).catch(console.error);
-      }
-    };
+    initializeSocketConnection();
   }, [selectedProjectId, user]);
 
   // Enhanced task management with Firebase real-time updates
@@ -646,9 +614,9 @@ const AdminContributionBoard = ({
     }
   };
 
-  // Load resources from API
-  const loadResourcesFromAPI = async () => {
-    if (!selectedProjectId) return;
+  // Load resources from API (memoized to prevent infinite loops)
+  const loadResourcesFromAPI = useCallback(async () => {
+    if (!selectedProjectId || resourcesLoading) return;
     
     try {
       setResourcesLoading(true);
@@ -664,7 +632,7 @@ const AdminContributionBoard = ({
     } finally {
       setResourcesLoading(false);
     }
-  };
+  }, [selectedProjectId, resourcesLoading]);
 
 
 
@@ -678,9 +646,9 @@ const AdminContributionBoard = ({
     { id: 'notifications', label: 'Notifications', icon: FaBell, color: 'red' }
   ];
 
-  // Load workspace data for enhanced features
-  const loadWorkspace = async () => {
-    if (!selectedProjectId) return;
+  // Load workspace data for enhanced features (memoized to prevent infinite loops)
+  const loadWorkspace = useCallback(async () => {
+    if (!selectedProjectId || resourcesLoading) return;
     
     try {
       const data = await projectTaskApi.getWorkspace(selectedProjectId);
@@ -710,10 +678,10 @@ const AdminContributionBoard = ({
       console.error('Failed to load workspace:', err);
       // Don't show error for workspace loading as it's optional
     }
-  };
+  }, [selectedProjectId, loadEnhancedStatistics, resourcesLoading]);
 
-  // Load team members from API
-  const loadTeamMembers = async () => {
+  // Load team members from API (memoized to prevent infinite loops)
+  const loadTeamMembers = useCallback(async () => {
     if (!selectedProjectId) return;
     
     try {
@@ -734,10 +702,10 @@ const AdminContributionBoard = ({
     } finally {
       setTeamMembersLoading(false);
     }
-  };
+  }, [selectedProjectId]);
 
-  // Fallback function to load tasks from API when Firebase fails
-  const loadTasksFromAPI = async () => {
+  // Fallback function to load tasks from API when Firebase fails (memoized)
+  const loadTasksFromAPI = useCallback(async () => {
     if (!selectedProjectId) return;
     
     try {
@@ -750,7 +718,7 @@ const AdminContributionBoard = ({
     } catch (error) {
       console.error('❌ Failed to load tasks from API:', error);
     }
-  };
+  }, [selectedProjectId]);
 
   // Fallback function to load statistics from API when Firebase fails
   const loadStatisticsFromAPI = async () => {
@@ -776,8 +744,8 @@ const AdminContributionBoard = ({
     }
   };
 
-  // Enhanced statistics loading with real-time updates
-  const loadEnhancedStatistics = async () => {
+  // Enhanced statistics loading with real-time updates (memoized to prevent infinite loops)
+  const loadEnhancedStatistics = useCallback(async () => {
     if (!selectedProjectId) return;
     
     try {
@@ -853,7 +821,7 @@ const AdminContributionBoard = ({
       setStatistics(fallbackStats);
       notificationService.warning('Using local data for statistics (API unavailable)');
     }
-  };
+  }, [selectedProjectId, tasks, teamMembers, onlineUsers, notifications, activeTimeTracking]);
 
   // Load workspace when project changes
   useEffect(() => {
@@ -861,7 +829,7 @@ const AdminContributionBoard = ({
       loadWorkspace();
       loadTeamMembers(); // Load team members when project changes
     }
-  }, [selectedProjectId]);
+  }, [selectedProjectId, loadWorkspace, loadTeamMembers]);
 
   // Real-time statistics updates
   useEffect(() => {
@@ -1400,7 +1368,7 @@ const AdminContributionBoard = ({
 
   // Enhanced Team Member Card Component
   const TeamMemberCard = ({ member }) => {
-    const isOnline = onlineUsers.some(user => user.userId === member.userId);
+    const isOnline = onlineUsers.some(user => user.userId === member.userId || user.userId === member._id);
     
     return (
       <div className="bg-[#181b23] rounded-xl p-4 border border-purple-500/10 hover:border-purple-400/30 transition-all">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Navbar from "../components/NavBar";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -195,7 +195,7 @@ const ContributionPage = () => {
       loadEscrowWalletData();
       loadTeamMembers();
     }
-  }, [projectId]);
+  }, [projectId, loadProjectResources, loadWorkspace, loadProjectOverview, loadEscrowWalletData, loadTeamMembers]);
 
   // Monitor resources state changes
   useEffect(() => {
@@ -215,7 +215,7 @@ const ContributionPage = () => {
         loadProjectResources();
       }
     }
-  }, [activeTab, projectId, resources.length, resourcesLoading, isFreeProject]);
+  }, [activeTab, projectId, resources.length, resourcesLoading, isFreeProject, loadProjectResources]);
 
   // Load tasks from API only (Firebase temporarily disabled)
   useEffect(() => {
@@ -229,7 +229,7 @@ const ContributionPage = () => {
 
       // return () => clearTimeout(timer);
     }
-  }, [projectId, user?._id]);
+  }, [projectId, user?._id, loadTasks]);
 
   // Setup real-time task listener (temporarily disabled)
   // const setupTaskRealtimeListener = () => {
@@ -286,8 +286,8 @@ const ContributionPage = () => {
   //     }
   //   };
 
-  // Load tasks from API
-  const loadTasks = async () => {
+  // Load tasks from API (memoized)
+  const loadTasks = useCallback(async () => {
     try {
       console.log('🔍 Loading tasks for projectId:', projectId);
       const responseData = await projectTaskApi.getProjectTasks(projectId);
@@ -301,7 +301,7 @@ const ContributionPage = () => {
       }
       setTasks([]);
     }
-  };
+  }, [projectId]);
 
   // Real-time escrow updates
   useEffect(() => {
@@ -378,8 +378,8 @@ const ContributionPage = () => {
     }
   }, [escrowWallet?.id, user?._id]);
 
-  // Load project overview and financial data
-  const loadProjectOverview = async () => {
+  // Load project overview and financial data (memoized)
+  const loadProjectOverview = useCallback(async () => {
     try {
       const response = await fetch(
         `${
@@ -405,7 +405,7 @@ const ContributionPage = () => {
     } catch (error) {
       console.error("Failed to load project overview:", error);
     }
-  };
+  }, [projectId]);
 
   // Handle project completion status changes
   const handleProjectCompletionChange = (escrowData) => {
@@ -416,8 +416,8 @@ const ContributionPage = () => {
     }
   };
 
-  // Load escrow wallet data
-  const loadEscrowWalletData = async () => {
+  // Load escrow wallet data (memoized)
+  const loadEscrowWalletData = useCallback(async () => {
     const maxRetries = 2;
     let retryCount = 0;
     
@@ -554,10 +554,10 @@ const ContributionPage = () => {
         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
     }
-  };
+  }, [projectId, user?._id]);
 
-  // Load team members
-  const loadTeamMembers = async () => {
+  // Load team members (memoized)
+  const loadTeamMembers = useCallback(async () => {
     try {
       console.log('🔍 Loading team members for project:', projectId);
       console.log('🔍 API endpoint:', `${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/team`);
@@ -580,10 +580,10 @@ const ContributionPage = () => {
     } finally {
       setTeamMembersLoading(false);
     }
-  };
+  }, [projectId]);
 
-  // Load project resources
-  const loadProjectResources = async () => {
+  // Load project resources (memoized to prevent infinite loops)
+  const loadProjectResources = useCallback(async () => {
     try {
       console.log('🔍 Loading project resources for project:', projectId);
       console.log('🔍 API endpoint:', `${import.meta.env.VITE_API_URL}/api/project-tasks/${projectId}/resources`);
@@ -619,7 +619,7 @@ const ContributionPage = () => {
     } finally {
       setResourcesLoading(false);
     }
-  };
+  }, [projectId]);
 
   // Add sample resources for testing
   const addSampleResources = async () => {
@@ -690,7 +690,7 @@ const ContributionPage = () => {
     }
   };
 
-  const loadWorkspace = async () => {
+  const loadWorkspace = useCallback(async () => {
     try {
       if (!projectId) {
         setError("Project ID is required");
@@ -726,7 +726,7 @@ const ContributionPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
   // Check Firebase workspace access
   const checkWorkspaceAccess = async () => {

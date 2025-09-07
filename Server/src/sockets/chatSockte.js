@@ -28,6 +28,20 @@ const chatSocket = (io) => {
   // Test connection on initialization
   testDatabaseConnection();
   
+  // Periodic broadcast of online users to all rooms
+  setInterval(() => {
+    onlineUsers.forEach((socketIds, projectId) => {
+      const projectOnlineUsers = Array.from(socketIds).map(socketId => {
+        const userInfo = userSockets.get(socketId);
+        return userInfo ? { userId: userInfo.userId, username: userInfo.username } : null;
+      }).filter(Boolean);
+      
+      if (projectOnlineUsers.length > 0) {
+        io.to(projectId).emit("onlineUsers", projectOnlineUsers);
+      }
+    });
+  }, 30000); // Broadcast every 30 seconds
+  
   io.on("connection", (socket) => {
     console.log("✅ Socket.IO: New user connected:", socket.id);
 
@@ -144,13 +158,14 @@ const chatSocket = (io) => {
           timestamp: new Date()
         });
         
-        // Send current online users to the new user
+        // Send current online users to all users in the room
         const projectOnlineUsers = Array.from(onlineUsers.get(projectId)).map(socketId => {
           const userInfo = userSockets.get(socketId);
           return userInfo ? { userId: userInfo.userId, username: userInfo.username } : null;
         }).filter(Boolean);
         
-        socket.emit("onlineUsers", projectOnlineUsers);
+        // Broadcast updated online users list to all users in the room
+        io.to(projectId).emit("onlineUsers", projectOnlineUsers);
         
         console.log(`✅ Socket: User ${username} (${userId}) successfully joined room: ${projectId}`);
       } catch (error) {
@@ -337,6 +352,14 @@ const chatSocket = (io) => {
           username,
           timestamp: new Date()
         });
+        
+        // Broadcast updated online users list to remaining users
+        const remainingOnlineUsers = Array.from(onlineUsers.get(projectId) || []).map(socketId => {
+          const userInfo = userSockets.get(socketId);
+          return userInfo ? { userId: userInfo.userId, username: userInfo.username } : null;
+        }).filter(Boolean);
+        
+        io.to(projectId).emit("onlineUsers", remainingOnlineUsers);
         
         console.log(`User ${username} (${userId}) disconnected from room: ${projectId}`);
       }
