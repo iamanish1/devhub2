@@ -60,5 +60,8 @@ export default defineConfig({
   esbuild: {
     target: 'esnext',
     format: 'esm',
+    // Add options to prevent temporal dead zone issues
+    keepNames: true,
+    minifyIdentifiers: false,
   },
 });

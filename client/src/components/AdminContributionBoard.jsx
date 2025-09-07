@@ -85,18 +85,24 @@ class AdminContributionBoardErrorBoundary extends Component {
     // Log the error details
     console.error("AdminContributionBoard Error:", error, errorInfo);
 
-    // Check if this is the 'Me' initialization error
+    // Check if this is the 'Me' initialization error or temporal dead zone error
     if (
-      error.message &&
-      error.message.includes("Cannot access") &&
-      error.message.includes("before initialization")
+      (error.message && error.message.includes("Cannot access") && error.message.includes("before initialization")) ||
+      (error.message && error.message.includes("temporal dead zone")) ||
+      (error.message && error.message.includes("Me"))
     ) {
       console.error(
-        "Detected temporal dead zone error - likely minified variable issue"
+        "Detected temporal dead zone error - likely minified variable issue or auth initialization problem"
       );
       // Add additional logging for debugging
       console.error("Error stack:", error.stack);
       console.error("Component stack:", errorInfo.componentStack);
+      
+      // Try to recover by reloading the page after a delay
+      setTimeout(() => {
+        console.log("Attempting to recover from temporal dead zone error...");
+        window.location.reload();
+      }, 2000);
     }
 
     this.setState({
@@ -167,7 +173,7 @@ const AdminContributionBoard = ({
   onTaskEdit,
   onTaskDelete,
 }) => {
-  // Initialize auth hook first to avoid temporal dead zone errors
+  // Initialize auth hook first - must be called unconditionally
   const authContext = useAuth();
   const user = authContext?.user || null;
 
@@ -217,7 +223,7 @@ const AdminContributionBoard = ({
 
     // Use setTimeout to ensure proper initialization order and avoid temporal dead zone
     // Increased delay to prevent 'Me' initialization issues
-    const timeoutId = setTimeout(initializeComponent, 2000);
+    const timeoutId = setTimeout(initializeComponent, 1000);
     return () => clearTimeout(timeoutId);
   }, [authContext, user]);
 
@@ -2099,6 +2105,7 @@ const AdminContributionBoard = ({
       </div>
     );
   }
+
 
   // Show loading state during initialization
   if (componentLoading || !authContext || authContext === undefined) {
@@ -4114,22 +4121,64 @@ const AdminContributionBoard = ({
   );
 };
 
-// Wrap the component with error boundary and additional safety checks
-const AdminContributionBoardWithErrorBoundary = (props) => {
-  // Add a small delay to ensure proper initialization order
+// Create a safer wrapper component to prevent initialization issues
+const AdminContributionBoardWrapper = (props) => {
   const [isReady, setIsReady] = useState(false);
+  const [initError, setInitError] = useState(null);
   
   useEffect(() => {
-    // Delay component rendering to prevent 'Me' initialization issues
-    const timer = setTimeout(() => {
-      setIsReady(true);
-    }, 500);
+    // Use a more robust initialization check
+    const initializeComponent = () => {
+      try {
+        // Check if we're in a browser environment
+        if (typeof window === 'undefined') {
+          setInitError('Not in browser environment');
+          return;
+        }
+        
+        // Check if required globals are available
+        if (!window.location || !window.document) {
+          setInitError('Required browser APIs not available');
+          return;
+        }
+        
+        // Additional delay to ensure all modules are loaded
+        setTimeout(() => {
+          setIsReady(true);
+        }, 500);
+        
+      } catch (error) {
+        console.error("Component wrapper initialization error:", error);
+        setInitError(error.message);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    // Start initialization
+    initializeComponent();
   }, []);
   
   // Add additional safety check to prevent initialization errors
   try {
+    if (initError) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
+              <div className="text-red-400 text-lg mb-3">Initialization Error</div>
+              <p className="text-gray-300 mb-4">{initError}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+              >
+                <FaSync className="w-4 h-4" />
+                Reload Page
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     if (!isReady) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
@@ -4188,4 +4237,4 @@ const AdminContributionBoardWithErrorBoundary = (props) => {
   }
 };
 
-export default AdminContributionBoardWithErrorBoundary;
+export default AdminContributionBoardWrapper;

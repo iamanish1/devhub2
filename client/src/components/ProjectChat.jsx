@@ -22,6 +22,7 @@ import chatService from '../services/chatService';
 import { notificationService } from '../services/notificationService';
 
 const ProjectChat = ({ projectId, projectTitle, onClose }) => {
+  // Initialize auth hook - must be called unconditionally
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');

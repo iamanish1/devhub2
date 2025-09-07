@@ -1,6 +1,9 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useRef } from "react";
-import AdminContributionBoard from "../components/AdminContributionBoard";
+import { lazy, Suspense } from "react";
+
+// Lazy load the AdminContributionBoard to prevent initialization issues
+const AdminContributionBoard = lazy(() => import("../components/AdminContributionBoard"));
 import axios from "axios";
 import {
   FaProjectDiagram,
@@ -1737,24 +1740,33 @@ const AdminPage = () => {
               </p>
             </div>
             <div className="bg-[#181b23]/80 backdrop-blur-md rounded-2xl shadow-xl border border-blue-500/10 p-6">
-              <AdminContributionBoard
-                tasks={adminTasks}
-                team={[]}
-                notes={adminNotes}
-                onTaskStatusChange={handleAdminTaskStatusChange}
-                onNotesChange={handleAdminNotesChange}
-                onTaskAdd={(task) => {
-                  setAdminTasks(prev => [...prev, { ...task, id: Date.now() }]);
-                }}
-                onTaskEdit={(id, updatedTask) => {
-                  setAdminTasks(prev => 
-                    prev.map(t => t.id === id ? { ...t, ...updatedTask } : t)
-                  );
-                }}
-                onTaskDelete={(id) => {
-                  setAdminTasks(prev => prev.filter(t => t.id !== id));
-                }}
-              />
+              <Suspense fallback={
+                <div className="flex items-center justify-center min-h-[400px]">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+                    <p className="text-blue-400 text-lg">Loading Project Management...</p>
+                  </div>
+                </div>
+              }>
+                <AdminContributionBoard
+                  tasks={adminTasks}
+                  team={[]}
+                  notes={adminNotes}
+                  onTaskStatusChange={handleAdminTaskStatusChange}
+                  onNotesChange={handleAdminNotesChange}
+                  onTaskAdd={(task) => {
+                    setAdminTasks(prev => [...prev, { ...task, id: Date.now() }]);
+                  }}
+                  onTaskEdit={(id, updatedTask) => {
+                    setAdminTasks(prev =>
+                      prev.map(t => t.id === id ? { ...t, ...updatedTask } : t)
+                    );
+                  }}
+                  onTaskDelete={(id) => {
+                    setAdminTasks(prev => prev.filter(t => t.id !== id));
+                  }}
+                />
+              </Suspense>
             </div>
           </section>
         )}
