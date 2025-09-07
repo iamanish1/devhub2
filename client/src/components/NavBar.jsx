@@ -20,29 +20,17 @@ const Navbar = () => {
   // Fetch user profile existence and subscription status
   useEffect(() => {
     async function fetchUserData() {
+      // Fetch profile data
       try {
-        const [profileResponse, subscriptionResponse, projectsResponse] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/payments/subscription/status`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }),
-          axios.get(`${import.meta.env.VITE_API_URL}/api/admin/dashboard/projects`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          })
-        ]);
+        const profileResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
         
         // Check if profile exists and is not null
+        console.log("Profile data received:", profileResponse.data);
         if (profileResponse.data.profile && profileResponse.data.profile !== null) {
           setProfileExist(true);
           setUserProfile(profileResponse.data.profile);
@@ -50,24 +38,48 @@ const Navbar = () => {
           setProfileExist(false);
           setUserProfile(null);
         }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        setProfileExist(false);
+        setUserProfile(null);
+      }
+
+      // Fetch subscription data
+      try {
+        const subscriptionResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/payments/subscription/status`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
         
         if (subscriptionResponse.data.success) {
+          console.log("Subscription data received:", subscriptionResponse.data.data);
           setSubscriptionStatus(subscriptionResponse.data.data);
         }
+      } catch (error) {
+        console.error("Error fetching subscription:", error);
+        setSubscriptionStatus(null);
+      }
+
+      // Fetch user projects data
+      try {
+        const projectsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/myproject`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
         
         // Check if user has listed any projects
+        console.log("Projects data received:", projectsResponse.data);
         if (projectsResponse.data.projects && projectsResponse.data.projects.length > 0) {
           setHasListedProjects(true);
         } else {
           setHasListedProjects(false);
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
-        
-        // Set default values on error
-        setProfileExist(false);
-        setUserProfile(null);
-        setSubscriptionStatus(null);
+        console.error("Error fetching projects:", error);
         setHasListedProjects(false);
       }
     }
@@ -267,6 +279,9 @@ const Navbar = () => {
                       </div>
                     </div>
 
+                    
+                    {/* Debug Info */}
+                    {console.log("Dropdown render - profileExsist:", profileExsist, "subscriptionStatus:", subscriptionStatus, "hasListedProjects:", hasListedProjects)}
                     
                     {/* Subscription Status */}
                     {subscriptionStatus && subscriptionStatus.isActive && (
