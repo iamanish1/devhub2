@@ -1,5 +1,6 @@
 import ProjectListing from "../Model/ProjectListingModel.js";
 import BonusPool from "../Model/BonusPoolModel.js";
+import { calculateProjectsStatus, calculateProjectStatus } from "../utils/projectStatusUtils.js";
 
 const ListProject = async (req, res) => {
   try {
@@ -252,9 +253,10 @@ export const getProject = async (req, res) => {
     // If no query param is provided at all, fetch all projects
     if (!techStack && !budget && !contributor && !search && !category) {
       const allProjects = await ProjectListing.find();
+      const projectsWithStatus = await calculateProjectsStatus(allProjects);
       return res.status(200).json({
         message: "All projects fetched successfully",
-        projects: allProjects,
+        projects: projectsWithStatus,
         total: allProjects.length,
       });
     }
@@ -319,9 +321,12 @@ export const getProject = async (req, res) => {
       .sort({ createdAt: -1 });
     const total = await ProjectListing.countDocuments(filter);
 
+    // Calculate status for filtered projects
+    const projectsWithStatus = await calculateProjectsStatus(projects);
+
     res.status(200).json({
       message: "Projects fetched successfully",
-      projects,
+      projects: projectsWithStatus,
       total,
     });
   } catch (error) {
@@ -343,9 +348,16 @@ export const getProjectById = async (req, res) => {
       });
     }
 
+    // Calculate project status
+    const statusInfo = await calculateProjectStatus(project);
+    const projectWithStatus = {
+      ...project.toObject(),
+      statusInfo
+    };
+
     res.status(200).json({
       message: "Project fetched successfully",
-      project,
+      project: projectWithStatus,
     });
   } catch (error) {
     res.status(500).json({

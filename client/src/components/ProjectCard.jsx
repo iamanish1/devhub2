@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { memo } from "react";
 import { motion } from "framer-motion";
+import { calculateProjectStatus, getProjectStatusForContext, isProjectAcceptingBids } from "../utils/projectStatusUtils";
 
 const ProjectCard = memo(({ project }) => {
   if (!project || Object.keys(project).length === 0) {
@@ -61,6 +62,10 @@ const ProjectCard = memo(({ project }) => {
       }).format(budget);
     };
 
+    // Calculate project status
+    const statusInfo = getProjectStatusForContext(project, 'card');
+    const acceptingBids = isProjectAcceptingBids(project);
+
     return {
       shortDescription,
       fullDescription: project.Project_Description || "No description available.",
@@ -68,7 +73,9 @@ const ProjectCard = memo(({ project }) => {
       formattedBudget: formatBudget(project.project_starting_bid),
       techStack: project.Project_tech_stack ? project.Project_tech_stack.split(",").map(tech => tech.trim()) : [],
       title: project.project_Title || "Untitled Project",
-      bidCount: project.Project_Number_Of_Bids || 0
+      bidCount: project.Project_Number_Of_Bids || 0,
+      statusInfo,
+      acceptingBids
     };
   }, [project]);
 
@@ -133,8 +140,9 @@ const ProjectCard = memo(({ project }) => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <span className="text-xs bg-green-500/20 text-green-400 px-3 py-1 rounded-full font-medium border border-green-500/30">
-                Active Project
+              <span className={`text-xs px-3 py-1 rounded-full font-medium border ${projectData.statusInfo.bgColor} text-${projectData.statusInfo.color}-400 border-${projectData.statusInfo.borderColor}`}>
+                <span className="mr-1">{projectData.statusInfo.icon}</span>
+                {projectData.statusInfo.message}
               </span>
             </motion.div>
           </div>
@@ -297,20 +305,35 @@ const ProjectCard = memo(({ project }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <Link to={`/bidingPage/${project._id}`} className="block">
+            {projectData.acceptingBids ? (
+              <Link to={`/bidingPage/${project._id}`} className="block">
+                <motion.button 
+                  className="w-full py-3 px-6 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-[#00A8E8]/20 hover:shadow-[#00A8E8]/40 focus:outline-none focus:ring-2 focus:ring-[#00A8E8]/50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="flex items-center justify-center">
+                    {projectData.statusInfo.status === 'contributors_selected' ? 'View Project' : 'Participate Now'}
+                    <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </span>
+                </motion.button>
+              </Link>
+            ) : (
               <motion.button 
-                className="w-full py-3 px-6 bg-gradient-to-r from-[#00A8E8] to-[#0062E6] text-white font-semibold rounded-lg transition-all duration-300 shadow-lg shadow-[#00A8E8]/20 hover:shadow-[#00A8E8]/40 focus:outline-none focus:ring-2 focus:ring-[#00A8E8]/50"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className="w-full py-3 px-6 bg-gray-600 text-gray-300 font-semibold rounded-lg cursor-not-allowed"
+                disabled
               >
                 <span className="flex items-center justify-center">
-                  Participate Now
+                  {projectData.statusInfo.status === 'closed' ? 'Project Closed' : 'View Project'}
                   <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </span>
               </motion.button>
-            </Link>
+            )}
           </motion.div>
         </div>
       </div>
