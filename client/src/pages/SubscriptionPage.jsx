@@ -340,7 +340,7 @@ const SubscriptionPage = () => {
         </div>
 
         {/* Debug Information */}
-        {process.env.NODE_ENV === 'development' && (
+        {import.meta.env.DEV && (
           <div className="mb-4 p-4 bg-gray-800 rounded-lg">
             <h3 className="text-white font-semibold mb-2">Debug Info:</h3>
             <p className="text-gray-300 text-sm">Plans loaded: {plans.length}</p>

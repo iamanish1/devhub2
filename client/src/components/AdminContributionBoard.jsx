@@ -191,7 +191,7 @@ const AdminContributionBoard = ({
       })
       .catch(() => setProjectsError("Failed to fetch projects"))
       .finally(() => setProjectsLoading(false));
-  }, []);
+  }, [selectedProjectId]);
 
   // Enhanced Firebase real-time listeners setup
   useEffect(() => {
@@ -397,7 +397,7 @@ const AdminContributionBoard = ({
       console.log("🧹 Cleaning up Firebase listeners for project:", selectedProjectId);
       listeners.forEach(unsubscribe => unsubscribe());
     };
-  }, [selectedProjectId]);
+  }, [selectedProjectId, loadResourcesFromAPI, loadTasksFromAPI, resourcesLoading]);
 
   // Socket.IO connection and online status management
   useEffect(() => {
@@ -889,7 +889,7 @@ const AdminContributionBoard = ({
 
       updateStats();
     }
-  }, [selectedProjectId, activeTab, tasks, teamMembers, onlineUsers, notifications, activeTimeTracking]);
+  }, [selectedProjectId, activeTab, tasks, teamMembers, onlineUsers, notifications, activeTimeTracking, statistics]);
 
   // Update selected project if projects change
   useEffect(() => {
