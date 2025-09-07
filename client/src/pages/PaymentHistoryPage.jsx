@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePayment } from '../context/PaymentContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import NavBar from '../components/NavBar';
+
 import { 
   PAYMENT_TYPES, 
   PAYMENT_STATUS,
@@ -206,7 +206,7 @@ const PaymentHistoryPage = () => {
 
   return (
     <div className="min-h-screen bg-[#121212] text-white">
-      <NavBar />
+   
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 mt-[5vmin]">

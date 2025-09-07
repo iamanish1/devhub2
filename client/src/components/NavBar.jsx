@@ -10,6 +10,7 @@ const Navbar = () => {
   const { user, logoutUser } = useAuth();
   const [profileExsist, setProfileExist] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [hasListedProjects, setHasListedProjects] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
@@ -20,7 +21,7 @@ const Navbar = () => {
   useEffect(() => {
     async function fetchUserData() {
       try {
-        const [profileResponse, subscriptionResponse] = await Promise.all([
+        const [profileResponse, subscriptionResponse, projectsResponse] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
             headers: {
               "Content-Type": "application/json",
@@ -28,6 +29,12 @@ const Navbar = () => {
             },
           }),
           axios.get(`${import.meta.env.VITE_API_URL}/api/payments/subscription/status`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/admin/dashboard/projects`, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -50,7 +57,20 @@ const Navbar = () => {
           console.log("Subscription status:", subscriptionResponse.data.data);
         }
         
-        console.log("User data fetched:", { profile: profileResponse.data, subscription: subscriptionResponse.data });
+        // Check if user has listed any projects
+        if (projectsResponse.data.projects && projectsResponse.data.projects.length > 0) {
+          setHasListedProjects(true);
+          console.log("User has listed projects:", projectsResponse.data.projects.length);
+        } else {
+          setHasListedProjects(false);
+          console.log("User has no listed projects");
+        }
+        
+        console.log("User data fetched:", { 
+          profile: profileResponse.data, 
+          subscription: subscriptionResponse.data,
+          projects: projectsResponse.data.projects?.length || 0
+        });
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -312,22 +332,24 @@ const Navbar = () => {
                     
                     {/* Platform Administrator Options */}
                     {user?.isPlatformAdmin && (
-                      <>
-                        <Link
-                          to="/listfreeproject"
-                          className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          List Free Project
-                        </Link>
-                        <Link
-                          to={`/admin`}
-                          className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
-                          onClick={() => setDropdownOpen(false)}
-                        >
-                          Admin Panel
-                        </Link>
-                      </>
+                      <Link
+                        to="/listfreeproject"
+                        className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        List Free Project
+                      </Link>
+                    )}
+                    
+                    {/* Admin Panel - Show for users who have listed projects or are platform admins */}
+                    {(hasListedProjects || user?.isPlatformAdmin) && (
+                      <Link
+                        to={`/admin`}
+                        className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Admin Panel
+                      </Link>
                     )}
                     <button
                       onClick={handleLogout}

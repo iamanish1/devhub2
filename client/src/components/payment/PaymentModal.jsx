@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePayment } from '../../context/PaymentContext';
 import { formatCurrency } from '../../utils/paymentUtils';
 import { PAYMENT_AMOUNTS, PAYMENT_TYPES } from '../../constants/paymentConstants';
