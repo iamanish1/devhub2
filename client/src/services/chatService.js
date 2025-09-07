@@ -17,8 +17,8 @@ class ChatService {
     this.lastOnlineUpdate = new Map(); // Track last update time per project
   }
 
-  // Initialize socket connection
-  connect(token) {
+  // Initialize socket connection with retry logic
+  connect(token, retryCount = 0) {
     if (this.socket && this.isConnected) {
       return Promise.resolve();
     }
@@ -31,13 +31,18 @@ class ChatService {
           return;
         }
 
+        console.log(`🔄 Attempting socket connection (attempt ${retryCount + 1})...`);
+
         this.socket = io(API_BASE_URL, {
           auth: {
             token
           },
           transports: ['websocket', 'polling'],
-          timeout: 10000, // 10 second timeout
-          forceNew: true // Force new connection
+          timeout: 15000, // 15 second timeout
+          forceNew: true, // Force new connection
+          reconnection: true,
+          reconnectionAttempts: 3,
+          reconnectionDelay: 1000
         });
 
         // Set up connection timeout
@@ -45,19 +50,26 @@ class ChatService {
           if (!this.isConnected) {
             console.error('❌ Socket.IO connection timeout');
             this.socket?.disconnect();
-            reject(new Error('Connection timeout'));
+            if (retryCount < 2) {
+              console.log(`🔄 Retrying connection (${retryCount + 1}/3)...`);
+              setTimeout(() => {
+                this.connect(token, retryCount + 1).then(resolve).catch(reject);
+              }, 2000);
+            } else {
+              reject(new Error('Connection timeout after 3 attempts'));
+            }
           }
-        }, 10000);
+        }, 15000);
 
         this.socket.on('connect', () => {
-          console.log('✅ Socket.IO connected');
+          console.log('✅ Socket.IO connected successfully');
           clearTimeout(connectionTimeout);
           this.isConnected = true;
           resolve();
         });
 
-        this.socket.on('disconnect', () => {
-          console.log('❌ Socket.IO disconnected');
+        this.socket.on('disconnect', (reason) => {
+          console.log('❌ Socket.IO disconnected:', reason);
           this.isConnected = false;
         });
 
@@ -65,7 +77,15 @@ class ChatService {
           console.error('❌ Socket.IO connection error:', error);
           clearTimeout(connectionTimeout);
           this.isConnected = false;
-          reject(error);
+          
+          if (retryCount < 2) {
+            console.log(`🔄 Retrying connection due to error (${retryCount + 1}/3)...`);
+            setTimeout(() => {
+              this.connect(token, retryCount + 1).then(resolve).catch(reject);
+            }, 2000);
+          } else {
+            reject(error);
+          }
         });
 
         // Set up message handlers
@@ -96,24 +116,57 @@ class ChatService {
     this.lastOnlineUpdate.clear();
   }
 
-  // Join project chat room
+  // Join project chat room with better error handling
   joinProject(projectId, userId, username) {
-    if (!this.socket || !this.isConnected) {
-      throw new Error('Socket not connected');
-    }
+    return new Promise((resolve, reject) => {
+      // Add safety checks
+      if (!projectId || !userId) {
+        reject(new Error('Missing required parameters for joining project'));
+        return;
+      }
 
-    // Add safety checks
-    if (!projectId || !userId) {
-      throw new Error('Missing required parameters for joining project');
-    }
+      if (!this.socket || !this.isConnected) {
+        reject(new Error('Socket not connected'));
+        return;
+      }
 
-    try {
-      this.currentProjectId = projectId;
-      this.socket.emit('joinRoom', { projectId, userId, username });
-    } catch (error) {
-      console.error('❌ Error joining project room:', error);
-      throw error;
-    }
+      try {
+        console.log(`🔄 Joining project room: ${projectId} for user: ${userId}`);
+        this.currentProjectId = projectId;
+        
+        // Set up a timeout for join room response
+        const joinTimeout = setTimeout(() => {
+          reject(new Error('Join room timeout'));
+        }, 10000);
+
+        // Listen for join confirmation
+        const onJoinSuccess = () => {
+          clearTimeout(joinTimeout);
+          this.socket.off('joinRoomSuccess', onJoinSuccess);
+          this.socket.off('error', onJoinError);
+          console.log(`✅ Successfully joined project room: ${projectId}`);
+          resolve();
+        };
+
+        const onJoinError = (error) => {
+          clearTimeout(joinTimeout);
+          this.socket.off('joinRoomSuccess', onJoinSuccess);
+          this.socket.off('error', onJoinError);
+          console.error('❌ Error joining project room:', error);
+          reject(new Error(error.message || 'Failed to join project room'));
+        };
+
+        // Set up temporary listeners
+        this.socket.once('joinRoomSuccess', onJoinSuccess);
+        this.socket.once('error', onJoinError);
+
+        // Emit join room request
+        this.socket.emit('joinRoom', { projectId, userId, username });
+      } catch (error) {
+        console.error('❌ Error joining project room:', error);
+        reject(error);
+      }
+    });
   }
 
   // Test database connection

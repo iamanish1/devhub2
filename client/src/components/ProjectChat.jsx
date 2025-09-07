@@ -26,7 +26,7 @@ import ChatErrorBoundary from './ChatErrorBoundary';
 const ProjectChat = ({ projectId, projectTitle, onClose }) => {
   // Initialize auth hook - must be called unconditionally
   const { user } = useAuth();
-  const { joinProject, onlineUsers } = useChat();
+  const { joinProject, onlineUsers, isConnected } = useChat();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState(new Set());
@@ -37,6 +37,7 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
   const [editingMessage, setEditingMessage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [messageMenu, setMessageMenu] = useState(null);
+  const [connectionError, setConnectionError] = useState(null);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -88,13 +89,14 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Initialize chat
+  // Initialize chat with retry logic
   useEffect(() => {
     if (!projectId || !user) return;
 
-    const initializeChat = async () => {
+    const initializeChat = async (retryCount = 0) => {
       try {
         setLoading(true);
+        console.log(`🔄 Initializing chat for project ${projectId} (attempt ${retryCount + 1})`);
         
         // Join project room using shared context
         await joinProject(projectId);
@@ -115,6 +117,7 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
         });
         
         setLoading(false);
+        console.log(`✅ Chat initialized successfully for project ${projectId}`);
         
         return () => {
           unsubscribeMessage();
@@ -122,14 +125,37 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
           unsubscribeUser();
         };
       } catch (error) {
-        console.error('Failed to initialize chat:', error);
-        notificationService.error('Failed to connect to chat');
-        setLoading(false);
+        console.error(`❌ Failed to initialize chat (attempt ${retryCount + 1}):`, error);
+        
+        if (retryCount < 2) {
+          console.log(`🔄 Retrying chat initialization in 3 seconds...`);
+          setTimeout(() => {
+            initializeChat(retryCount + 1);
+          }, 3000);
+        } else {
+          setConnectionError(error.message || 'Failed to connect to chat');
+          notificationService.error('Failed to connect to chat after multiple attempts');
+          setLoading(false);
+        }
       }
     };
 
     initializeChat();
-  }, [projectId, user, joinProject, handleNewMessage, handleTyping, handleUserEvent]);
+
+    // Listen for retry events
+    const handleRetry = () => {
+      if (connectionError) {
+        initializeChat();
+      }
+    };
+
+    window.addEventListener('retry-chat-connection', handleRetry);
+
+    return () => {
+      window.removeEventListener('retry-chat-connection', handleRetry);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, user, joinProject, handleNewMessage, handleTyping, handleUserEvent]); // Removed connectionError to prevent infinite loop
 
   // Handle typing
   const handleTypingChange = useCallback((e) => {
@@ -268,17 +294,52 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
     );
   }
 
+  if (connectionError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 p-4">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-white mb-2">Connection Failed</h3>
+          <p className="text-gray-400 mb-4">{connectionError}</p>
+          <button
+            onClick={() => {
+              setConnectionError(null);
+              setLoading(true);
+              // Re-trigger initialization by calling the effect again
+              const event = new Event('retry-chat-connection');
+              window.dispatchEvent(event);
+            }}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ChatErrorBoundary>
       <div className="flex flex-col h-full bg-[#0f1419] border border-blue-500/20 rounded-xl overflow-hidden">
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 bg-[#181b23] border-b border-blue-500/10">
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <div className={`w-2 h-2 rounded-full ${
+            isConnected 
+              ? 'bg-green-400 animate-pulse' 
+              : connectionError 
+                ? 'bg-red-400' 
+                : 'bg-yellow-400 animate-pulse'
+          }`}></div>
           <div>
             <h3 className="text-lg font-semibold text-white">{projectTitle}</h3>
             <p className="text-sm text-gray-400">
-              {onlineUsers.length} online • {messages.length} messages
+              {isConnected 
+                ? `${onlineUsers.length} online • ${messages.length} messages`
+                : connectionError 
+                  ? 'Connection failed'
+                  : 'Connecting...'
+              }
             </p>
           </div>
         </div>
@@ -462,9 +523,9 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
             value={newMessage}
             onChange={handleTypingChange}
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="Type your message..."
-            className="flex-1 bg-[#232a34] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none"
-            disabled={sending}
+            placeholder={isConnected ? "Type your message..." : "Connecting..."}
+            className="flex-1 bg-[#232a34] border border-blue-500/20 rounded-lg px-4 py-2 text-white focus:border-blue-400 focus:outline-none disabled:opacity-50"
+            disabled={sending || !isConnected}
           />
           
           <input
@@ -477,23 +538,23 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
           
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 bg-[#232a34] hover:bg-[#2a2f3a] border border-blue-500/20 rounded-lg transition-colors"
-            disabled={sending}
+            className="p-2 bg-[#232a34] hover:bg-[#2a2f3a] border border-blue-500/20 rounded-lg transition-colors disabled:opacity-50"
+            disabled={sending || !isConnected}
           >
             <Paperclip className="w-5 h-5 text-gray-400" />
           </button>
           
           <button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="p-2 bg-[#232a34] hover:bg-[#2a2f3a] border border-blue-500/20 rounded-lg transition-colors"
-            disabled={sending}
+            className="p-2 bg-[#232a34] hover:bg-[#2a2f3a] border border-blue-500/20 rounded-lg transition-colors disabled:opacity-50"
+            disabled={sending || !isConnected}
           >
             <Smile className="w-5 h-5 text-gray-400" />
           </button>
           
           <button
             onClick={sendMessage}
-            disabled={(!newMessage.trim() && !selectedFile) || sending}
+            disabled={(!newMessage.trim() && !selectedFile) || sending || !isConnected}
             className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
           >
             {sending ? (

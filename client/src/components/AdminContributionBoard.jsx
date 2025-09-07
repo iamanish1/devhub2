@@ -1122,7 +1122,8 @@ const AdminContributionBoard = ({
       console.error("Failed to load workspace:", err);
       // Don't show error for workspace loading as it's optional
     }
-  }, [selectedProjectId, resourcesLoading, tasks, teamMembers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectId, resourcesLoading]); // Removed tasks and teamMembers to prevent circular dependency
 
   // Load team members from API (memoized to prevent infinite loops)
   const loadTeamMembers = useCallback(async () => {
@@ -1211,7 +1212,8 @@ const AdminContributionBoard = ({
       loadWorkspace();
       loadTeamMembers(); // Load team members when project changes
     }
-  }, [selectedProjectId, loadWorkspace, loadTeamMembers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectId]); // Removed loadWorkspace and loadTeamMembers from dependencies to prevent infinite loop
 
   // Real-time statistics updates
   useEffect(() => {
@@ -1261,7 +1263,8 @@ const AdminContributionBoard = ({
 
       updateStats();
     }
-  }, [selectedProjectId, activeTab, statistics, tasks, teamMembers, getOnlineUsersCount, notifications, activeTimeTracking]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProjectId, activeTab, tasks, teamMembers, getOnlineUsersCount, notifications, activeTimeTracking]); // Removed statistics to prevent infinite loop
 
   // Update selected project if projects change
   useEffect(() => {

@@ -170,6 +170,9 @@ const chatSocket = (io) => {
         // Also send to the newly joined user specifically for immediate feedback
         socket.emit("onlineUsers", projectOnlineUsers);
         
+        // Emit success event to confirm room join
+        socket.emit("joinRoomSuccess", { projectId, userId, username });
+        
         console.log(`✅ Socket: User ${username} (${userId}) successfully joined room: ${projectId}`);
       } catch (error) {
         console.error("❌ Socket: Error joining room:", error);

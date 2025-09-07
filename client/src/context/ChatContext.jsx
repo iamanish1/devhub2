@@ -73,37 +73,33 @@ export const ChatProvider = ({ children }) => {
     };
   }, [user, currentProjectId]);
 
-  // Join project room
+  // Join project room with improved error handling
   const joinProject = useCallback(async (projectId) => {
     if (!user || !projectId) {
       console.warn('Cannot join project: missing user or projectId');
       return;
     }
 
-    // Wait for connection if not connected yet
-    if (!isConnected) {
-      console.log('Waiting for chat connection...');
-      // Wait up to 5 seconds for connection
-      let attempts = 0;
-      while (!isConnected && attempts < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      
-      if (!isConnected) {
-        console.error('Failed to establish chat connection');
-        throw new Error('Socket not connected');
-      }
-    }
-
     try {
+      // Ensure connection is established first
+      if (!isConnected) {
+        console.log('🔄 Establishing chat connection...');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+        
+        await chatService.connect(token);
+        setIsConnected(true);
+      }
+
       // Leave current project if any
       if (currentProjectId && currentProjectId !== projectId) {
         chatService.leaveProject();
       }
 
-      // Join new project
-      chatService.joinProject(projectId, user._id, user.username || user.name);
+      // Join new project with promise-based approach
+      await chatService.joinProject(projectId, user._id, user.username || user.name);
       setCurrentProjectId(projectId);
 
       // Load cached online users for immediate display
@@ -115,8 +111,10 @@ export const ChatProvider = ({ children }) => {
           return newMap;
         });
       }
+
+      console.log(`✅ Successfully joined project: ${projectId}`);
     } catch (error) {
-      console.error('Failed to join project:', error);
+      console.error('❌ Failed to join project:', error);
       throw error; // Re-throw the error so components can handle it
     }
   }, [user, isConnected, currentProjectId]);
