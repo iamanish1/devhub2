@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
-import AdminContributionBoard from "../components/AdminContributioBoard";
+import AdminContributionBoard from "../components/AdminContributionBoard";
 import axios from "axios";
 import {
   FaProjectDiagram,
