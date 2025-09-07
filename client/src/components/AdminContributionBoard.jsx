@@ -563,7 +563,7 @@ const AdminContributionBoard = ({
       );
       listeners.forEach((unsubscribe) => unsubscribe());
     };
-  }, [selectedProjectId]);
+  }, [selectedProjectId, loadTasksFromAPI]);
 
   // Socket.IO connection and online status management
   useEffect(() => {
@@ -935,89 +935,6 @@ const AdminContributionBoard = ({
     { id: "notifications", label: "Notifications", icon: FaBell, color: "red" },
   ];
 
-  // Load workspace data for enhanced features (memoized to prevent infinite loops)
-  const loadWorkspace = useCallback(async () => {
-    if (!selectedProjectId) return;
-
-    try {
-      const data = await projectTaskApi.getWorkspace(selectedProjectId);
-      setWorkspace(data.workspace);
-      setUserAccess(data.userAccess);
-
-      // Load resources
-      if (data.workspace.resources) {
-        setResources(data.workspace.resources);
-      }
-
-      // Load statistics
-      try {
-        await loadEnhancedStatistics();
-      } catch (statsError) {
-        console.error("Failed to load statistics:", statsError);
-        // Set default statistics if API fails
-        setStatistics({
-          project: { id: selectedProjectId, title: "Project", description: "" },
-          tasks: {
-            total: 0,
-            completed: 0,
-            inProgress: 0,
-            pending: 0,
-            progressPercentage: 0,
-          },
-          team: { totalMembers: 0, activeContributors: 0 },
-          time: { totalEstimatedHours: 0, totalActualHours: 0, efficiency: 0 },
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load workspace:", err);
-      // Don't show error for workspace loading as it's optional
-    }
-  }, [selectedProjectId]);
-
-  // Load team members from API (memoized to prevent infinite loops)
-  const loadTeamMembers = useCallback(async () => {
-    if (!selectedProjectId) return;
-
-    try {
-      setTeamMembersLoading(true);
-      setTeamMembersError(null);
-      console.log("🔄 Loading team members for project:", selectedProjectId);
-      const response = await projectSelectionApi.getProjectTeamMembers(
-        selectedProjectId
-      );
-
-      if (response.teamMembers) {
-        setTeamMembers(response.teamMembers);
-        console.log("✅ Loaded", response.teamMembers.length, "team members");
-      }
-    } catch (error) {
-      console.error("❌ Failed to load team members:", error);
-      setTeamMembersError(error.message || "Failed to load team members");
-      // Set empty array if API fails
-      setTeamMembers([]);
-    } finally {
-      setTeamMembersLoading(false);
-    }
-  }, [selectedProjectId]);
-
-  // Fallback function to load tasks from API when Firebase fails (memoized)
-  const loadTasksFromAPI = useCallback(async () => {
-    if (!selectedProjectId) return;
-
-    try {
-      console.log("🔄 Loading tasks from API as Firebase fallback...");
-      const response = await projectTaskApi.getUserTasks({
-        projectId: selectedProjectId,
-      });
-      if (response.tasks) {
-        setTasks(response.tasks);
-        console.log("✅ Loaded", response.tasks.length, "tasks from API");
-      }
-    } catch (error) {
-      console.error("❌ Failed to load tasks from API:", error);
-    }
-  }, [selectedProjectId]);
-
   // Fallback function to load statistics from API when Firebase fails
   const loadStatisticsFromAPI = async () => {
     if (!selectedProjectId) return;
@@ -1041,7 +958,6 @@ const AdminContributionBoard = ({
           completed: tasks.filter((t) => t.status === "completed").length,
           inProgress: tasks.filter((t) => t.status === "in_progress").length,
           pending: tasks.filter((t) => t.status === "pending").length,
-          review: tasks.filter((t) => t.status === "review").length,
           progressPercentage:
             tasks.length > 0
               ? (tasks.filter((t) => t.status === "completed").length /
@@ -1052,26 +968,24 @@ const AdminContributionBoard = ({
         team: {
           totalMembers: teamMembers.length,
           activeContributors: teamMembers.length,
+          onlineUsers: onlineUsers.length,
         },
         time: {
           totalEstimatedHours: tasks.reduce(
-            (sum, t) => sum + (t.estimatedHours || 0),
+            (sum, task) => sum + (task.estimatedHours || 0),
             0
           ),
           totalActualHours: tasks.reduce(
-            (sum, t) => sum + (t.actualHours || 0),
+            (sum, task) => sum + (task.actualHours || 0),
             0
           ),
           efficiency: 0,
         },
       });
-      notificationService.error(
-        "Failed to load statistics: " + (error.message || "Unknown error")
-      );
     }
   };
 
-  // Enhanced statistics loading with real-time updates (memoized to prevent infinite loops)
+  // Fallback function to load statistics from API when Firebase fails
   const loadEnhancedStatistics = useCallback(async () => {
     if (!selectedProjectId) return;
 
@@ -1123,10 +1037,39 @@ const AdminContributionBoard = ({
             onlineUsers: onlineUsers.length,
           },
           realTime: {
-            lastUpdated: new Date(),
             onlineUsers: onlineUsers.length,
-            recentNotifications: notifications.length,
-            activeTimeTracking: Object.keys(activeTimeTracking).length,
+            activeTasks: tasks.filter(
+              (t) => t.status === "in_progress" || t.task_status === "inprogress"
+            ).length,
+            completedToday: tasks.filter((t) => {
+              const today = new Date().toDateString();
+              return (
+                (t.status === "completed" || t.task_status === "done") &&
+                t.completedAt &&
+                new Date(t.completedAt).toDateString() === today
+              );
+            }).length,
+          },
+          time: {
+            ...response.statistics.time,
+            totalEstimatedHours: tasks.reduce(
+              (sum, task) => sum + (task.estimatedHours || 0),
+              0
+            ),
+            totalActualHours: tasks.reduce(
+              (sum, task) => sum + (task.actualHours || 0),
+              0
+            ),
+            efficiency:
+              tasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0) >
+              0
+                ? (tasks.reduce((sum, task) => sum + (task.actualHours || 0), 0) /
+                    tasks.reduce(
+                      (sum, task) => sum + (task.estimatedHours || 0),
+                      0
+                    )) *
+                  100
+                : 0,
           },
         };
 
@@ -1135,8 +1078,8 @@ const AdminContributionBoard = ({
       }
     } catch (error) {
       console.error("❌ Failed to load enhanced statistics:", error);
-      // Fallback to local data
-      const fallbackStats = {
+      // Set default statistics if API fails
+      setStatistics({
         project: { id: selectedProjectId, title: "Project", description: "" },
         tasks: {
           total: tasks.length,
@@ -1168,27 +1111,99 @@ const AdminContributionBoard = ({
         },
         time: {
           totalEstimatedHours: tasks.reduce(
-            (sum, t) => sum + (t.estimatedHours || 0),
+            (sum, task) => sum + (task.estimatedHours || 0),
             0
           ),
           totalActualHours: tasks.reduce(
-            (sum, t) => sum + (t.actualHours || 0),
+            (sum, task) => sum + (task.actualHours || 0),
             0
           ),
           efficiency: 0,
         },
-        realTime: {
-          lastUpdated: new Date(),
-          onlineUsers: onlineUsers.length,
-          recentNotifications: notifications.length,
-          activeTimeTracking: Object.keys(activeTimeTracking).length,
-        },
-      };
+      });
+    }
+  }, [selectedProjectId, tasks, teamMembers, onlineUsers]);
 
-      setStatistics(fallbackStats);
-      notificationService.warning(
-        "Using local data for statistics (API unavailable)"
+  // Load workspace data for enhanced features (memoized to prevent infinite loops)
+  const loadWorkspace = useCallback(async () => {
+    if (!selectedProjectId) return;
+
+    try {
+      const data = await projectTaskApi.getWorkspace(selectedProjectId);
+      setWorkspace(data.workspace);
+      setUserAccess(data.userAccess);
+
+      // Load resources
+      if (data.workspace.resources) {
+        setResources(data.workspace.resources);
+      }
+
+      // Load statistics
+      try {
+        await loadEnhancedStatistics();
+      } catch (statsError) {
+        console.error("Failed to load statistics:", statsError);
+        // Set default statistics if API fails
+        setStatistics({
+          project: { id: selectedProjectId, title: "Project", description: "" },
+          tasks: {
+            total: 0,
+            completed: 0,
+            inProgress: 0,
+            pending: 0,
+            progressPercentage: 0,
+          },
+          team: { totalMembers: 0, activeContributors: 0 },
+          time: { totalEstimatedHours: 0, totalActualHours: 0, efficiency: 0 },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load workspace:", err);
+      // Don't show error for workspace loading as it's optional
+    }
+  }, [selectedProjectId, loadEnhancedStatistics]);
+
+  // Load team members from API (memoized to prevent infinite loops)
+  const loadTeamMembers = useCallback(async () => {
+    if (!selectedProjectId) return;
+
+    try {
+      setTeamMembersLoading(true);
+      setTeamMembersError(null);
+      console.log("🔄 Loading team members for project:", selectedProjectId);
+      const response = await projectSelectionApi.getProjectTeamMembers(
+        selectedProjectId
       );
+
+      if (response.teamMembers) {
+        setTeamMembers(response.teamMembers);
+        console.log("✅ Loaded", response.teamMembers.length, "team members");
+      }
+    } catch (error) {
+      console.error("❌ Failed to load team members:", error);
+      setTeamMembersError(error.message || "Failed to load team members");
+      // Set empty array if API fails
+      setTeamMembers([]);
+    } finally {
+      setTeamMembersLoading(false);
+    }
+  }, [selectedProjectId]);
+
+  // Fallback function to load tasks from API when Firebase fails (memoized)
+  const loadTasksFromAPI = useCallback(async () => {
+    if (!selectedProjectId) return;
+
+    try {
+      console.log("🔄 Loading tasks from API as Firebase fallback...");
+      const response = await projectTaskApi.getUserTasks({
+        projectId: selectedProjectId,
+      });
+      if (response.tasks) {
+        setTasks(response.tasks);
+        console.log("✅ Loaded", response.tasks.length, "tasks from API");
+      }
+    } catch (error) {
+      console.error("❌ Failed to load tasks from API:", error);
     }
   }, [selectedProjectId]);
 
@@ -1198,7 +1213,7 @@ const AdminContributionBoard = ({
       loadWorkspace();
       loadTeamMembers(); // Load team members when project changes
     }
-  }, [selectedProjectId]);
+  }, [selectedProjectId, loadWorkspace, loadTeamMembers]);
 
   // Real-time statistics updates
   useEffect(() => {
@@ -1248,7 +1263,7 @@ const AdminContributionBoard = ({
 
       updateStats();
     }
-  }, [selectedProjectId, activeTab]);
+  }, [selectedProjectId, activeTab, statistics, tasks, teamMembers, onlineUsers, notifications, activeTimeTracking]);
 
   // Update selected project if projects change
   useEffect(() => {
