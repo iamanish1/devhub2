@@ -1739,12 +1739,21 @@ const AdminPage = () => {
             <div className="bg-[#181b23]/80 backdrop-blur-md rounded-2xl shadow-xl border border-blue-500/10 p-6">
               <AdminContributionBoard
                 tasks={adminTasks}
-                chat={adminChat}
-                mentor={adminMentor}
+                team={[]}
                 notes={adminNotes}
                 onTaskStatusChange={handleAdminTaskStatusChange}
-                onSendMessage={handleAdminSendMessage}
                 onNotesChange={handleAdminNotesChange}
+                onTaskAdd={(task) => {
+                  setAdminTasks(prev => [...prev, { ...task, id: Date.now() }]);
+                }}
+                onTaskEdit={(id, updatedTask) => {
+                  setAdminTasks(prev => 
+                    prev.map(t => t.id === id ? { ...t, ...updatedTask } : t)
+                  );
+                }}
+                onTaskDelete={(id) => {
+                  setAdminTasks(prev => prev.filter(t => t.id !== id));
+                }}
               />
             </div>
           </section>

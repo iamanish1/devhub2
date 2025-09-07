@@ -216,7 +216,8 @@ const AdminContributionBoard = ({
     };
 
     // Use setTimeout to ensure proper initialization order and avoid temporal dead zone
-    const timeoutId = setTimeout(initializeComponent, 1000);
+    // Increased delay to prevent 'Me' initialization issues
+    const timeoutId = setTimeout(initializeComponent, 2000);
     return () => clearTimeout(timeoutId);
   }, [authContext, user]);
 
@@ -2053,8 +2054,29 @@ const AdminContributionBoard = ({
     if (typeof user === "undefined") {
       throw new Error("User object is undefined - temporal dead zone issue");
     }
+
+    // Check for potential 'Me' variable issues in minified code
+    if (typeof window !== 'undefined' && window.location) {
+      // Additional safety check to prevent minified variable access issues
+      const currentUrl = window.location.href;
+      if (currentUrl.includes('admin') && !authContext) {
+        throw new Error("Admin context not properly initialized - potential 'Me' variable issue");
+      }
+    }
   } catch (error) {
     console.error("Critical initialization error:", error);
+    
+    // Check if this is the specific 'Me' initialization error
+    if (error.message && error.message.includes('Me') || 
+        error.message && error.message.includes('temporal dead zone')) {
+      console.error("❌ Detected 'Me' initialization error - implementing recovery");
+      
+      // Try to recover by delaying the component render
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
         <div className="max-w-7xl mx-auto">
@@ -2063,8 +2085,7 @@ const AdminContributionBoard = ({
               Initialization Error
             </div>
             <p className="text-gray-300 mb-4">
-              Failed to initialize the Project Management component. Please
-              refresh the page.
+              Failed to initialize the Project Management component. This may be due to a 'Me' variable initialization issue. Please refresh the page.
             </p>
             <button
               onClick={() => window.location.reload()}
@@ -4095,8 +4116,35 @@ const AdminContributionBoard = ({
 
 // Wrap the component with error boundary and additional safety checks
 const AdminContributionBoardWithErrorBoundary = (props) => {
+  // Add a small delay to ensure proper initialization order
+  const [isReady, setIsReady] = useState(false);
+  
+  useEffect(() => {
+    // Delay component rendering to prevent 'Me' initialization issues
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
   // Add additional safety check to prevent initialization errors
   try {
+    if (!isReady) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+                <p className="text-blue-400 text-lg">Initializing Project Management...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <AdminContributionBoardErrorBoundary>
         <AdminContributionBoard {...props} />
