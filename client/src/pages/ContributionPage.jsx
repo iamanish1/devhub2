@@ -690,44 +690,6 @@ const ContributionPage = () => {
     }
   };
 
-  const loadWorkspace = useCallback(async () => {
-    try {
-      if (!projectId) {
-        setError("Project ID is required");
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      // First check Firebase workspace access
-      await checkWorkspaceAccess();
-
-      const data = await projectTaskApi.getWorkspace(projectId);
-      setWorkspace(data.workspace);
-      setUserAccess(data.userAccess);
-
-      // Load tasks
-      if (data.workspace.tasks) {
-        setTasks(data.workspace.tasks);
-      }
-
-      // Skip loading resources from workspace - we use dedicated resources API instead
-      console.log('🔍 Skipping workspace resources - using dedicated resources API');
-
-    } catch (err) {
-      if (err.message?.includes("not found")) {
-        setError(
-          "Project workspace not found. Please contact the project owner."
-        );
-      } else {
-        setError(err.message || "Failed to load workspace");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, checkWorkspaceAccess]);
-
   // Check Firebase workspace access
   const checkWorkspaceAccess = useCallback(async () => {
     try {
@@ -823,6 +785,44 @@ const ContributionPage = () => {
       throw new Error("Access denied: " + error.message);
     }
   }, [user?._id, projectId]);
+
+  const loadWorkspace = useCallback(async () => {
+    try {
+      if (!projectId) {
+        setError("Project ID is required");
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      // First check Firebase workspace access
+      await checkWorkspaceAccess();
+
+      const data = await projectTaskApi.getWorkspace(projectId);
+      setWorkspace(data.workspace);
+      setUserAccess(data.userAccess);
+
+      // Load tasks
+      if (data.workspace.tasks) {
+        setTasks(data.workspace.tasks);
+      }
+
+      // Skip loading resources from workspace - we use dedicated resources API instead
+      console.log('🔍 Skipping workspace resources - using dedicated resources API');
+
+    } catch (err) {
+      if (err.message?.includes("not found")) {
+        setError(
+          "Project workspace not found. Please contact the project owner."
+        );
+      } else {
+        setError(err.message || "Failed to load workspace");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, checkWorkspaceAccess]);
 
   // Create new task
   const handleCreateTask = async () => {
