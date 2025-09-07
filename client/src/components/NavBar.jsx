@@ -3,13 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { MoneyIcon, DocumentIcon, PaymentMethodIcon } from "../utils/iconUtils";
 import PremiumBadge from "./PremiumBadge";
 
 
 const Navbar = () => {
   const { user, logoutUser } = useAuth();
   const [profileExsist, setProfileExist] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
@@ -37,9 +37,11 @@ const Navbar = () => {
         
         if (profileResponse.data.profile) {
           setProfileExist(true);
+          setUserProfile(profileResponse.data.profile);
           console.log("User profile exists:", profileResponse.data.profile);
         } else {
           setProfileExist(false);
+          setUserProfile(null);
           console.log("User profile does not exist.");
         }
         
@@ -198,8 +200,20 @@ const Navbar = () => {
             >
               <button
                 onClick={() => setDropdownOpen((open) => !open)}
-                className="h-[5vmin] w-[5vmin] bg-[#00A8E8] rounded-full text-[2.3vmin] font-medium transition-all duration-300 flex items-center justify-center focus:outline-none"
-              ></button>
+                className="h-[5vmin] w-[5vmin] bg-[#00A8E8] rounded-full text-[2.3vmin] font-medium transition-all duration-300 flex items-center justify-center focus:outline-none overflow-hidden"
+              >
+                {userProfile?.user_profile_avatar ? (
+                  <img 
+                    src={userProfile.user_profile_avatar} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="text-white">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                )}
+              </button>
               <AnimatePresence>
                 {dropdownOpen && (
                   <motion.div
@@ -208,8 +222,35 @@ const Navbar = () => {
                     animate="visible"
                     exit="exit"
                     variants={dropdownVariants}
-                    className="absolute right-0 mt-2 w-56 bg-[#232323] rounded-lg shadow-xl border border-[#00A8E8]/30 z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-64 bg-[#232323] rounded-lg shadow-xl border border-[#00A8E8]/30 z-50 overflow-hidden"
                   >
+                    {/* User Profile Section */}
+                    <div className="px-6 py-4 border-b border-gray-700">
+                      <div className="flex items-center space-x-3">
+                        <div className="h-12 w-12 rounded-full overflow-hidden bg-[#00A8E8] flex items-center justify-center">
+                          {userProfile?.user_profile_avatar ? (
+                            <img 
+                              src={userProfile.user_profile_avatar} 
+                              alt="Profile" 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-white text-lg font-medium">
+                              {user?.name ? user.name.charAt(0).toUpperCase() : user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium truncate">
+                            {userProfile?.user_profile_bio ? userProfile.user_profile_bio.split(' ').slice(0, 2).join(' ') : (user?.name || user?.email || 'User')}
+                          </p>
+                          <p className="text-gray-400 text-sm truncate">
+                            {user?.email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Subscription Status */}
                     {subscriptionStatus?.isActive && (
                       <div className="px-6 py-3 border-b border-gray-700">
@@ -245,42 +286,27 @@ const Navbar = () => {
                     {/* Subscription Management */}
                     <Link
                       to="/subscription"
-                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" clipRule="evenodd" />
-                      </svg>
                       {subscriptionStatus?.isActive ? 'Manage Subscription' : 'Upgrade to Premium'}
                     </Link>
                     
                     {/* Payment Center */}
                     <Link
                       to="/payments"
-                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      <MoneyIcon className="w-4 h-4 mr-2" />
                       Payment Center
-                    </Link>
-                    
-                    {/* Payment History */}
-                    <Link
-                      to="/payment-history"
-                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      <DocumentIcon className="w-4 h-4 mr-2" />
-                      Payment History
                     </Link>
                     
                     {/* Withdrawals */}
                     <Link
                       to="/withdrawals"
-                      className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
+                      className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      <PaymentMethodIcon type="card" className="w-4 h-4 mr-2" />
                       Withdrawals
                     </Link>
                     
@@ -289,12 +315,9 @@ const Navbar = () => {
                       <>
                         <Link
                           to="/listfreeproject"
-                          className="flex px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin] items-center"
+                          className="block px-6 py-3 text-white hover:bg-[#00A8E8] hover:text-white transition-colors text-[2vmin]"
                           onClick={() => setDropdownOpen(false)}
                         >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
                           List Free Project
                         </Link>
                         <Link
