@@ -44,12 +44,12 @@ const testProjects = [
 ];
 
 async function testProjectStatus() {
-  console.log('🧪 Testing Project Status Functionality\n');
+  console.log('Testing Project Status Functionality\n');
   
   for (const project of testProjects) {
     try {
       const statusInfo = await calculateProjectStatus(project);
-      console.log(`📋 Project: ${project.project_Title}`);
+      console.log(`Project: ${project.project_Title}`);
       console.log(`   Status: ${statusInfo.status}`);
       console.log(`   Message: ${statusInfo.message}`);
       console.log(`   Icon: ${statusInfo.icon}`);
@@ -57,11 +57,11 @@ async function testProjectStatus() {
       console.log(`   Color: ${statusInfo.color}`);
       console.log('   ---');
     } catch (error) {
-      console.error(`❌ Error testing project ${project.project_Title}:`, error.message);
+      console.error(`Error testing project ${project.project_Title}:`, error.message);
     }
   }
   
-  console.log('\n✅ Project status testing completed!');
+  console.log('\nProject status testing completed!');
 }
 
 // Run the test

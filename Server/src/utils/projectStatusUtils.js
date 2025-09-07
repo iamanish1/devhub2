@@ -18,7 +18,7 @@ export const calculateProjectStatus = async (project) => {
       color: 'gray',
       bgColor: 'gray-500/20',
       borderColor: 'gray-500/30',
-      icon: '❓'
+      icon: 'help'
     };
   }
 
@@ -57,7 +57,7 @@ export const calculateProjectStatus = async (project) => {
       color: 'red',
       bgColor: 'red-500/20',
       borderColor: 'red-500/30',
-      icon: '🔒',
+      icon: 'lock',
       description: 'Project duration has ended'
     };
   }
@@ -69,7 +69,7 @@ export const calculateProjectStatus = async (project) => {
       color: 'blue',
       bgColor: 'blue-500/20',
       borderColor: 'blue-500/30',
-      icon: '👥',
+      icon: 'users',
       description: 'Contributors are actively working'
     };
   }
@@ -81,7 +81,7 @@ export const calculateProjectStatus = async (project) => {
       color: 'yellow',
       bgColor: 'yellow-500/20',
       borderColor: 'yellow-500/30',
-      icon: '✅',
+      icon: 'check',
       description: 'Contributors have been selected'
     };
   }
@@ -93,7 +93,7 @@ export const calculateProjectStatus = async (project) => {
     color: 'green',
     bgColor: 'green-500/20',
     borderColor: 'green-500/30',
-    icon: '🚀',
+    icon: 'play',
     description: 'Open for bidding'
   };
 };
