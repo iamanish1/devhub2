@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -42,37 +42,33 @@ const Navbar = () => {
           })
         ]);
         
-        if (profileResponse.data.profile) {
+        // Check if profile exists and is not null
+        if (profileResponse.data.profile && profileResponse.data.profile !== null) {
           setProfileExist(true);
           setUserProfile(profileResponse.data.profile);
-          console.log("User profile exists:", profileResponse.data.profile);
         } else {
           setProfileExist(false);
           setUserProfile(null);
-          console.log("User profile does not exist.");
         }
         
         if (subscriptionResponse.data.success) {
           setSubscriptionStatus(subscriptionResponse.data.data);
-          console.log("Subscription status:", subscriptionResponse.data.data);
         }
         
         // Check if user has listed any projects
         if (projectsResponse.data.projects && projectsResponse.data.projects.length > 0) {
           setHasListedProjects(true);
-          console.log("User has listed projects:", projectsResponse.data.projects.length);
         } else {
           setHasListedProjects(false);
-          console.log("User has no listed projects");
         }
-        
-        console.log("User data fetched:", { 
-          profile: profileResponse.data, 
-          subscription: subscriptionResponse.data,
-          projects: projectsResponse.data.projects?.length || 0
-        });
       } catch (error) {
         console.error("Error fetching user data:", error);
+        
+        // Set default values on error
+        setProfileExist(false);
+        setUserProfile(null);
+        setSubscriptionStatus(null);
+        setHasListedProjects(false);
       }
     }
     fetchUserData();
@@ -271,8 +267,9 @@ const Navbar = () => {
                       </div>
                     </div>
 
+                    
                     {/* Subscription Status */}
-                    {subscriptionStatus?.isActive && (
+                    {subscriptionStatus && subscriptionStatus.isActive && (
                       <div className="px-6 py-3 border-b border-gray-700">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-300 text-sm">Premium Status</span>
