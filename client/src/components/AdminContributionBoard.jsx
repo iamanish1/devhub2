@@ -548,10 +548,7 @@ const AdminContributionBoard = ({
       },
       (error) => {
         console.error("❌ Firebase resources listener error:", error);
-        // Fallback to API if Firebase fails (only if not already loading)
-        if (!resourcesLoading) {
-          loadResourcesFromAPI();
-        }
+        // Just log the error, don't call loadResourcesFromAPI to avoid circular dependency
       }
     );
     listeners.push(resourcesUnsubscribe);
@@ -566,12 +563,7 @@ const AdminContributionBoard = ({
       );
       listeners.forEach((unsubscribe) => unsubscribe());
     };
-  }, [
-    selectedProjectId,
-    loadResourcesFromAPI,
-    loadTasksFromAPI,
-    resourcesLoading,
-  ]);
+  }, [selectedProjectId]);
 
   // Socket.IO connection and online status management
   useEffect(() => {
@@ -907,7 +899,7 @@ const AdminContributionBoard = ({
 
   // Load resources from API (memoized to prevent infinite loops)
   const loadResourcesFromAPI = useCallback(async () => {
-    if (!selectedProjectId || resourcesLoading) return;
+    if (!selectedProjectId) return;
 
     try {
       setResourcesLoading(true);
@@ -931,7 +923,7 @@ const AdminContributionBoard = ({
     } finally {
       setResourcesLoading(false);
     }
-  }, [selectedProjectId, resourcesLoading]);
+  }, [selectedProjectId]);
 
   // Enhanced Tab Configuration
   const tabs = [
@@ -945,7 +937,7 @@ const AdminContributionBoard = ({
 
   // Load workspace data for enhanced features (memoized to prevent infinite loops)
   const loadWorkspace = useCallback(async () => {
-    if (!selectedProjectId || resourcesLoading) return;
+    if (!selectedProjectId) return;
 
     try {
       const data = await projectTaskApi.getWorkspace(selectedProjectId);
@@ -980,7 +972,7 @@ const AdminContributionBoard = ({
       console.error("Failed to load workspace:", err);
       // Don't show error for workspace loading as it's optional
     }
-  }, [selectedProjectId, loadEnhancedStatistics, resourcesLoading]);
+  }, [selectedProjectId]);
 
   // Load team members from API (memoized to prevent infinite loops)
   const loadTeamMembers = useCallback(async () => {
@@ -1198,14 +1190,7 @@ const AdminContributionBoard = ({
         "Using local data for statistics (API unavailable)"
       );
     }
-  }, [
-    selectedProjectId,
-    tasks,
-    teamMembers,
-    onlineUsers,
-    notifications,
-    activeTimeTracking,
-  ]);
+  }, [selectedProjectId]);
 
   // Load workspace when project changes
   useEffect(() => {
@@ -1213,7 +1198,7 @@ const AdminContributionBoard = ({
       loadWorkspace();
       loadTeamMembers(); // Load team members when project changes
     }
-  }, [selectedProjectId, loadWorkspace, loadTeamMembers]);
+  }, [selectedProjectId]);
 
   // Real-time statistics updates
   useEffect(() => {
@@ -1263,16 +1248,7 @@ const AdminContributionBoard = ({
 
       updateStats();
     }
-  }, [
-    selectedProjectId,
-    activeTab,
-    tasks,
-    teamMembers,
-    onlineUsers,
-    notifications,
-    activeTimeTracking,
-    statistics,
-  ]);
+  }, [selectedProjectId, activeTab]);
 
   // Update selected project if projects change
   useEffect(() => {
