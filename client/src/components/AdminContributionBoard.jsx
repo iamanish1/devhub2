@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, Component } from "react";
 import {
   FaCheck,
   FaEdit,
@@ -63,6 +63,72 @@ import chatService from "../services/chatService";
 const Socket_URl =
   import.meta.env.VITE_SOCKET_SERVER || `${import.meta.env.VITE_API_URL}`;
 
+// Error Boundary Component to catch initialization errors
+class AdminContributionBoardErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log the error details
+    console.error('AdminContributionBoard Error:', error, errorInfo);
+    this.setState({
+      error: error,
+      errorInfo: errorInfo
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Fallback UI
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
+              <div className="text-red-400 text-lg mb-3">Component Error</div>
+              <p className="text-gray-300 mb-4">
+                An error occurred while loading the Project Management component. This is likely due to an initialization issue.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                >
+                  <FaSync className="w-4 h-4" />
+                  Reload Page
+                </button>
+                <button
+                  onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                >
+                  Try Again
+                </button>
+              </div>
+              {this.state.error && (
+                <details className="mt-4 text-xs text-gray-400">
+                  <summary className="cursor-pointer">Error Details</summary>
+                  <pre className="mt-2 p-2 bg-black/20 rounded text-red-300 overflow-auto">
+                    {this.state.error.toString()}
+                    {this.state.errorInfo.componentStack}
+                  </pre>
+                </details>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const AdminContributionBoard = ({
   tasks: initialTasks = [],
   team = [],
@@ -73,6 +139,10 @@ const AdminContributionBoard = ({
   onTaskEdit,
   onTaskDelete,
 }) => {
+  // Initialize auth hook first to avoid temporal dead zone errors
+  const authContext = useAuth();
+  const user = authContext?.user || null;
+  
   // State
   const [tasks, setTasks] = useState(initialTasks);
   const [notes, setNotes] = useState(initialNotes);
@@ -87,9 +157,6 @@ const AdminContributionBoard = ({
     assignedTo: "",
     estimatedHours: 0
   });
-  // Initialize auth hook safely to avoid temporal dead zone errors
-  const authContext = useAuth();
-  const user = authContext?.user || null;
   
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -105,12 +172,12 @@ const AdminContributionBoard = ({
   useEffect(() => {
     const initializeComponent = () => {
       try {
-        // Ensure all dependencies are loaded
-        if (authContext && user !== undefined) {
+        // Ensure all dependencies are loaded and valid
+        if (authContext !== undefined && authContext !== null) {
           setComponentLoading(false);
           setComponentError(null);
-        } else if (authContext === null) {
-          // Auth context is null, which is normal during loading
+        } else {
+          // Still loading or auth context is not ready
           setComponentLoading(true);
         }
       } catch (error) {
@@ -120,8 +187,8 @@ const AdminContributionBoard = ({
       }
     };
 
-    // Use setTimeout to ensure proper initialization order
-    const timeoutId = setTimeout(initializeComponent, 0);
+    // Use setTimeout to ensure proper initialization order and avoid temporal dead zone
+    const timeoutId = setTimeout(initializeComponent, 100);
     return () => clearTimeout(timeoutId);
   }, [authContext, user]);
 
@@ -1552,8 +1619,37 @@ const AdminContributionBoard = ({
     return null;
   }
 
+  // Additional safety check to prevent 'Me' initialization errors
+  try {
+    // Ensure all critical variables are properly initialized
+    if (authContext === undefined || authContext === null) {
+      throw new Error('Auth context not properly initialized');
+    }
+  } catch (error) {
+    console.error('Critical initialization error:', error);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
+            <div className="text-red-400 text-lg mb-3">Initialization Error</div>
+            <p className="text-gray-300 mb-4">
+              Failed to initialize the Project Management component. Please refresh the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+            >
+              <FaSync className="w-4 h-4" />
+              Reload Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading state during initialization
-  if (componentLoading || !authContext) {
+  if (componentLoading || !authContext || authContext === undefined) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0f0f] to-[#1a1a2e] p-6">
         <div className="max-w-7xl mx-auto">
@@ -3087,4 +3183,13 @@ const AdminContributionBoard = ({
   );
 };
 
-export default AdminContributionBoard;
+// Wrap the component with error boundary
+const AdminContributionBoardWithErrorBoundary = (props) => {
+  return (
+    <AdminContributionBoardErrorBoundary>
+      <AdminContributionBoard {...props} />
+    </AdminContributionBoardErrorBoundary>
+  );
+};
+
+export default AdminContributionBoardWithErrorBoundary;
