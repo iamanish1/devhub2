@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AdminContributionBoard from "../components/AdminContributioBoard";
 import axios from "axios";
 import {
@@ -141,6 +141,9 @@ const AdminPage = () => {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [selectedEscrowForCompletion, setSelectedEscrowForCompletion] = useState(null);
   const [escrowActionLoading, setEscrowActionLoading] = useState(false);
+  
+  // Debounce mechanism to prevent rapid successive calls
+  const [escrowLoadTimeout, setEscrowLoadTimeout] = useState(null);
 
   const handleAdminTaskStatusChange = (id, newStatus) => {
     setAdminTasks((prev) =>
@@ -212,19 +215,30 @@ const AdminPage = () => {
         }
       });
       setFirebaseListeners([]);
+      
+      // Clean up any pending timeout
+      if (escrowLoadTimeout) {
+        clearTimeout(escrowLoadTimeout);
+      }
     };
   }, []); // Empty dependency array - only runs on unmount
 
   // Cleanup Firebase listeners when view changes
   useEffect(() => {
     // Cleanup previous listeners when view changes
+    cleanupFirebaseListeners();
+  }, [view, cleanupFirebaseListeners]);
+
+  // Centralized cleanup function for Firebase listeners
+  const cleanupFirebaseListeners = useCallback(() => {
+    console.log("🧹 Cleaning up Firebase listeners...");
     firebaseListeners.forEach(unsubscribe => {
       if (typeof unsubscribe === 'function') {
         unsubscribe();
       }
     });
     setFirebaseListeners([]);
-  }, [view]);
+  }, [firebaseListeners]);
 
   // Firebase real-time listeners setup
   const setupFirebaseListeners = (groupedApplicants) => {
@@ -317,12 +331,100 @@ const AdminPage = () => {
   // Enhanced escrow wallet fetch with real-time updates
   useEffect(() => {
     if (view === "escrow") {
-      loadEscrowData();
+      // Use a flag to prevent multiple simultaneous loads
+      let isMounted = true;
+      
+      const loadData = async () => {
+        try {
+          setEscrowLoading(true);
+          setEscrowError(null);
+          
+          console.log('🔍 Loading escrow data for admin panel...');
+          
+          const escrowsRes = await escrowWalletApi.getProjectOwnerEscrows();
+          
+          if (!isMounted) return; // Component unmounted, don't update state
+          
+          console.log('🔍 Escrow wallets response:', escrowsRes);
+          
+          const escrowWallets = escrowsRes.escrowWallets || [];
+          
+          // Calculate stats from escrow wallets data
+          const calculatedStats = calculateEscrowStats(escrowWallets);
+          
+          console.log('🔍 Setting escrow wallets:', escrowWallets);
+          console.log('🔍 Calculated stats:', calculatedStats);
+          
+          setEscrowWallets(escrowWallets);
+          setEscrowStats(calculatedStats);
+          setEscrowError(null);
+          
+          // Clean up existing listeners before setting up new ones
+          firebaseListeners.forEach(unsubscribe => {
+            if (typeof unsubscribe === 'function') {
+              unsubscribe();
+            }
+          });
+          setFirebaseListeners([]);
+          
+          // Set up Firebase real-time listeners for escrow updates
+          setupEscrowFirebaseListeners(escrowWallets);
+          // Set up Firebase real-time listeners for task updates
+          setupTaskFirebaseListeners(escrowWallets);
+          
+        } catch (error) {
+          if (!isMounted) return; // Component unmounted, don't update state
+          
+          console.error("Error loading escrow data:", error);
+          
+          // More specific error handling
+          if (error.message?.includes('Network Error') || error.code === 'ERR_INSUFFICIENT_RESOURCES') {
+            setEscrowError("Network error: Too many requests. Please wait a moment and try again.");
+          } else if (error.response?.status === 401) {
+            setEscrowError("Authentication error. Please log in again.");
+          } else {
+            setEscrowError("Failed to fetch escrow wallet data. Please try again.");
+          }
+          
+          setEscrowWallets([]);
+          setEscrowStats({});
+        } finally {
+          if (isMounted) {
+            setEscrowLoading(false);
+          }
+        }
+      };
+      
+      loadData();
+      
+      return () => {
+        isMounted = false;
+      };
     }
-  }, [view]);
+  }, [view]); // Only depend on view
 
-  // Load escrow data function
-  const loadEscrowData = async () => {
+  // Load escrow data function with proper cleanup and debouncing
+  const loadEscrowData = useCallback(async (skipListeners = false, debounceMs = 0) => {
+    // Clear any existing timeout
+    if (escrowLoadTimeout) {
+      clearTimeout(escrowLoadTimeout);
+    }
+
+    // If debounce is requested, delay the execution
+    if (debounceMs > 0) {
+      const timeoutId = setTimeout(() => {
+        performEscrowDataLoad(skipListeners);
+      }, debounceMs);
+      setEscrowLoadTimeout(timeoutId);
+      return;
+    }
+
+    // Execute immediately
+    await performEscrowDataLoad(skipListeners);
+  }, [escrowLoadTimeout, performEscrowDataLoad]);
+
+  // Actual escrow data loading function
+  const performEscrowDataLoad = useCallback(async (skipListeners = false) => {
     try {
       setEscrowLoading(true);
       setEscrowError(null);
@@ -345,20 +447,35 @@ const AdminPage = () => {
       setEscrowStats(calculatedStats);
       setEscrowError(null);
       
-      // Set up Firebase real-time listeners for escrow updates
-      setupEscrowFirebaseListeners(escrowWallets);
-      // Set up Firebase real-time listeners for task updates
-      setupTaskFirebaseListeners(escrowWallets);
+      // Only set up listeners if not skipping (prevents recursive listener setup)
+      if (!skipListeners) {
+        // Clean up existing listeners before setting up new ones
+        cleanupFirebaseListeners();
+        
+        // Set up Firebase real-time listeners for escrow updates
+        setupEscrowFirebaseListeners(escrowWallets);
+        // Set up Firebase real-time listeners for task updates
+        setupTaskFirebaseListeners(escrowWallets);
+      }
       
     } catch (error) {
       console.error("Error loading escrow data:", error);
-      setEscrowError("Failed to fetch escrow wallet data");
+      
+      // More specific error handling
+      if (error.message?.includes('Network Error') || error.code === 'ERR_INSUFFICIENT_RESOURCES') {
+        setEscrowError("Network error: Too many requests. Please wait a moment and try again.");
+      } else if (error.response?.status === 401) {
+        setEscrowError("Authentication error. Please log in again.");
+      } else {
+        setEscrowError("Failed to fetch escrow wallet data. Please try again.");
+      }
+      
       setEscrowWallets([]);
       setEscrowStats({});
     } finally {
       setEscrowLoading(false);
     }
-  };
+  }, [cleanupFirebaseListeners, setupEscrowFirebaseListeners, setupTaskFirebaseListeners]);
 
   // Calculate escrow stats from wallets data
   const calculateEscrowStats = (wallets) => {
@@ -396,7 +513,7 @@ const AdminPage = () => {
   };
 
   // Setup Firebase listeners for escrow real-time updates
-  const setupEscrowFirebaseListeners = (escrowWallets) => {
+  const setupEscrowFirebaseListeners = useCallback((escrowWallets) => {
     escrowWallets.forEach(wallet => {
       const escrowRef = doc(db, 'escrow_wallets', wallet._id);
       const unsubscribe = onSnapshot(escrowRef, (doc) => {
@@ -415,10 +532,10 @@ const AdminPage = () => {
       // Store unsubscribe function for cleanup
       setFirebaseListeners(prev => [...prev, unsubscribe]);
     });
-  };
+  }, []);
 
   // Setup Firebase listeners for task updates
-  const setupTaskFirebaseListeners = (escrowWallets) => {
+  const setupTaskFirebaseListeners = useCallback((escrowWallets) => {
     escrowWallets.forEach(wallet => {
       // Listen for task updates in the project
       const taskQuery = query(
@@ -432,10 +549,35 @@ const AdminPage = () => {
             const taskData = change.doc.data();
             console.log(`🔄 Task update for project ${wallet.projectId?._id || wallet.projectId}:`, taskData);
             
-            // Update escrow stats if needed
+            // Update escrow stats if needed - but don't reload data to prevent infinite loop
             if (taskData.status === 'completed') {
-              // Refresh escrow data to get updated statistics
-              loadEscrowData();
+              // Instead of calling loadEscrowData(), just update the stats locally
+              // This prevents the infinite loop while still providing real-time updates
+              console.log('📊 Task completed, updating escrow stats locally...');
+              
+              // Update the specific wallet's stats without triggering a full reload
+              setEscrowWallets(prev => {
+                const updatedWallets = prev.map(w => {
+                  if (w._id === wallet._id || w.projectId?._id === wallet.projectId?._id) {
+                    // Update the wallet's completion status
+                    return {
+                      ...w,
+                      projectCompletion: {
+                        ...w.projectCompletion,
+                        isCompleted: true,
+                        completedAt: new Date().toISOString()
+                      }
+                    };
+                  }
+                  return w;
+                });
+                
+                // Recalculate stats with updated wallets
+                const newStats = calculateEscrowStats(updatedWallets);
+                setEscrowStats(newStats);
+                
+                return updatedWallets;
+              });
             }
           }
         });
@@ -444,7 +586,7 @@ const AdminPage = () => {
       // Store unsubscribe function for cleanup
       setFirebaseListeners(prev => [...prev, taskUnsubscribe]);
     });
-  };
+  }, []);
 
   // Handle escrow wallet creation
   const handleCreateEscrowWallet = async () => {
@@ -1722,7 +1864,17 @@ const AdminPage = () => {
             {escrowLoading ? (
               <div className="text-blue-300 text-lg">Loading escrow data...</div>
             ) : escrowError ? (
-              <div className="text-red-400 text-lg">{escrowError}</div>
+              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                <div className="text-red-400 text-lg mb-3">{escrowError}</div>
+                <button
+                  onClick={() => window.location.reload()}
+                  disabled={escrowLoading}
+                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-800 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                >
+                  <FaChartLine className="w-4 h-4" />
+                  {escrowLoading ? 'Retrying...' : 'Retry'}
+                </button>
+              </div>
             ) : (
               <div className="space-y-6">
                 {/* Escrow Statistics */}
@@ -1746,7 +1898,7 @@ const AdminPage = () => {
                           Create Wallet
                         </button>
                         <button
-                          onClick={loadEscrowData}
+                          onClick={() => window.location.reload()}
                           disabled={escrowLoading}
                           className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-700 text-white px-3 py-1 rounded-lg transition flex items-center gap-2 text-sm"
                         >
