@@ -87,7 +87,7 @@ const AdminContributionBoard = ({
     assignedTo: "",
     estimatedHours: 0
   });
-  // Initialize auth hook first to avoid initialization order issues
+  // Initialize auth hook safely to avoid temporal dead zone errors
   const authContext = useAuth();
   const user = authContext?.user || null;
   
@@ -101,22 +101,28 @@ const AdminContributionBoard = ({
   const [componentLoading, setComponentLoading] = useState(true);
   const [componentError, setComponentError] = useState(null);
   
-  // Initialize component safely
+  // Initialize component safely with proper error handling
   useEffect(() => {
-    try {
-      // Ensure all dependencies are loaded
-      if (authContext && user !== undefined) {
+    const initializeComponent = () => {
+      try {
+        // Ensure all dependencies are loaded
+        if (authContext && user !== undefined) {
+          setComponentLoading(false);
+          setComponentError(null);
+        } else if (authContext === null) {
+          // Auth context is null, which is normal during loading
+          setComponentLoading(true);
+        }
+      } catch (error) {
+        console.error('Component initialization error:', error);
+        setComponentError(error.message);
         setComponentLoading(false);
-        setComponentError(null);
-      } else if (authContext === null) {
-        // Auth context is null, which is normal during loading
-        setComponentLoading(true);
       }
-    } catch (error) {
-      console.error('Component initialization error:', error);
-      setComponentError(error.message);
-      setComponentLoading(false);
-    }
+    };
+
+    // Use setTimeout to ensure proper initialization order
+    const timeoutId = setTimeout(initializeComponent, 0);
+    return () => clearTimeout(timeoutId);
   }, [authContext, user]);
 
   // Enhanced Contribution State
@@ -1540,6 +1546,11 @@ const AdminContributionBoard = ({
       </div>
     );
   };
+
+  // Early return if component is not ready to prevent initialization errors
+  if (typeof window === 'undefined') {
+    return null;
+  }
 
   // Show loading state during initialization
   if (componentLoading || !authContext) {
