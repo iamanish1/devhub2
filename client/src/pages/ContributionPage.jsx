@@ -185,207 +185,101 @@ const ContributionPage = () => {
     { id: "how-to-work", label: "How to Work", icon: FileText, color: "cyan" },
   ];
 
-  // Load workspace data
-  useEffect(() => {
-    if (projectId) {
-      // Load resources first to ensure they're not overwritten
-      loadProjectResources();
-      loadWorkspace();
-      loadProjectOverview();
-      loadEscrowWalletData();
-      loadTeamMembers();
-    }
-  }, [projectId, loadProjectResources, loadWorkspace, loadProjectOverview, loadEscrowWalletData, loadTeamMembers]);
-
-  // Monitor resources state changes
-  useEffect(() => {
-    console.log('🔍 Resources state changed:', resources);
-    console.log('🔍 Resources length:', resources.length);
-    if (resources.length > 0) {
-      console.log('🔍 First resource:', resources[0]);
-    }
-  }, [resources]);
-
-  // Load resources when resources tab is selected (only for non-free projects)
-  useEffect(() => {
-    if (activeTab === "resources" && projectId && !isFreeProject) {
-      console.log('🔍 Resources tab selected, ensuring resources are loaded');
-      if (resources.length === 0 && !resourcesLoading) {
-        console.log('🔍 No resources loaded, loading them now');
-        loadProjectResources();
-      }
-    }
-  }, [activeTab, projectId, resources.length, resourcesLoading, isFreeProject, loadProjectResources]);
-
-  // Load tasks from API only (Firebase temporarily disabled)
-  useEffect(() => {
-    if (projectId && user?._id) {
-      // Load tasks from API
-      loadTasks();
-      // Firebase listener temporarily disabled to prevent overriding API data
-      // const timer = setTimeout(() => {
-      //   setupTaskRealtimeListener();
-      // }, 1000);
-
-      // return () => clearTimeout(timer);
-    }
-  }, [projectId, user?._id, loadTasks]);
-
-  // Setup real-time task listener (temporarily disabled)
-  // const setupTaskRealtimeListener = () => {
-  //   try {
-  //     console.log('🔍 Setting up Firebase task listener for project:', projectId);
-
-  //     const tasksQuery = query(
-  //       collection(db, 'project_tasks'),
-  //       where('projectId', '==', projectId),
-  //       where('deleted', '!=', true)
-  //     );
-
-  //     const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
-  //       console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
-
-  //       // Only update tasks from Firebase if we have data AND current tasks are empty
-  //       // This prevents Firebase from overriding API data when API has tasks but Firebase doesn't
-  //       if (snapshot.size > 0) {
-  //         const updatedTasks = [];
-  //         snapshot.forEach((doc) => {
-  //           const data = doc.data();
-  //           console.log('🔍 Firebase task data:', data);
-  //           updatedTasks.push({
-  //               _id: data.id,
-  //               title: data.title,
-  //               description: data.description,
-  //               status: data.status,
-  //               priority: data.priority,
-  //               assignedTo: data.assignedTo,
-  //               createdBy: data.createdBy,
-  //               createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
-  //               dueDate: data.dueDate?.toDate?.() || data.dueDate,
-  //               estimatedHours: data.estimatedHours || 0,
-  //               actualHours: data.actualHours || 0,
-  //               completionNotes: data.completionNotes,
-  //               completedAt: data.completedAt?.toDate?.() || data.completedAt,
-  //               progress: data.progress || 0
-  //             });
-  //           });
-  //           console.log('🔍 Setting tasks from Firebase:', updatedTasks);
-  //           setTasks(updatedTasks);
-  //         } else {
-  //           console.log('🔍 Firebase returned empty snapshot, keeping API tasks');
-  //           // Don't override tasks if Firebase is empty - this prevents API data from being cleared
-  //         }
-  //       }, (error) => {
-  //         console.error('🔍 Firebase task listener error:', error);
-  //         // On error, don't override the API tasks
-  //       });
-
-  //       return unsubscribe;
-  //     } catch (error) {
-  //       console.error('🔍 Error setting up task listener:', error);
-  //     }
-  //   };
-
-  // Load tasks from API (memoized)
-  const loadTasks = useCallback(async () => {
+  // Check Firebase workspace access
+  const checkWorkspaceAccess = useCallback(async () => {
     try {
-      console.log('🔍 Loading tasks for projectId:', projectId);
-      const responseData = await projectTaskApi.getProjectTasks(projectId);
-      console.log('✅ Tasks loaded successfully:', responseData);
-      setTasks(responseData.tasks || []);
-    } catch (error) {
-      console.error("❌ Failed to load tasks:", error);
-      console.error("❌ Error message:", error.message);
-      if (error.response) {
-        console.error("❌ Error response:", error.response.data);
+      if (!user?._id) {
+        throw new Error("User not authenticated");
       }
-      setTasks([]);
-    }
-  }, [projectId]);
 
-  // Handle project completion status changes
-  const handleProjectCompletionChange = useCallback((escrowData) => {
-    if (escrowData.projectCompletion?.isCompleted && !escrowWallet?.projectCompletion?.isCompleted) {
-      notificationService.info(
-        "🎯 Project has been completed! Your payment will be released soon."
+      if (!projectId) {
+        throw new Error("Project ID is required");
+      }
+
+      console.log(
+        `🔍 Checking workspace access for user ${user._id} on project ${projectId}`
       );
-    }
-  }, [escrowWallet]);
 
-  // Real-time escrow updates
-  useEffect(() => {
-    if (escrowWallet?.id) {
-      const escrowRef = doc(db, "escrow_wallets", escrowWallet.id);
-      const unsubscribe = onSnapshot(
-        escrowRef,
-        (doc) => {
-          if (doc.exists()) {
-            const updatedWallet = { id: doc.id, ...doc.data() };
-            const previousWallet = escrowWallet;
-            setEscrowWallet(updatedWallet);
+      // First check workspace_access collection
+      const workspaceAccessRef = doc(
+        db,
+        "workspace_access",
+        `${projectId}_${user._id}`
+      );
+      const accessDoc = await getDoc(workspaceAccessRef);
 
-            // Handle project completion status changes
-            handleProjectCompletionChange(updatedWallet);
+      if (accessDoc.exists()) {
+        const accessData = accessDoc.data();
+        console.log("📋 Workspace access data:", accessData);
 
-            // Update user earnings if user data is available
-            if (user?._id) {
-              const userFunds = updatedWallet.lockedFunds?.find(
-                (fund) => fund.userId === user._id
-              );
-              const previousUserFunds = previousWallet?.lockedFunds?.find(
-                (fund) => fund.userId === user._id
-              );
-
-              if (userFunds) {
-                const newUserEarnings = {
-                  bidAmount: userFunds.bidAmount,
-                  bonusAmount: userFunds.bonusAmount,
-                  totalAmount: userFunds.totalAmount,
-                  status: userFunds.lockStatus,
-                  lockedAt: userFunds.lockedAt,
-                  releasedAt: userFunds.releasedAt,
-                  refundedAt: userFunds.refundedAt,
-                  releaseReason: userFunds.releaseReason,
-                  releaseNotes: userFunds.releaseNotes,
-                };
-
-                setUserEarnings(newUserEarnings);
-
-                // Show notifications for status changes
-                if (
-                  previousUserFunds &&
-                  userFunds.lockStatus !== previousUserFunds.lockStatus
-                ) {
-                  if (userFunds.lockStatus === "released") {
-                    notificationService.success(
-                      "🎉 Your funds have been released! You can now withdraw your earnings."
-                    );
-                  } else if (userFunds.lockStatus === "locked") {
-                    notificationService.info(
-                      "🔒 Your funds have been locked in escrow. They will be released upon project completion."
-                    );
-                  } else if (userFunds.lockStatus === "refunded") {
-                    notificationService.info(
-                      "ℹ️ Your funds have been refunded by the project owner."
-                    );
-                  } else if (userFunds.lockStatus === "withdrawn") {
-                    notificationService.success(
-                      "✅ Your withdrawal has been processed successfully!"
-                    );
-                  }
-                }
-              }
-            }
-          }
-        },
-        (error) => {
-          console.error("Firebase escrow listener error:", error);
+        if (
+          accessData.status === "active" &&
+          accessData.accessLevel === "contributor"
+        ) {
+          console.log("✅ User has workspace access as contributor");
+          return true;
+        } else {
+          console.log(
+            "⚠️ Workspace access exists but status/level incorrect:",
+            accessData
+          );
         }
-      );
+      } else {
+        console.log("❌ No workspace_access document found");
+      }
 
-      return () => unsubscribe();
+      // Check project_contributors collection
+      const projectContributorRef = doc(
+        db,
+        "project_contributors",
+        `${projectId}_${user._id}`
+      );
+      const contributorDoc = await getDoc(projectContributorRef);
+
+      if (contributorDoc.exists()) {
+        const contributorData = contributorDoc.data();
+        console.log("📋 Project contributor data:", contributorData);
+
+        if (
+          contributorData.status === "active" &&
+          contributorData.role === "contributor"
+        ) {
+          console.log("✅ User has project contributor access");
+          return true;
+        } else {
+          console.log(
+            "⚠️ Project contributor exists but status/role incorrect:",
+            contributorData
+          );
+        }
+      } else {
+        console.log("❌ No project_contributors document found");
+      }
+
+      // Check if user is project owner by making a backend call
+      try {
+        console.log("🔍 Checking backend access...");
+        const data = await projectTaskApi.checkWorkspaceAccess(projectId);
+        console.log("📋 Backend response data:", data);
+        if (data.hasAccess) {
+          console.log("✅ User has access via backend check");
+          return true;
+        } else {
+          console.log("❌ Backend denied access:", data.message);
+        }
+      } catch (error) {
+        console.log("❌ Backend access check failed:", error.message);
+      }
+
+      // If we reach here, user doesn't have access
+      throw new Error(
+        "Access denied: User is not a selected contributor or project owner"
+      );
+    } catch (error) {
+      console.error("Workspace access check failed:", error);
+      throw new Error("Access denied: " + error.message);
     }
-  }, [escrowWallet?.id, user?._id, handleProjectCompletionChange, escrowWallet]);
+  }, [user?._id, projectId]);
 
   // Load project overview and financial data (memoized)
   const loadProjectOverview = useCallback(async () => {
@@ -621,6 +515,246 @@ const ContributionPage = () => {
     }
   }, [projectId]);
 
+  const loadWorkspace = useCallback(async () => {
+    try {
+      if (!projectId) {
+        setError("Project ID is required");
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      // First check Firebase workspace access
+      await checkWorkspaceAccess();
+
+      const data = await projectTaskApi.getWorkspace(projectId);
+      setWorkspace(data.workspace);
+      setUserAccess(data.userAccess);
+
+      // Load tasks
+      if (data.workspace.tasks) {
+        setTasks(data.workspace.tasks);
+      }
+
+      // Skip loading resources from workspace - we use dedicated resources API instead
+      console.log('🔍 Skipping workspace resources - using dedicated resources API');
+
+    } catch (err) {
+      if (err.message?.includes("not found")) {
+        setError(
+          "Project workspace not found. Please contact the project owner."
+        );
+      } else {
+        setError(err.message || "Failed to load workspace");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, checkWorkspaceAccess]);
+
+  // Load workspace data
+  useEffect(() => {
+    if (projectId) {
+      // Load resources first to ensure they're not overwritten
+      loadProjectResources();
+      loadWorkspace();
+      loadProjectOverview();
+      loadEscrowWalletData();
+      loadTeamMembers();
+    }
+  }, [projectId, loadProjectResources, loadWorkspace, loadProjectOverview, loadEscrowWalletData, loadTeamMembers]);
+
+  // Monitor resources state changes
+  useEffect(() => {
+    console.log('🔍 Resources state changed:', resources);
+    console.log('🔍 Resources length:', resources.length);
+    if (resources.length > 0) {
+      console.log('🔍 First resource:', resources[0]);
+    }
+  }, [resources]);
+
+  // Load resources when resources tab is selected (only for non-free projects)
+  useEffect(() => {
+    if (activeTab === "resources" && projectId && !isFreeProject) {
+      console.log('🔍 Resources tab selected, ensuring resources are loaded');
+      if (resources.length === 0 && !resourcesLoading) {
+        console.log('🔍 No resources loaded, loading them now');
+        loadProjectResources();
+      }
+    }
+  }, [activeTab, projectId, resources.length, resourcesLoading, isFreeProject, loadProjectResources]);
+
+  // Load tasks from API only (Firebase temporarily disabled)
+  useEffect(() => {
+    if (projectId && user?._id) {
+      // Load tasks from API
+      loadTasks();
+      // Firebase listener temporarily disabled to prevent overriding API data
+      // const timer = setTimeout(() => {
+      //   setupTaskRealtimeListener();
+      // }, 1000);
+
+      // return () => clearTimeout(timer);
+    }
+  }, [projectId, user?._id, loadTasks]);
+
+  // Setup real-time task listener (temporarily disabled)
+  // const setupTaskRealtimeListener = () => {
+  //   try {
+  //     console.log('🔍 Setting up Firebase task listener for project:', projectId);
+
+  //     const tasksQuery = query(
+  //       collection(db, 'project_tasks'),
+  //       where('projectId', '==', projectId),
+  //       where('deleted', '!=', true)
+  //     );
+
+  //     const unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
+  //       console.log('🔍 Firebase snapshot received, docs count:', snapshot.size);
+
+  //       // Only update tasks from Firebase if we have data AND current tasks are empty
+  //       // This prevents Firebase from overriding API data when API has tasks but Firebase doesn't
+  //       if (snapshot.size > 0) {
+  //         const updatedTasks = [];
+  //         snapshot.forEach((doc) => {
+  //           const data = doc.data();
+  //           console.log('🔍 Firebase task data:', data);
+  //           updatedTasks.push({
+  //               _id: data.id,
+  //               title: data.title,
+  //               description: data.description,
+  //               status: data.status,
+  //               priority: data.priority,
+  //               assignedTo: data.assignedTo,
+  //               createdBy: data.createdBy,
+  //               createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt),
+  //               dueDate: data.dueDate?.toDate?.() || data.dueDate,
+  //               estimatedHours: data.estimatedHours || 0,
+  //               actualHours: data.actualHours || 0,
+  //               completionNotes: data.completionNotes,
+  //               completedAt: data.completedAt?.toDate?.() || data.completedAt,
+  //               progress: data.progress || 0
+  //             });
+  //           });
+  //           console.log('🔍 Setting tasks from Firebase:', updatedTasks);
+  //           setTasks(updatedTasks);
+  //         } else {
+  //           console.log('🔍 Firebase returned empty snapshot, keeping API tasks');
+  //           // Don't override tasks if Firebase is empty - this prevents API data from being cleared
+  //         }
+  //       }, (error) => {
+  //         console.error('🔍 Firebase task listener error:', error);
+  //         // On error, don't override the API tasks
+  //       });
+
+  //       return unsubscribe;
+  //     } catch (error) {
+  //       console.error('🔍 Error setting up task listener:', error);
+  //     }
+  //   };
+
+  // Load tasks from API (memoized)
+  const loadTasks = useCallback(async () => {
+    try {
+      console.log('🔍 Loading tasks for projectId:', projectId);
+      const responseData = await projectTaskApi.getProjectTasks(projectId);
+      console.log('✅ Tasks loaded successfully:', responseData);
+      setTasks(responseData.tasks || []);
+    } catch (error) {
+      console.error("❌ Failed to load tasks:", error);
+      console.error("❌ Error message:", error.message);
+      if (error.response) {
+        console.error("❌ Error response:", error.response.data);
+      }
+      setTasks([]);
+    }
+  }, [projectId]);
+
+  // Handle project completion status changes
+  const handleProjectCompletionChange = useCallback((escrowData) => {
+    if (escrowData.projectCompletion?.isCompleted && !escrowWallet?.projectCompletion?.isCompleted) {
+      notificationService.info(
+        "🎯 Project has been completed! Your payment will be released soon."
+      );
+    }
+  }, [escrowWallet]);
+
+  // Real-time escrow updates
+  useEffect(() => {
+    if (escrowWallet?.id) {
+      const escrowRef = doc(db, "escrow_wallets", escrowWallet.id);
+      const unsubscribe = onSnapshot(
+        escrowRef,
+        (doc) => {
+          if (doc.exists()) {
+            const updatedWallet = { id: doc.id, ...doc.data() };
+            const previousWallet = escrowWallet;
+            setEscrowWallet(updatedWallet);
+
+            // Handle project completion status changes
+            handleProjectCompletionChange(updatedWallet);
+
+            // Update user earnings if user data is available
+            if (user?._id) {
+              const userFunds = updatedWallet.lockedFunds?.find(
+                (fund) => fund.userId === user._id
+              );
+              const previousUserFunds = previousWallet?.lockedFunds?.find(
+                (fund) => fund.userId === user._id
+              );
+
+              if (userFunds) {
+                const newUserEarnings = {
+                  bidAmount: userFunds.bidAmount,
+                  bonusAmount: userFunds.bonusAmount,
+                  totalAmount: userFunds.totalAmount,
+                  status: userFunds.lockStatus,
+                  lockedAt: userFunds.lockedAt,
+                  releasedAt: userFunds.releasedAt,
+                  refundedAt: userFunds.refundedAt,
+                  releaseReason: userFunds.releaseReason,
+                  releaseNotes: userFunds.releaseNotes,
+                };
+
+                setUserEarnings(newUserEarnings);
+
+                // Show notifications for status changes
+                if (
+                  previousUserFunds &&
+                  userFunds.lockStatus !== previousUserFunds.lockStatus
+                ) {
+                  if (userFunds.lockStatus === "released") {
+                    notificationService.success(
+                      "🎉 Your funds have been released! You can now withdraw your earnings."
+                    );
+                  } else if (userFunds.lockStatus === "locked") {
+                    notificationService.info(
+                      "🔒 Your funds have been locked in escrow. They will be released upon project completion."
+                    );
+                  } else if (userFunds.lockStatus === "refunded") {
+                    notificationService.info(
+                      "ℹ️ Your funds have been refunded by the project owner."
+                    );
+                  } else if (userFunds.lockStatus === "withdrawn") {
+                    notificationService.success(
+                      "✅ Your withdrawal has been processed successfully!"
+                    );
+                  }
+                }
+              }
+            }
+          }
+        },
+        (error) => {
+          console.error("Firebase escrow listener error:", error);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+  }, [escrowWallet?.id, user?._id, handleProjectCompletionChange, escrowWallet]);
+
   // Add sample resources for testing
   const addSampleResources = async () => {
     try {
@@ -689,140 +823,6 @@ const ContributionPage = () => {
       console.error("❌ Error loading bid debug info:", error);
     }
   };
-
-  // Check Firebase workspace access
-  const checkWorkspaceAccess = useCallback(async () => {
-    try {
-      if (!user?._id) {
-        throw new Error("User not authenticated");
-      }
-
-      if (!projectId) {
-        throw new Error("Project ID is required");
-      }
-
-      console.log(
-        `🔍 Checking workspace access for user ${user._id} on project ${projectId}`
-      );
-
-      // First check workspace_access collection
-      const workspaceAccessRef = doc(
-        db,
-        "workspace_access",
-        `${projectId}_${user._id}`
-      );
-      const accessDoc = await getDoc(workspaceAccessRef);
-
-      if (accessDoc.exists()) {
-        const accessData = accessDoc.data();
-        console.log("📋 Workspace access data:", accessData);
-
-        if (
-          accessData.status === "active" &&
-          accessData.accessLevel === "contributor"
-        ) {
-          console.log("✅ User has workspace access as contributor");
-          return true;
-        } else {
-          console.log(
-            "⚠️ Workspace access exists but status/level incorrect:",
-            accessData
-          );
-        }
-      } else {
-        console.log("❌ No workspace_access document found");
-      }
-
-      // Check project_contributors collection
-      const projectContributorRef = doc(
-        db,
-        "project_contributors",
-        `${projectId}_${user._id}`
-      );
-      const contributorDoc = await getDoc(projectContributorRef);
-
-      if (contributorDoc.exists()) {
-        const contributorData = contributorDoc.data();
-        console.log("📋 Project contributor data:", contributorData);
-
-        if (
-          contributorData.status === "active" &&
-          contributorData.role === "contributor"
-        ) {
-          console.log("✅ User has project contributor access");
-          return true;
-        } else {
-          console.log(
-            "⚠️ Project contributor exists but status/role incorrect:",
-            contributorData
-          );
-        }
-      } else {
-        console.log("❌ No project_contributors document found");
-      }
-
-      // Check if user is project owner by making a backend call
-      try {
-        console.log("🔍 Checking backend access...");
-        const data = await projectTaskApi.checkWorkspaceAccess(projectId);
-        console.log("📋 Backend response data:", data);
-        if (data.hasAccess) {
-          console.log("✅ User has access via backend check");
-          return true;
-        } else {
-          console.log("❌ Backend denied access:", data.message);
-        }
-      } catch (error) {
-        console.log("❌ Backend access check failed:", error.message);
-      }
-
-      // If we reach here, user doesn't have access
-      throw new Error(
-        "Access denied: User is not a selected contributor or project owner"
-      );
-    } catch (error) {
-      console.error("Workspace access check failed:", error);
-      throw new Error("Access denied: " + error.message);
-    }
-  }, [user?._id, projectId]);
-
-  const loadWorkspace = useCallback(async () => {
-    try {
-      if (!projectId) {
-        setError("Project ID is required");
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      // First check Firebase workspace access
-      await checkWorkspaceAccess();
-
-      const data = await projectTaskApi.getWorkspace(projectId);
-      setWorkspace(data.workspace);
-      setUserAccess(data.userAccess);
-
-      // Load tasks
-      if (data.workspace.tasks) {
-        setTasks(data.workspace.tasks);
-      }
-
-      // Skip loading resources from workspace - we use dedicated resources API instead
-      console.log('🔍 Skipping workspace resources - using dedicated resources API');
-
-    } catch (err) {
-      if (err.message?.includes("not found")) {
-        setError(
-          "Project workspace not found. Please contact the project owner."
-        );
-      } else {
-        setError(err.message || "Failed to load workspace");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId, checkWorkspaceAccess]);
 
   // Create new task
   const handleCreateTask = async () => {
