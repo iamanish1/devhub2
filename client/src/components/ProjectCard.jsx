@@ -73,7 +73,6 @@ const ProjectCard = memo(({ project }) => {
       formattedBudget: formatBudget(project.project_starting_bid),
       techStack: project.Project_tech_stack ? project.Project_tech_stack.split(",").map(tech => tech.trim()) : [],
       title: project.project_Title || "Untitled Project",
-      bidCount: project.Project_Number_Of_Bids || 0,
       statusInfo,
       acceptingBids
     };
@@ -249,7 +248,7 @@ const ProjectCard = memo(({ project }) => {
 
           {/* Project details grid */}
           <motion.div 
-            className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6 lg:mb-8"
+            className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4 mb-6 lg:mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
@@ -286,18 +285,6 @@ const ProjectCard = memo(({ project }) => {
               </p>
             </motion.div>
             
-            <motion.div 
-              className="bg-gradient-to-br from-[#2A2A2A] to-[#333] p-3 lg:p-4 rounded-lg border border-[#444] hover:border-[#00A8E8]/30 transition-all duration-300"
-              whileHover={{ scale: 1.02 }}
-            >
-              <h3 className="text-gray-400 text-xs uppercase font-medium mb-1 flex items-center">
-                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Active Bidders
-              </h3>
-              <p className="text-lg lg:text-xl font-bold text-white">{projectData.bidCount}</p>
-            </motion.div>
 
             {/* Bonus Pool Card */}
             <motion.div 
