@@ -1748,24 +1748,24 @@ const AdminPage = () => {
                   </div>
                 </div>
               }>
-                <AdminContributionBoard
-                  tasks={adminTasks}
-                  team={[]}
-                  notes={adminNotes}
-                  onTaskStatusChange={handleAdminTaskStatusChange}
-                  onNotesChange={handleAdminNotesChange}
-                  onTaskAdd={(task) => {
-                    setAdminTasks(prev => [...prev, { ...task, id: Date.now() }]);
-                  }}
-                  onTaskEdit={(id, updatedTask) => {
-                    setAdminTasks(prev =>
-                      prev.map(t => t.id === id ? { ...t, ...updatedTask } : t)
-                    );
-                  }}
-                  onTaskDelete={(id) => {
-                    setAdminTasks(prev => prev.filter(t => t.id !== id));
-                  }}
-                />
+              <AdminContributionBoard
+                tasks={adminTasks}
+                team={[]}
+                notes={adminNotes}
+                onTaskStatusChange={handleAdminTaskStatusChange}
+                onNotesChange={handleAdminNotesChange}
+                onTaskAdd={(task) => {
+                  setAdminTasks(prev => [...prev, { ...task, id: Date.now() }]);
+                }}
+                onTaskEdit={(id, updatedTask) => {
+                  setAdminTasks(prev => 
+                    prev.map(t => t.id === id ? { ...t, ...updatedTask } : t)
+                  );
+                }}
+                onTaskDelete={(id) => {
+                  setAdminTasks(prev => prev.filter(t => t.id !== id));
+                }}
+              />
               </Suspense>
             </div>
           </section>
