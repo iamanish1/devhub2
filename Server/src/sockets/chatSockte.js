@@ -28,7 +28,7 @@ const chatSocket = (io) => {
   // Test connection on initialization
   testDatabaseConnection();
   
-  // Periodic broadcast of online users to all rooms
+  // Optimized periodic broadcast of online users to all rooms
   setInterval(() => {
     onlineUsers.forEach((socketIds, projectId) => {
       const projectOnlineUsers = Array.from(socketIds).map(socketId => {
@@ -40,7 +40,7 @@ const chatSocket = (io) => {
         io.to(projectId).emit("onlineUsers", projectOnlineUsers);
       }
     });
-  }, 30000); // Broadcast every 30 seconds
+  }, 5000); // Broadcast every 5 seconds for faster updates
   
   io.on("connection", (socket) => {
     console.log("✅ Socket.IO: New user connected:", socket.id);
@@ -158,14 +158,17 @@ const chatSocket = (io) => {
           timestamp: new Date()
         });
         
-        // Send current online users to all users in the room
+        // Send current online users to all users in the room immediately
         const projectOnlineUsers = Array.from(onlineUsers.get(projectId)).map(socketId => {
           const userInfo = userSockets.get(socketId);
           return userInfo ? { userId: userInfo.userId, username: userInfo.username } : null;
         }).filter(Boolean);
         
-        // Broadcast updated online users list to all users in the room
+        // Broadcast updated online users list to all users in the room immediately
         io.to(projectId).emit("onlineUsers", projectOnlineUsers);
+        
+        // Also send to the newly joined user specifically for immediate feedback
+        socket.emit("onlineUsers", projectOnlineUsers);
         
         console.log(`✅ Socket: User ${username} (${userId}) successfully joined room: ${projectId}`);
       } catch (error) {
@@ -353,12 +356,13 @@ const chatSocket = (io) => {
           timestamp: new Date()
         });
         
-        // Broadcast updated online users list to remaining users
+        // Broadcast updated online users list to remaining users immediately
         const remainingOnlineUsers = Array.from(onlineUsers.get(projectId) || []).map(socketId => {
           const userInfo = userSockets.get(socketId);
           return userInfo ? { userId: userInfo.userId, username: userInfo.username } : null;
         }).filter(Boolean);
         
+        // Send immediate update to remaining users
         io.to(projectId).emit("onlineUsers", remainingOnlineUsers);
         
         console.log(`User ${username} (${userId}) disconnected from room: ${projectId}`);

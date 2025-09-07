@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Navbar from "../components/NavBar";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useChat } from "../context/ChatContext";
 import { projectTaskApi } from "../services/projectTaskApi";
 import { escrowWalletApi } from "../services/escrowWalletApi";
 import { notificationService } from "../services/notificationService";
@@ -60,6 +61,7 @@ const ContributionPage = () => {
   const { _id: projectId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { joinProject } = useChat();
 
   // Core state
   const [workspace, setWorkspace] = useState(null);
@@ -579,8 +581,11 @@ const ContributionPage = () => {
       loadProjectOverview();
       loadEscrowWalletData();
       loadTeamMembers();
+      
+      // Join project chat room
+      joinProject(projectId);
     }
-  }, [projectId, loadProjectResources, loadWorkspace, loadProjectOverview, loadEscrowWalletData, loadTeamMembers]);
+  }, [projectId, loadProjectResources, loadWorkspace, loadProjectOverview, loadEscrowWalletData, loadTeamMembers, joinProject]);
 
   // Monitor resources state changes
   useEffect(() => {

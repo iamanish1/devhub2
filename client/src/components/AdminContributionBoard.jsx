@@ -61,6 +61,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../Config/firebase";
 import { useAuth } from "../context/AuthContext";
+import { useChat } from "../context/ChatContext";
 import { projectTaskApi } from "../services/projectTaskApi";
 import { notificationService } from "../services/notificationService";
 import { projectSelectionApi } from "../services/projectSelectionApi";
@@ -176,6 +177,7 @@ const AdminContributionBoard = ({
   // Initialize auth hook first - must be called unconditionally
   const authContext = useAuth();
   const user = authContext?.user || null;
+  const { joinProject, getOnlineUsersCount, onlineUsers } = useChat();
 
   // State
   const [tasks, setTasks] = useState(initialTasks);
@@ -254,7 +256,6 @@ const AdminContributionBoard = ({
   const [teamMembersError, setTeamMembersError] = useState(null);
   const [taskComments, setTaskComments] = useState({});
   const [taskFiles, setTaskFiles] = useState({});
-  const [onlineUsers, setOnlineUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
   // Task filters state
@@ -634,48 +635,21 @@ const AdminContributionBoard = ({
           return;
         }
 
-        if (!chatService.isConnected) {
-          await chatService.connect(token);
-        }
+        // Join project room using shared chat context
+        await joinProject(selectedProjectId);
 
-        // Join project room
-        chatService.joinProject(
-          selectedProjectId,
-          user._id,
-          user.username || user.name
-        );
-
-        // Set up online users handler
-        const unsubscribeOnlineUsers = chatService.onUserEvent(
-          (data, eventType) => {
-            console.log("🔄 AdminContributioBoard: User event received:", {
-              data,
-              eventType,
-            });
-            if (eventType === "online") {
-              console.log(
-                "🔄 AdminContributioBoard: Setting online users:",
-                data
-              );
-              setOnlineUsers(data);
-            }
-          }
-        );
-
-        // Set up user activity tracking
+        // Set up user activity tracking with optimized frequency
         const activityInterval = setInterval(() => {
           try {
             chatService.sendUserActivity();
           } catch (error) {
             console.error("❌ Error sending user activity:", error);
           }
-        }, 30000); // Send activity every 30 seconds
+        }, 20000); // Send activity every 20 seconds (optimized frequency)
 
         cleanupFunction = () => {
           try {
-            unsubscribeOnlineUsers();
             clearInterval(activityInterval);
-            chatService.leaveProject();
           } catch (error) {
             console.error("❌ Error during socket cleanup:", error);
           }
@@ -1124,11 +1098,11 @@ const AdminContributionBoard = ({
             ...response.statistics.team,
             totalMembers: teamMembers.length,
             activeContributors: teamMembers.length,
-            onlineUsers: onlineUsers.length,
+            onlineUsers: getOnlineUsersCount(selectedProjectId),
           },
           realTime: {
             lastUpdated: new Date(),
-            onlineUsers: onlineUsers.length,
+            onlineUsers: getOnlineUsersCount(selectedProjectId),
             recentNotifications: notifications.length,
             activeTimeTracking: Object.keys(activeTimeTracking).length,
           },
@@ -1168,7 +1142,7 @@ const AdminContributionBoard = ({
         team: {
           totalMembers: teamMembers.length,
           activeContributors: teamMembers.length,
-          onlineUsers: onlineUsers.length,
+          onlineUsers: getOnlineUsersCount(selectedProjectId),
         },
         time: {
           totalEstimatedHours: tasks.reduce(
@@ -1183,7 +1157,7 @@ const AdminContributionBoard = ({
         },
         realTime: {
           lastUpdated: new Date(),
-          onlineUsers: onlineUsers.length,
+          onlineUsers: getOnlineUsersCount(selectedProjectId),
           recentNotifications: notifications.length,
           activeTimeTracking: Object.keys(activeTimeTracking).length,
         },
@@ -1238,11 +1212,11 @@ const AdminContributionBoard = ({
           team: {
             totalMembers: teamMembers.length,
             activeContributors: teamMembers.length,
-            onlineUsers: onlineUsers.length,
+            onlineUsers: getOnlineUsersCount(selectedProjectId),
           },
           realTime: {
             lastUpdated: new Date(),
-            onlineUsers: onlineUsers.length,
+            onlineUsers: getOnlineUsersCount(selectedProjectId),
             recentNotifications: notifications.length,
             activeTimeTracking: Object.keys(activeTimeTracking).length,
           },
@@ -2192,7 +2166,7 @@ const AdminContributionBoard = ({
                     <span className="text-sm text-green-400">Live</span>
                   </div>
                   <div className="text-sm text-gray-400">
-                    {onlineUsers.length} team members online
+                    {getOnlineUsersCount(selectedProjectId)} team members online
                   </div>
                   <div className="text-sm text-gray-400">
                     {
@@ -2521,7 +2495,7 @@ const AdminContributionBoard = ({
                     </div>
                     <div className="bg-[#181b23] rounded-lg p-4 border border-yellow-500/20 text-center">
                       <div className="text-2xl font-bold text-yellow-400">
-                        {onlineUsers.length}
+                        {getOnlineUsersCount(selectedProjectId)}
                       </div>
                       <div className="text-sm text-gray-400">Online Now</div>
                     </div>
@@ -3061,7 +3035,7 @@ const AdminContributionBoard = ({
                         {statistics?.team?.totalMembers || 0} total members
                       </p>
                       <div className="mt-2 text-xs text-purple-300">
-                        {onlineUsers.length} currently online
+                        {getOnlineUsersCount(selectedProjectId)} currently online
                       </div>
                     </div>
                   </div>
@@ -3280,7 +3254,7 @@ const AdminContributionBoard = ({
                             Currently Online
                           </span>
                           <span className="text-green-400 font-semibold">
-                            {onlineUsers.length}
+                            {getOnlineUsersCount(selectedProjectId)}
                           </span>
                         </div>
 
@@ -3301,14 +3275,14 @@ const AdminContributionBoard = ({
                                 </span>
                               </div>
                             ))}
-                            {onlineUsers.length === 0 && (
+                            {getOnlineUsersCount(selectedProjectId) === 0 && (
                               <span className="text-sm text-gray-400">
                                 No team members online
                               </span>
                             )}
-                            {onlineUsers.length > 5 && (
+                            {getOnlineUsersCount(selectedProjectId) > 5 && (
                               <span className="text-sm text-gray-400">
-                                +{onlineUsers.length - 5} more
+                                +{getOnlineUsersCount(selectedProjectId) - 5} more
                               </span>
                             )}
                           </div>
@@ -3656,12 +3630,12 @@ const AdminContributionBoard = ({
                           <span className="text-gray-300">Team Activity</span>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-bold ${
-                              onlineUsers.length > 0
+                              getOnlineUsersCount(selectedProjectId) > 0
                                 ? "bg-green-900/40 text-green-400"
                                 : "bg-gray-900/40 text-gray-400"
                             }`}
                           >
-                            {onlineUsers.length > 0 ? "ACTIVE" : "INACTIVE"}
+                            {getOnlineUsersCount(selectedProjectId) > 0 ? "ACTIVE" : "INACTIVE"}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
@@ -3722,7 +3696,7 @@ const AdminContributionBoard = ({
                         )}
 
                         {/* Team Insights */}
-                        {onlineUsers.length === 0 && (
+                        {getOnlineUsersCount(selectedProjectId) === 0 && (
                           <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
                             <div className="flex items-center gap-2 mb-1">
                               <FaUsers className="text-blue-400 text-sm" />
@@ -3799,7 +3773,7 @@ const AdminContributionBoard = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-gray-400">
-                        <span>{onlineUsers.length} team members online</span>
+                        <span>{getOnlineUsersCount(selectedProjectId)} team members online</span>
                         <span>{notifications.length} total activities</span>
                         <span>
                           {Object.keys(activeTimeTracking).length} active timers

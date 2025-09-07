@@ -11,6 +11,10 @@ class ChatService {
     this.messageHandlers = new Map();
     this.typingHandlers = new Map();
     this.userHandlers = new Map();
+    this.activityTimeout = null;
+    this.lastActivitySent = null;
+    this.onlineUsersCache = new Map(); // Cache online users per project
+    this.lastOnlineUpdate = new Map(); // Track last update time per project
   }
 
   // Initialize socket connection
@@ -81,6 +85,15 @@ class ChatService {
       this.isConnected = false;
       this.currentProjectId = null;
     }
+    
+    // Clear timeouts and cache
+    if (this.activityTimeout) {
+      clearTimeout(this.activityTimeout);
+      this.activityTimeout = null;
+    }
+    this.lastActivitySent = null;
+    this.onlineUsersCache.clear();
+    this.lastOnlineUpdate.clear();
   }
 
   // Join project chat room
@@ -181,13 +194,28 @@ class ChatService {
     this.socket.emit('typing', { projectId: this.currentProjectId, isTyping });
   }
 
-  // Send user activity
+  // Send user activity with debouncing
   sendUserActivity() {
     if (!this.socket || !this.isConnected || !this.currentProjectId) {
       return;
     }
 
-    this.socket.emit('userActivity', { projectId: this.currentProjectId });
+    // Clear existing timeout to debounce activity updates
+    if (this.activityTimeout) {
+      clearTimeout(this.activityTimeout);
+    }
+
+    // Send activity immediately for first call, then debounce subsequent calls
+    if (!this.lastActivitySent) {
+      this.socket.emit('userActivity', { projectId: this.currentProjectId });
+      this.lastActivitySent = Date.now();
+    } else {
+      // Debounce activity updates to avoid spam
+      this.activityTimeout = setTimeout(() => {
+        this.socket.emit('userActivity', { projectId: this.currentProjectId });
+        this.lastActivitySent = Date.now();
+      }, 2000); // 2 second debounce
+    }
   }
 
   // Set up message handlers
@@ -224,6 +252,11 @@ class ChatService {
     });
 
     this.socket.on('onlineUsers', (users) => {
+      // Cache online users for this project
+      if (this.currentProjectId) {
+        this.onlineUsersCache.set(this.currentProjectId, users);
+        this.lastOnlineUpdate.set(this.currentProjectId, Date.now());
+      }
       this.userHandlers.forEach(handler => handler(users, 'online'));
     });
 
@@ -302,6 +335,19 @@ class ChatService {
       console.error('Error fetching online users:', error);
       throw error;
     }
+  }
+
+  // Get cached online users for immediate display
+  getCachedOnlineUsers(projectId) {
+    const cached = this.onlineUsersCache.get(projectId);
+    const lastUpdate = this.lastOnlineUpdate.get(projectId);
+    
+    // Return cached data if it's less than 10 seconds old
+    if (cached && lastUpdate && (Date.now() - lastUpdate) < 10000) {
+      return cached;
+    }
+    
+    return [];
   }
 
   async uploadFile(file, projectId) {

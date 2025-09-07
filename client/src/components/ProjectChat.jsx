@@ -18,15 +18,16 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 import chatService from '../services/chatService';
 import { notificationService } from '../services/notificationService';
 
 const ProjectChat = ({ projectId, projectTitle, onClose }) => {
   // Initialize auth hook - must be called unconditionally
   const { user } = useAuth();
+  const { joinProject, onlineUsers } = useChat();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [onlineUsers, setOnlineUsers] = useState([]);
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -57,12 +58,8 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
       try {
         setLoading(true);
         
-        // Connect to socket
-        const token = localStorage.getItem('token');
-        await chatService.connect(token);
-        
-        // Join project room
-        chatService.joinProject(projectId, user._id, user.username || user.name);
+        // Join project room using shared context
+        await joinProject(projectId);
         
         // Load existing messages
         const response = await chatService.getProjectMessages(projectId);
@@ -85,7 +82,6 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
           unsubscribeMessage();
           unsubscribeTyping();
           unsubscribeUser();
-          chatService.leaveProject();
         };
       } catch (error) {
         console.error('Failed to initialize chat:', error);
@@ -95,7 +91,7 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
     };
 
     initializeChat();
-  }, [projectId, user]);
+  }, [projectId, user, joinProject, handleNewMessage, handleTyping, handleUserEvent]);
 
   // Handle new messages
   const handleNewMessage = useCallback((message, type = 'new') => {
@@ -123,17 +119,15 @@ const ProjectChat = ({ projectId, projectTitle, onClose }) => {
     }
   }, []);
 
-  // Handle user events
+  // Handle user events with optimized updates
   const handleUserEvent = useCallback((data, eventType) => {
     console.log('🔄 ProjectChat: User event received:', { data, eventType });
-    if (eventType === 'online') {
-      console.log('🔄 ProjectChat: Setting online users:', data);
-      setOnlineUsers(data);
-    } else if (eventType === 'joined') {
+    if (eventType === 'joined') {
       notificationService.success(`${data.username} joined the chat`);
     } else if (eventType === 'left') {
       notificationService.info(`${data.username} left the chat`);
     }
+    // Online status is now handled by the shared ChatContext
   }, []);
 
   // Handle typing
