@@ -21,7 +21,8 @@ import {
   getProjectResources,
   deleteProjectResource,
   updateProjectResource,
-  createFirebaseAccess
+  createFirebaseAccess,
+  recalculateUserProfileStats
 } from '../controller/ProjectTaskController.js';
 import authMiddleware from '../Middleware/authenticateMiddelware.js';
 import { uploadSingle } from '../Middleware/upload.js';
@@ -145,6 +146,7 @@ projectTaskRoutes.post('/test-task/:projectId', (req, res) => {
 
 // User-specific routes (must come before parameterized routes)
 projectTaskRoutes.get('/user/tasks', authMiddleware, getUserTasks);
+projectTaskRoutes.post('/user/recalculate-stats', authMiddleware, recalculateUserProfileStats);
 
 // Specific routes (must come before parameterized routes)
 projectTaskRoutes.post('/firebase-access/:projectId', authMiddleware, createFirebaseAccess);

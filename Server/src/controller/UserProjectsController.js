@@ -26,17 +26,23 @@ export const getUserAssignedProjects = async (req, res) => {
         // Get all tasks for this project
         const tasks = await ProjectTask.find({ projectId: project._id });
         
+        // Debug logging
+        console.log(`🔍 [getUserAssignedProjects] Project ${project._id}: Found ${tasks.length} tasks`);
+        
                  // Calculate progress
          const totalTasks = tasks.length;
          const completedTasks = tasks.filter(task => 
-           task.task_status === "Completed" || task.task_status === "done"
+           task.status === "completed" || task.status === "Completed" || task.status === "done"
          ).length;
          const inProgressTasks = tasks.filter(task => 
-           task.task_status === "In Progress" || 
-           task.task_status === "in progress" ||
-           task.task_status === "in-progress"
+           task.status === "in_progress" || 
+           task.status === "In Progress" || 
+           task.status === "in progress" ||
+           task.status === "in-progress"
          ).length;
-         const pendingTasks = tasks.filter(task => task.task_status === "todo").length;
+         const pendingTasks = tasks.filter(task => 
+           task.status === "pending" || task.status === "todo" || task.status === "Pending"
+         ).length;
         
                  // Debug logging
          console.log(`Project ${project._id}: Total: ${totalTasks}, Completed: ${completedTasks}, In Progress: ${inProgressTasks}, Pending: ${pendingTasks}`);
@@ -121,14 +127,17 @@ export const getUserProjectStats = async (req, res) => {
          // Task statistics
      const totalTasks = allTasks.length;
      const completedTasks = allTasks.filter(task => 
-       task.task_status === "Completed" || task.task_status === "done"
+       task.status === "completed" || task.status === "Completed" || task.status === "done"
      ).length;
      const inProgressTasks = allTasks.filter(task => 
-       task.task_status === "In Progress" || 
-       task.task_status === "in progress" ||
-       task.task_status === "in-progress"
+       task.status === "in_progress" || 
+       task.status === "In Progress" || 
+       task.status === "in progress" ||
+       task.status === "in-progress"
      ).length;
-     const pendingTasks = allTasks.filter(task => task.task_status === "todo").length;
+     const pendingTasks = allTasks.filter(task => 
+       task.status === "pending" || task.status === "todo" || task.status === "Pending"
+     ).length;
 
     // Calculate completion rate
     const completionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
@@ -202,12 +211,13 @@ export const getProjectDetails = async (req, res) => {
          // Calculate progress
      const totalTasks = tasks.length;
      const completedTasks = tasks.filter(task => 
-       task.task_status === "Completed" || task.task_status === "done"
+       task.status === "completed" || task.status === "Completed" || task.status === "done"
      ).length;
      const inProgressTasks = tasks.filter(task => 
-       task.task_status === "In Progress" || 
-       task.task_status === "in progress" ||
-       task.task_status === "in-progress"
+       task.status === "in_progress" || 
+       task.status === "In Progress" || 
+       task.status === "in progress" ||
+       task.status === "in-progress"
      ).length;
      const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -231,9 +241,9 @@ export const getProjectDetails = async (req, res) => {
       assignedDate: bid.created_at,
       tasks: tasks.map(task => ({
         _id: task._id,
-        title: task.task_title,
-        description: task.task_description,
-        status: task.task_status,
+        title: task.title,
+        description: task.description,
+        status: task.status,
         createdAt: task.createdAt
       }))
     };
@@ -254,22 +264,85 @@ export const getProjectDetails = async (req, res) => {
 };
 
 // Update task status (for user to mark tasks as completed)
+// Helper function to update user profile statistics
+const updateUserProfileStats = async (userId, oldStatus, newStatus, projectStatus) => {
+  try {
+    console.log(`🔄 Updating profile stats for user ${userId}: ${oldStatus} -> ${newStatus}, Project: ${projectStatus}`);
+    
+    // Find or create user profile
+    let userProfile = await UserProfile.findOne({ username: userId });
+    
+    if (!userProfile) {
+      console.log(`📝 Creating new profile for user ${userId}`);
+      userProfile = new UserProfile({
+        username: userId,
+        user_project_contribution: 0,
+        user_completed_projects: 0,
+      });
+    }
+
+    // Check if task was just completed (increment contribution)
+    const wasCompleted = oldStatus && (
+      oldStatus.trim() === "completed" || 
+      oldStatus.trim() === "Completed" || 
+      oldStatus.trim() === "done"
+    );
+    
+    const isNowCompleted = newStatus && (
+      newStatus.trim() === "completed" || 
+      newStatus.trim() === "Completed" || 
+      newStatus.trim() === "done"
+    );
+
+    // If task just became completed, increment contribution
+    if (!wasCompleted && isNowCompleted) {
+      userProfile.user_project_contribution += 1;
+      console.log(`✅ Incremented contribution count for user ${userId}. New count: ${userProfile.user_project_contribution}`);
+    }
+
+    // If project just became completed, increment completed projects
+    if (projectStatus === "Completed") {
+      // Check if this is the first time this project is being marked as completed
+      // We'll use a simple approach: if contribution count increased, it means tasks were completed
+      // and if project status is "Completed", increment completed projects
+      const currentCompletedProjects = userProfile.user_completed_projects || 0;
+      
+      // Only increment if we haven't already counted this project
+      // This is a simple approach - in a more complex system, you'd track which projects were already counted
+      if (userProfile.user_project_contribution > currentCompletedProjects) {
+        userProfile.user_completed_projects = userProfile.user_project_contribution;
+        console.log(`🎉 Incremented completed projects count for user ${userId}. New count: ${userProfile.user_completed_projects}`);
+      }
+    }
+
+    // Save the updated profile
+    await userProfile.save();
+    console.log(`💾 Profile stats updated for user ${userId}: Contributions: ${userProfile.user_project_contribution}, Completed Projects: ${userProfile.user_completed_projects}`);
+    
+  } catch (error) {
+    console.error(`❌ Error updating profile stats for user ${userId}:`, error);
+    // Don't throw error to avoid breaking the main task update flow
+  }
+};
+
 // Helper function to calculate project status
 const calculateProjectStatus = (tasks) => {
   const totalTasks = tasks.length;
   // More robust status checking with trim and case-insensitive comparison
   // Handle both "done" and "Completed" status values
   const completedTasks = tasks.filter(task => 
-    task.task_status && (
-      task.task_status.trim() === "Completed" || 
-      task.task_status.trim() === "done"
+    task.status && (
+      task.status.trim() === "completed" || 
+      task.status.trim() === "Completed" || 
+      task.status.trim() === "done"
     )
   ).length;
      const inProgressTasks = tasks.filter(task => 
-     task.task_status && (
-       task.task_status.trim() === "In Progress" ||
-       task.task_status.trim() === "in progress" ||
-       task.task_status.trim() === "in-progress"
+     task.status && (
+       task.status.trim() === "in_progress" ||
+       task.status.trim() === "In Progress" ||
+       task.status.trim() === "in progress" ||
+       task.status.trim() === "in-progress"
      )
    ).length;
   
@@ -280,7 +353,7 @@ const calculateProjectStatus = (tasks) => {
   console.log(`   In Progress tasks: ${inProgressTasks}`);
   
   tasks.forEach((task, index) => {
-    console.log(`   Task ${index + 1}: "${task.task_title}" - Status: "${task.task_status}"`);
+    console.log(`   Task ${index + 1}: "${task.title}" - Status: "${task.status}"`);
   });
   
   if (totalTasks === 0) {
@@ -328,10 +401,13 @@ export const updateTaskStatus = async (req, res) => {
       });
     }
 
+    // Get the old task status for comparison
+    const oldStatus = task.status;
+
     // Update task status
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
-      { task_status },
+      { status: task_status },
       { new: true }
     );
 
@@ -341,6 +417,9 @@ export const updateTaskStatus = async (req, res) => {
     
     // Log for debugging
     console.log(`Project ${task.projectId}: Total tasks: ${allProjectTasks.length}, Status: ${projectStatus}`);
+    
+    // Update user profile statistics
+    await updateUserProfileStats(userId, oldStatus, task_status, projectStatus);
     
     // If all tasks are completed, log it
     if (projectStatus === "Completed") {
@@ -390,14 +469,17 @@ export const refreshProjectStatus = async (req, res) => {
     
          const totalTasks = tasks.length;
      const completedTasks = tasks.filter(task => 
-       task.task_status === "Completed" || task.task_status === "done"
+       task.status === "completed" || task.status === "Completed" || task.status === "done"
      ).length;
      const inProgressTasks = tasks.filter(task => 
-       task.task_status === "In Progress" || 
-       task.task_status === "in progress" ||
-       task.task_status === "in-progress"
+       task.status === "in_progress" || 
+       task.status === "In Progress" || 
+       task.status === "in progress" ||
+       task.status === "in-progress"
      ).length;
-     const pendingTasks = tasks.filter(task => task.task_status === "todo").length;
+     const pendingTasks = tasks.filter(task => 
+       task.status === "pending" || task.status === "todo" || task.status === "Pending"
+     ).length;
 
     console.log(`🔍 Project Status Refresh - Project ${projectId}:`);
     console.log(`   Total Tasks: ${totalTasks}`);
@@ -475,6 +557,90 @@ export const createTestInProgressTask = async (req, res) => {
   }
 };
 
+// Function to recalculate and update user profile statistics
+export const recalculateUserProfileStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    console.log(`🔄 Recalculating profile stats for user ${userId}`);
+
+    // Get all accepted bids for this user
+    const acceptedBids = await Bidding.find({
+      user_id: userId,
+      bid_status: "Accepted"
+    });
+
+    // Get all project IDs
+    const projectIds = acceptedBids.map(bid => bid.project_id);
+
+    // Get all tasks for these projects
+    const allTasks = await ProjectTask.find({ projectId: { $in: projectIds } });
+
+    // Calculate actual statistics
+    const totalTasks = allTasks.length;
+    const completedTasks = allTasks.filter(task => 
+      task.status === "completed" || task.status === "Completed" || task.status === "done"
+    ).length;
+
+    // Calculate completed projects
+    const projectStats = await Promise.all(
+      acceptedBids.map(async (bid) => {
+        const tasks = allTasks.filter(task => task.projectId.toString() === bid.project_id.toString());
+        return calculateProjectStatus(tasks);
+      })
+    );
+
+    const completedProjects = projectStats.filter(status => status === "Completed").length;
+
+    // Find or create user profile
+    let userProfile = await UserProfile.findOne({ username: userId });
+    
+    if (!userProfile) {
+      console.log(`📝 Creating new profile for user ${userId}`);
+      userProfile = new UserProfile({
+        username: userId,
+        user_project_contribution: 0,
+        user_completed_projects: 0,
+      });
+    }
+
+    // Update with calculated values
+    const oldContribution = userProfile.user_project_contribution;
+    const oldCompleted = userProfile.user_completed_projects;
+    
+    userProfile.user_project_contribution = completedTasks;
+    userProfile.user_completed_projects = completedProjects;
+
+    await userProfile.save();
+
+    console.log(`✅ Profile stats recalculated for user ${userId}:`);
+    console.log(`   Contributions: ${oldContribution} -> ${completedTasks}`);
+    console.log(`   Completed Projects: ${oldCompleted} -> ${completedProjects}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Profile statistics recalculated successfully",
+      stats: {
+        totalProjects: acceptedBids.length,
+        totalTasks,
+        completedTasks,
+        completedProjects,
+        oldContribution,
+        oldCompleted,
+        newContribution: completedTasks,
+        newCompleted: completedProjects
+      }
+    });
+
+  } catch (error) {
+    console.error("Error recalculating profile stats:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
 // Debug endpoint to check task data for a project
 export const debugProjectTasks = async (req, res) => {
   try {
@@ -505,15 +671,15 @@ export const debugProjectTasks = async (req, res) => {
     tasks.forEach((task, index) => {
       console.log(`Task ${index + 1}:`);
       console.log(`  ID: ${task._id}`);
-      console.log(`  Title: ${task.task_title}`);
-      console.log(`  Status: "${task.task_status}" (length: ${task.task_status ? task.task_status.length : 0})`);
-      console.log(`  Status trimmed: "${task.task_status ? task.task_status.trim() : ''}"`);
+      console.log(`  Title: ${task.title}`);
+      console.log(`  Status: "${task.status}" (length: ${task.status ? task.status.length : 0})`);
+      console.log(`  Status trimmed: "${task.status ? task.status.trim() : ''}"`);
       console.log(`  Created: ${task.createdAt}`);
     });
 
     // Group tasks by status
     const statusGroups = tasks.reduce((acc, task) => {
-      const status = task.task_status;
+      const status = task.status;
       if (!acc[status]) acc[status] = [];
       acc[status].push(task);
       return acc;
@@ -530,8 +696,8 @@ export const debugProjectTasks = async (req, res) => {
       totalTasks: tasks.length,
       tasks: tasks.map(task => ({
         _id: task._id,
-        title: task.task_title,
-        status: task.task_status,
+        title: task.title,
+        status: task.status,
         createdAt: task.createdAt
       })),
       statusBreakdown: statusGroups

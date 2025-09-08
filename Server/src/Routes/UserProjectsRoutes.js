@@ -7,7 +7,8 @@ import {
   updateTaskStatus,
   refreshProjectStatus,
   debugProjectTasks,
-  createTestInProgressTask
+  createTestInProgressTask,
+  recalculateUserProfileStats
 } from '../controller/UserProjectsController.js';
 
 const userProjectsRoutes = express.Router();
@@ -32,5 +33,8 @@ userProjectsRoutes.get('/debug-tasks/:projectId', authMiddleware, debugProjectTa
 
 // Test endpoint to create In Progress task
 userProjectsRoutes.post('/test-in-progress/:projectId', authMiddleware, createTestInProgressTask);
+
+// Recalculate user profile statistics
+userProjectsRoutes.post('/recalculate-stats', authMiddleware, recalculateUserProfileStats);
 
 export default userProjectsRoutes;

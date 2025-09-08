@@ -10,6 +10,160 @@ import { doc, getDoc, setDoc, collection, addDoc, query, where, orderBy, onSnaps
 import { db } from "../config/firebase.js";
 
 /**
+ * Helper function to update user profile statistics
+ */
+const updateUserProfileStats = async (userId, oldStatus, newStatus, projectId) => {
+  try {
+    console.log(`🔄 [ProjectTask] Updating profile stats for user ${userId}: ${oldStatus} -> ${newStatus}, Project: ${projectId}`);
+    
+    // Find or create user profile
+    let userProfile = await UserProfile.findOne({ username: userId });
+    
+    if (!userProfile) {
+      console.log(`📝 [ProjectTask] Creating new profile for user ${userId}`);
+      userProfile = new UserProfile({
+        username: userId,
+        user_project_contribution: 0,
+        user_completed_projects: 0,
+      });
+    }
+
+    // Check if task was just completed (increment contribution)
+    const wasCompleted = oldStatus && (
+      oldStatus.trim() === "completed" || 
+      oldStatus.trim() === "Completed" || 
+      oldStatus.trim() === "done"
+    );
+    
+    const isNowCompleted = newStatus && (
+      newStatus.trim() === "completed" || 
+      newStatus.trim() === "Completed" || 
+      newStatus.trim() === "done"
+    );
+
+    // If task just became completed, increment contribution
+    if (!wasCompleted && isNowCompleted) {
+      userProfile.user_project_contribution += 1;
+      console.log(`✅ [ProjectTask] Incremented contribution count for user ${userId}. New count: ${userProfile.user_project_contribution}`);
+    }
+
+    // Check if all tasks for this project are now completed
+    const allProjectTasks = await ProjectTask.find({ projectId });
+    const completedTasks = allProjectTasks.filter(task => 
+      task.status === "completed" || task.status === "Completed" || task.status === "done"
+    ).length;
+    
+    // If all tasks are completed, increment completed projects
+    if (completedTasks === allProjectTasks.length && allProjectTasks.length > 0) {
+      const currentCompletedProjects = userProfile.user_completed_projects || 0;
+      
+      // Only increment if we haven't already counted this project
+      if (userProfile.user_project_contribution > currentCompletedProjects) {
+        userProfile.user_completed_projects = userProfile.user_project_contribution;
+        console.log(`🎉 [ProjectTask] Incremented completed projects count for user ${userId}. New count: ${userProfile.user_completed_projects}`);
+      }
+    }
+
+    // Save the updated profile
+    await userProfile.save();
+    console.log(`💾 [ProjectTask] Profile stats updated for user ${userId}: Contributions: ${userProfile.user_project_contribution}, Completed Projects: ${userProfile.user_completed_projects}`);
+    
+  } catch (error) {
+    console.error(`❌ [ProjectTask] Error updating profile stats for user ${userId}:`, error);
+    // Don't throw error to avoid breaking the main task update flow
+  }
+};
+
+/**
+ * Function to recalculate and update user profile statistics
+ */
+export const recalculateUserProfileStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    console.log(`🔄 [ProjectTask] Recalculating profile stats for user ${userId}`);
+
+    // Get all accepted bids for this user
+    const acceptedBids = await Bidding.find({
+      user_id: userId,
+      bid_status: "Accepted"
+    });
+
+    // Get all project IDs
+    const projectIds = acceptedBids.map(bid => bid.project_id);
+
+    // Get all tasks for these projects
+    const allTasks = await ProjectTask.find({ projectId: { $in: projectIds } });
+
+    // Calculate actual statistics
+    const totalTasks = allTasks.length;
+    const completedTasks = allTasks.filter(task => 
+      task.status === "completed" || task.status === "Completed" || task.status === "done"
+    ).length;
+
+    // Calculate completed projects
+    const projectStats = await Promise.all(
+      acceptedBids.map(async (bid) => {
+        const tasks = allTasks.filter(task => task.projectId.toString() === bid.project_id.toString());
+        const completedTasksInProject = tasks.filter(task => 
+          task.status === "completed" || task.status === "Completed" || task.status === "done"
+        ).length;
+        return completedTasksInProject === tasks.length && tasks.length > 0;
+      })
+    );
+
+    const completedProjects = projectStats.filter(isCompleted => isCompleted).length;
+
+    // Find or create user profile
+    let userProfile = await UserProfile.findOne({ username: userId });
+    
+    if (!userProfile) {
+      console.log(`📝 [ProjectTask] Creating new profile for user ${userId}`);
+      userProfile = new UserProfile({
+        username: userId,
+        user_project_contribution: 0,
+        user_completed_projects: 0,
+      });
+    }
+
+    // Update with calculated values
+    const oldContribution = userProfile.user_project_contribution;
+    const oldCompleted = userProfile.user_completed_projects;
+    
+    userProfile.user_project_contribution = completedTasks;
+    userProfile.user_completed_projects = completedProjects;
+
+    await userProfile.save();
+
+    console.log(`✅ [ProjectTask] Profile stats recalculated for user ${userId}:`);
+    console.log(`   Contributions: ${oldContribution} -> ${completedTasks}`);
+    console.log(`   Completed Projects: ${oldCompleted} -> ${completedProjects}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Profile statistics recalculated successfully",
+      stats: {
+        totalProjects: acceptedBids.length,
+        totalTasks,
+        completedTasks,
+        completedProjects,
+        oldContribution,
+        oldCompleted,
+        newContribution: completedTasks,
+        newCompleted: completedProjects
+      }
+    });
+
+  } catch (error) {
+    console.error("Error recalculating profile stats:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+/**
  * Helper function to check if user has access to a project
  * @param {Object} project - The project object
  * @param {string} userId - The user ID to check
@@ -255,6 +409,12 @@ export const updateTask = async (req, res) => {
       return res.status(403).json({ message: accessResult.message });
     }
 
+    // Get the old task status for comparison
+    const oldTask = await ProjectTask.findById(taskId);
+    if (!oldTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
     // Update task in database
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
@@ -264,6 +424,11 @@ export const updateTask = async (req, res) => {
 
     if (!updatedTask) {
       return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Update user profile statistics if task status changed
+    if (updateData.status && updateData.status !== oldTask.status) {
+      await updateUserProfileStats(userId, oldTask.status, updateData.status, projectId);
     }
 
     // Sync to Firebase for real-time updates

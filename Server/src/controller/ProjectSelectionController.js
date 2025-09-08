@@ -15,6 +15,40 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../config/firebase.js";
 
 /**
+ * Update user profile statistics when user is selected for a project
+ */
+const updateUserProfileOnSelection = async (userId) => {
+  try {
+    console.log(`🔄 Updating profile stats for selected user ${userId}`);
+    
+    // Find or create user profile
+    let userProfile = await UserProfile.findOne({ username: userId });
+    
+    if (!userProfile) {
+      console.log(`📝 Creating new profile for selected user ${userId}`);
+      userProfile = new UserProfile({
+        username: userId,
+        user_project_contribution: 0,
+        user_completed_projects: 0,
+      });
+    }
+
+    // User was selected for a project - this could be considered a contribution
+    // We'll increment the contribution count to reflect their selection
+    userProfile.user_project_contribution += 1;
+    console.log(`✅ User ${userId} selected for project. Contribution count: ${userProfile.user_project_contribution}`);
+
+    // Save the updated profile
+    await userProfile.save();
+    console.log(`💾 Profile stats updated for selected user ${userId}: Contributions: ${userProfile.user_project_contribution}, Completed Projects: ${userProfile.user_completed_projects}`);
+    
+  } catch (error) {
+    console.error(`❌ Error updating profile stats for selected user ${userId}:`, error);
+    // Don't throw error to avoid breaking the selection flow
+  }
+};
+
+/**
  * Create Firebase workspace access for selected contributors
  */
 export const createFirebaseWorkspaceAccess = async (projectId, userId) => {
@@ -434,6 +468,9 @@ export const manualSelection = async (req, res) => {
         await Bidding.findByIdAndUpdate(selectedUser.bidId, {
           bid_status: "Accepted",
         });
+
+        // Update user profile statistics (user was selected for a project)
+        await updateUserProfileOnSelection(selectedUser.userId);
 
         // Create Firebase workspace access
         const firebaseResult = await createFirebaseWorkspaceAccess(projectId, selectedUser.userId);
