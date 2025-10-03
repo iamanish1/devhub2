@@ -75,7 +75,7 @@ const CorsOption = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
-      'https://www.devhubs.in',
+      'https://devhubs.in',
       'https://www.devhubs.in',
       'http://localhost:5173',
       'http://localhost:3000'
