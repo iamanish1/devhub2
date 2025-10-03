@@ -61,7 +61,7 @@ const io = new Server(server, {
     credentials: true,
   },
 });
-
+ console.log("🔧 Socket.IO: Server initialized");
 
 
 app.use(express.json());
