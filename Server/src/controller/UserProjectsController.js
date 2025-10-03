@@ -2,6 +2,8 @@ import Bidding from "../Model/BiddingModel.js";
 import ProjectListing from "../Model/ProjectListingModel.js";
 import ProjectTask from "../Model/ProjectTaskModel.js";
 import UserProfile from "../Model/UserProfileModel.js";
+import { firestoreDb } from "../config/firebaseAdmin.js";
+
 
 // Get user's assigned projects (where bid was accepted)
 export const getUserAssignedProjects = async (req, res) => {
@@ -23,8 +25,8 @@ export const getUserAssignedProjects = async (req, res) => {
       acceptedBids.map(async (bid) => {
         const project = bid.project_id;
         
-        // Get all tasks for this project
-        const tasks = await ProjectTask.find({ projectId: project._id });
+        // Get all tasks for this project with completion dates
+        const tasks = await ProjectTask.find({ projectId: project._id }).select('title status completedAt createdAt');
         
         // Debug logging
         console.log(`🔍 [getUserAssignedProjects] Project ${project._id}: Found ${tasks.length} tasks`);
@@ -70,7 +72,14 @@ export const getUserAssignedProjects = async (req, res) => {
           inProgressTasks,
           pendingTasks: totalTasks - completedTasks - inProgressTasks,
           assignedDate: bid.created_at,
-          bidId: bid._id
+          bidId: bid._id,
+          tasks: tasks.map(task => ({
+            _id: task._id,
+            title: task.title,
+            status: task.status,
+            completedAt: task.completedAt,
+            createdAt: task.createdAt
+          }))
         };
       })
     );
@@ -265,7 +274,7 @@ export const getProjectDetails = async (req, res) => {
 
 // Update task status (for user to mark tasks as completed)
 // Helper function to update user profile statistics
-const updateUserProfileStats = async (userId, oldStatus, newStatus, projectStatus) => {
+const updateUserProfileStats = async (userId, oldStatus, newStatus, projectStatus, updatedTask = null) => {
   try {
     console.log(`🔄 Updating profile stats for user ${userId}: ${oldStatus} -> ${newStatus}, Project: ${projectStatus}`);
     
@@ -296,28 +305,52 @@ const updateUserProfileStats = async (userId, oldStatus, newStatus, projectStatu
 
     // If task just became completed, increment contribution
     if (!wasCompleted && isNowCompleted) {
-      userProfile.user_project_contribution += 1;
+      userProfile.user_project_contribution = (userProfile.user_project_contribution || 0) + 1;
       console.log(`✅ Incremented contribution count for user ${userId}. New count: ${userProfile.user_project_contribution}`);
     }
 
-    // If project just became completed, increment completed projects
-    if (projectStatus === "Completed") {
-      // Check if this is the first time this project is being marked as completed
-      // We'll use a simple approach: if contribution count increased, it means tasks were completed
-      // and if project status is "Completed", increment completed projects
-      const currentCompletedProjects = userProfile.user_completed_projects || 0;
+    // Recalculate completed projects based on actual project completion status
+    // This ensures accuracy instead of relying on incremental updates
+    const acceptedBids = await Bidding.find({
+      user_id: userId,
+      bid_status: "Accepted"
+    });
+    
+    let completedProjectsCount = 0;
+    
+    // Check each project to see if it's actually completed
+    for (const bid of acceptedBids) {
+      const projectTasks = await ProjectTask.find({ projectId: bid.project_id });
+      const projectTaskStatus = calculateProjectStatus(projectTasks);
       
-      // Only increment if we haven't already counted this project
-      // This is a simple approach - in a more complex system, you'd track which projects were already counted
-      if (userProfile.user_project_contribution > currentCompletedProjects) {
-        userProfile.user_completed_projects = userProfile.user_project_contribution;
-        console.log(`🎉 Incremented completed projects count for user ${userId}. New count: ${userProfile.user_completed_projects}`);
+      if (projectTaskStatus === "Completed") {
+        completedProjectsCount++;
       }
     }
+    
+    userProfile.user_completed_projects = completedProjectsCount;
+    console.log(`🎉 Updated completed projects count for user ${userId}. New count: ${userProfile.user_completed_projects}`);
 
     // Save the updated profile
     await userProfile.save();
     console.log(`💾 Profile stats updated for user ${userId}: Contributions: ${userProfile.user_project_contribution}, Completed Projects: ${userProfile.user_completed_projects}`);
+    
+    // Automatically sync updated contribution count to Firebase for real-time updates
+    if (firestoreDb && (!wasCompleted && isNowCompleted)) {
+      try {
+        // Sync only the newly completed task to Firebase (incremental update)
+        if (updatedTask) {
+          await syncSingleTaskCompletionToFirebase(userId, userProfile, updatedTask);
+        } else {
+          // Fallback to full sync if updatedTask is not available
+          await syncAllContributionsToFirebase(userId, userProfile, []);
+        }
+        console.log(`🔥 [Firebase] Auto-synced single task completion to Firebase for user ${userId} (total: ${userProfile.user_project_contribution})`);
+        
+      } catch (firebaseError) {
+        console.error("Firebase contribution sync error:", firebaseError);
+      }
+    }
     
   } catch (error) {
     console.error(`❌ Error updating profile stats for user ${userId}:`, error);
@@ -404,12 +437,64 @@ export const updateTaskStatus = async (req, res) => {
     // Get the old task status for comparison
     const oldStatus = task.status;
 
-    // Update task status
+    // Update task status and set completion date if task is being completed
+    const updateData = { status: task_status };
+    
+    // Set completedAt timestamp if task is being marked as completed
+    if (task_status && (
+      task_status.trim() === "completed" || 
+      task_status.trim() === "Completed" || 
+      task_status.trim() === "done"
+    )) {
+      updateData.completedAt = new Date();
+    }
+    
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
-      { status: task_status },
+      updateData,
       { new: true }
     );
+
+    // Sync task completion to Firebase for real-time updates
+    if (firestoreDb && task_status && (
+      task_status.trim() === "completed" || 
+      task_status.trim() === "Completed" || 
+      task_status.trim() === "done"
+    )) {
+      try {
+        // Sync task data to Firebase immediately
+        await firestoreDb.collection('project_tasks').doc(taskId).set({
+          _id: taskId,
+          title: updatedTask.title,
+          status: updatedTask.status,
+          completedAt: updatedTask.completedAt,
+          projectId: updatedTask.projectId,
+          assignedTo: updatedTask.assignedTo,
+          updatedAt: new Date(),
+          syncedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`🔥 [Firebase] Synced task completion to Firebase: ${taskId}`);
+        
+        // Also trigger a real-time event for immediate frontend updates
+        await firestoreDb.collection('realtime_events').add({
+          type: 'task_completed',
+          taskId: taskId,
+          userId: userId,
+          projectId: updatedTask.projectId,
+          timestamp: new Date(),
+          data: {
+            title: updatedTask.title,
+            status: updatedTask.status,
+            completedAt: updatedTask.completedAt
+          }
+        });
+        
+        console.log(`🔥 [Firebase] Created real-time event for task completion: ${taskId}`);
+      } catch (firebaseError) {
+        console.error("Firebase sync error:", firebaseError);
+      }
+    }
 
     // Check if all tasks for this project are now completed
     const allProjectTasks = await ProjectTask.find({ projectId: task.projectId });
@@ -419,7 +504,7 @@ export const updateTaskStatus = async (req, res) => {
     console.log(`Project ${task.projectId}: Total tasks: ${allProjectTasks.length}, Status: ${projectStatus}`);
     
     // Update user profile statistics
-    await updateUserProfileStats(userId, oldStatus, task_status, projectStatus);
+    await updateUserProfileStats(userId, oldStatus, task_status, projectStatus, updatedTask);
     
     // If all tasks are completed, log it
     if (projectStatus === "Completed") {
@@ -612,13 +697,16 @@ export const recalculateUserProfileStats = async (req, res) => {
 
     await userProfile.save();
 
+    // Sync the recalculated data to Firebase
+    await syncAllContributionsToFirebase(userId, userProfile, allTasks);
+
     console.log(`✅ Profile stats recalculated for user ${userId}:`);
     console.log(`   Contributions: ${oldContribution} -> ${completedTasks}`);
     console.log(`   Completed Projects: ${oldCompleted} -> ${completedProjects}`);
 
     res.status(200).json({
       success: true,
-      message: "Profile statistics recalculated successfully",
+      message: "Profile statistics recalculated and synced successfully",
       stats: {
         totalProjects: acceptedBids.length,
         totalTasks,
@@ -637,6 +725,156 @@ export const recalculateUserProfileStats = async (req, res) => {
       success: false,
       message: "Internal server error",
       error: error.message
+    });
+  }
+};
+
+// Helper function to sync a single task completion to Firebase (incremental)
+export const syncSingleTaskCompletionToFirebase = async (userId, userProfile, completedTask) => {
+  if (!firestoreDb) {
+    console.error("❌ [Firebase] Firestore database not initialized");
+    return;
+  }
+  
+  try {
+    console.log(`🔥 [Firebase] Syncing single task completion for user ${userId}: ${completedTask.title}`);
+    
+    // Get existing Firebase data
+    const userContributionsRef = firestoreDb.collection('userContributions').doc(userId);
+    const existingDoc = await userContributionsRef.get();
+    const existingData = existingDoc.exists ? existingDoc.data() : {};
+    
+    console.log(`📄 [Firebase] Existing Firebase data:`, existingData);
+    
+    // Get the completion date for this specific task
+    const completionDate = completedTask.completedAt ? new Date(completedTask.completedAt) : new Date(completedTask.createdAt);
+    const dateKey = `${completionDate.getFullYear()}-${String(completionDate.getMonth() + 1).padStart(2, '0')}-${String(completionDate.getDate()).padStart(2, '0')}`;
+    
+    console.log(`📅 [Firebase] Task completed on ${dateKey}: ${completedTask.title}`);
+    
+    // Start with existing data to preserve all historical contributions
+    const contributionData = { ...existingData };
+    
+    // Increment the count for this specific date (accumulate)
+    const existingCount = contributionData[dateKey] || 0;
+    contributionData[dateKey] = existingCount + 1;
+    
+    console.log(`📅 [Firebase] Incrementing ${dateKey}: ${existingCount} + 1 = ${contributionData[dateKey]} contributions`);
+    
+    // Update metadata
+    contributionData.lastUpdated = new Date();
+    contributionData.totalContributions = userProfile.user_project_contribution;
+    contributionData.profileContributions = userProfile.user_project_contribution;
+    contributionData.syncedAt = new Date().toISOString();
+    
+    console.log(`💾 [Firebase] About to save incremental contribution data:`, contributionData);
+    
+    // Update Firebase with incremental contribution data (merge to preserve existing dates)
+    await userContributionsRef.set(contributionData, { merge: true });
+    
+    console.log(`🔥 [Firebase] Successfully synced single task completion to Firebase for user ${userId}`);
+    console.log(`📊 [Firebase] Total dates with contributions: ${Object.keys(contributionData).filter(key => key.match(/^\d{4}-\d{2}-\d{2}$/)).length}`);
+    
+  } catch (firebaseError) {
+    console.error("❌ [Firebase] Single task sync error:", firebaseError);
+    console.error("❌ [Firebase] Error details:", {
+      message: firebaseError.message,
+      code: firebaseError.code,
+      stack: firebaseError.stack
+    });
+  }
+};
+
+// Helper function to sync all contributions to Firebase
+export const syncAllContributionsToFirebase = async (userId, userProfile, allTasks = []) => {
+  if (!firestoreDb) {
+    console.error("❌ [Firebase] Firestore database not initialized");
+    return;
+  }
+  
+  try {
+    console.log(`🔥 [Firebase] Syncing all contributions for user ${userId}`);
+    console.log(`📊 [Firebase] User profile contributions: ${userProfile.user_project_contribution}`);
+    
+    // Get existing Firebase data first to preserve existing contributions
+    const userContributionsRef = firestoreDb.collection('userContributions').doc(userId);
+    const existingDoc = await userContributionsRef.get();
+    const existingData = existingDoc.exists ? existingDoc.data() : {};
+    
+    console.log(`📄 [Firebase] Existing Firebase data:`, existingData);
+    
+    // Build contribution map from actual task completion dates
+    const contributionMap = new Map();
+    
+    // If allTasks is provided, use it; otherwise fetch all tasks for this user
+    let tasksToProcess = allTasks;
+    if (tasksToProcess.length === 0) {
+      // Fetch all accepted bids for this user
+      const acceptedBids = await Bidding.find({
+        user_id: userId,
+        bid_status: "Accepted"
+      });
+      
+      console.log(`🎯 [Firebase] Found ${acceptedBids.length} accepted bids for user ${userId}`);
+      
+      // Get all project IDs
+      const projectIds = acceptedBids.map(bid => bid.project_id);
+      
+      // Get all tasks for these projects
+      tasksToProcess = await ProjectTask.find({ projectId: { $in: projectIds } });
+    }
+    
+    console.log(`📊 [Firebase] Processing ${tasksToProcess.length} tasks for user ${userId}`);
+    
+    // Count completed tasks by date
+    let completedTasksCount = 0;
+    tasksToProcess.forEach(task => {
+      if (task.status === "completed" || task.status === "Completed" || task.status === "done") {
+        completedTasksCount++;
+        const completionDate = task.completedAt ? new Date(task.completedAt) : new Date(task.createdAt);
+        const dateKey = `${completionDate.getFullYear()}-${String(completionDate.getMonth() + 1).padStart(2, '0')}-${String(completionDate.getDate()).padStart(2, '0')}`;
+        
+        const existingCount = contributionMap.get(dateKey) || 0;
+        contributionMap.set(dateKey, existingCount + 1);
+        
+        console.log(`✅ [Firebase] Task completed on ${dateKey}: ${task.title}`);
+      }
+    });
+    
+    console.log(`📊 [Firebase] Found ${completedTasksCount} completed tasks`);
+    
+    // Start with existing Firebase data to preserve all historical contributions
+    const contributionData = { ...existingData };
+    
+    // Only update dates that have new contributions (accumulate, don't overwrite)
+    contributionMap.forEach((count, dateKey) => {
+      // If this date already exists in Firebase, add to it (accumulate)
+      // If it doesn't exist, set it to the new count
+      const existingCount = contributionData[dateKey] || 0;
+      contributionData[dateKey] = existingCount + count;
+      console.log(`📅 [Firebase] Accumulating ${dateKey}: ${existingCount} + ${count} = ${contributionData[dateKey]} contributions`);
+    });
+    
+    // Add/update metadata
+    contributionData.lastUpdated = new Date();
+    contributionData.totalContributions = userProfile.user_project_contribution;
+    contributionData.profileContributions = userProfile.user_project_contribution;
+    contributionData.syncedAt = new Date().toISOString();
+    
+    console.log(`💾 [Firebase] About to save contribution data:`, contributionData);
+    
+    // Update Firebase with all contribution data (merge to preserve existing dates)
+    await userContributionsRef.set(contributionData, { merge: true });
+    
+    console.log(`🔥 [Firebase] Successfully synced all contributions to Firebase for user ${userId}`);
+    console.log(`📊 [Firebase] Total dates with contributions: ${Object.keys(contributionData).filter(key => key.match(/^\d{4}-\d{2}-\d{2}$/)).length}`);
+    
+  } catch (firebaseError) {
+    console.error("❌ [Firebase] Sync error:", firebaseError);
+    console.error("❌ [Firebase] Error details:", {
+      message: firebaseError.message,
+      code: firebaseError.code,
+      stack: firebaseError.stack
     });
   }
 };
@@ -705,6 +943,141 @@ export const debugProjectTasks = async (req, res) => {
 
   } catch (error) {
     console.error("Error debugging project tasks:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+// Manual sync endpoint to force sync all contributions to Firebase
+export const manualSyncContributions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    console.log(`🔄 [Manual Sync] Starting manual sync for user ${userId}`);
+    
+    // Get user profile
+    const userProfile = await UserProfile.findOne({ username: userId });
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found"
+      });
+    }
+    
+    // Force sync all contributions to Firebase
+    await syncAllContributionsToFirebase(userId, userProfile, []);
+    
+    console.log(`✅ [Manual Sync] Completed manual sync for user ${userId}`);
+    
+    res.json({
+      success: true,
+      message: "Contributions synced successfully",
+      userId,
+      totalContributions: userProfile.user_project_contribution
+    });
+
+  } catch (error) {
+    console.error("Manual sync error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+// Debug endpoint to check user's contribution data
+export const debugUserContributions = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    console.log(`🔍 Debug User Contributions - User ${userId}:`);
+    
+    // Get user profile
+    const userProfile = await UserProfile.findOne({ username: userId });
+    if (!userProfile) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found"
+      });
+    }
+    
+    // Get all accepted bids for this user
+    const acceptedBids = await Bidding.find({
+      user_id: userId,
+      bid_status: "Accepted"
+    });
+    
+    // Get all project IDs
+    const projectIds = acceptedBids.map(bid => bid.project_id);
+    
+    // Get all tasks for these projects
+    const allTasks = await ProjectTask.find({ projectId: { $in: projectIds } });
+    
+    // Count completed tasks by date
+    const contributionMap = new Map();
+    allTasks.forEach(task => {
+      if (task.status === "completed" || task.status === "Completed" || task.status === "done") {
+        const completionDate = task.completedAt ? new Date(task.completedAt) : new Date(task.createdAt);
+        const dateKey = `${completionDate.getFullYear()}-${String(completionDate.getMonth() + 1).padStart(2, '0')}-${String(completionDate.getDate()).padStart(2, '0')}`;
+        
+        const existingCount = contributionMap.get(dateKey) || 0;
+        contributionMap.set(dateKey, existingCount + 1);
+      }
+    });
+    
+    // Convert map to object
+    const contributionData = {};
+    contributionMap.forEach((count, dateKey) => {
+      contributionData[dateKey] = count;
+    });
+    
+    console.log(`📊 User Profile Stats:`);
+    console.log(`  Total Contributions: ${userProfile.user_project_contribution}`);
+    console.log(`  Completed Projects: ${userProfile.user_completed_projects}`);
+    
+    console.log(`📅 Contribution Data by Date:`);
+    Object.entries(contributionData).forEach(([date, count]) => {
+      console.log(`  ${date}: ${count} contributions`);
+    });
+    
+    // Get Firebase data if available
+    let firebaseData = null;
+    if (firestoreDb) {
+      try {
+        const userContributionsRef = firestoreDb.collection('userContributions').doc(userId);
+        const firebaseDoc = await userContributionsRef.get();
+        if (firebaseDoc.exists) {
+          firebaseData = firebaseDoc.data();
+          console.log(`🔥 Firebase Data:`, firebaseData);
+        } else {
+          console.log(`🔥 No Firebase data found`);
+        }
+      } catch (firebaseError) {
+        console.error("Firebase error:", firebaseError);
+      }
+    }
+    
+    res.json({
+      success: true,
+      userId,
+      userProfile: {
+        totalContributions: userProfile.user_project_contribution,
+        completedProjects: userProfile.user_completed_projects
+      },
+      contributionData,
+      firebaseData,
+      totalTasks: allTasks.length,
+      completedTasks: allTasks.filter(task => 
+        task.status === "completed" || task.status === "Completed" || task.status === "done"
+      ).length
+    });
+
+  } catch (error) {
+    console.error("Debug user contributions error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",

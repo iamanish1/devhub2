@@ -1,5 +1,6 @@
 import ProjectTask from "../Model/ProjectTaskModel.js";
 import { firestoreDb } from "../config/firebaseAdmin.js";
+import { updateUserProfileStats } from "./ProjectTaskController.js";
 
 export const createProjectTask = async (req, res) => {
   try {
@@ -92,10 +93,27 @@ export const updateProjectTaskStatus = async (req, res) => {
         .json({ message: "Task ID and status are required." });
     }
 
-    // Update the task status
+    // Get the old task status for comparison
+    const oldTask = await ProjectTask.findById(taskId);
+    if (!oldTask) {
+      return res.status(404).json({ message: "Task not found." });
+    }
+
+    // Update the task status and set completion date if task is being completed
+    const updateData = { task_status };
+    
+    // Set completedAt timestamp if task is being marked as completed
+    if (task_status && (
+      task_status.trim() === "completed" || 
+      task_status.trim() === "Completed" || 
+      task_status.trim() === "done"
+    )) {
+      updateData.completedAt = new Date();
+    }
+    
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
-      { task_status },
+      updateData,
       { new: true } // Return the updated document
     );
 
@@ -103,14 +121,23 @@ export const updateProjectTaskStatus = async (req, res) => {
       return res.status(404).json({ message: "Task not found." });
     }
 
+    // Update user profile statistics if task status changed to completed
+    if (task_status && task_status !== oldTask.task_status) {
+      await updateUserProfileStats(oldTask.assignedTo, oldTask.task_status, task_status, oldTask.projectId);
+    }
+
     // Sync the updated task status to Firestore
     await firestoreDb.collection("project_tasks").doc(taskId).set(
       {
-        task_status: updatedTask.task_status,
+        _id: taskId,
+        title: updatedTask.task_title,
+        status: updatedTask.task_status,
+        completedAt: updatedTask.completedAt,
+        projectId: updatedTask.projectId.toString(),
+        assignedTo: updatedTask.assignedTo,
         updated_at: new Date(),
-        projectId: updatedTask.projectId.toString(), // <-- Add this line!
-        task_title: updatedTask.task_title, // (optional, for full sync)
-        task_description: updatedTask.task_description, // (optional)
+        task_title: updatedTask.task_title,
+        task_description: updatedTask.task_description,
       },
       { merge: true } // This will create the document if it doesn't exist
     );

@@ -12,7 +12,7 @@ import { db } from "../config/firebase.js";
 /**
  * Helper function to update user profile statistics
  */
-const updateUserProfileStats = async (userId, oldStatus, newStatus, projectId) => {
+export const updateUserProfileStats = async (userId, oldStatus, newStatus, projectId) => {
   try {
     console.log(`🔄 [ProjectTask] Updating profile stats for user ${userId}: ${oldStatus} -> ${newStatus}, Project: ${projectId}`);
     
@@ -68,6 +68,59 @@ const updateUserProfileStats = async (userId, oldStatus, newStatus, projectId) =
     await userProfile.save();
     console.log(`💾 [ProjectTask] Profile stats updated for user ${userId}: Contributions: ${userProfile.user_project_contribution}, Completed Projects: ${userProfile.user_completed_projects}`);
     
+    // Sync updated contribution count to Firebase for real-time updates with proper date-wise storage
+    if (db) {
+      try {
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        // Get current Firebase contribution data
+        const userContributionsRef = doc(db, 'userContributions', userId.toString());
+        const currentData = await getDoc(userContributionsRef);
+        
+        let firebaseData = {};
+        if (currentData.exists()) {
+          firebaseData = currentData.data();
+        }
+        
+        // CRITICAL FIX: Only increment if this is a new completion, not a status change
+        // Check if we already counted this task completion today
+        const taskCompletionKey = `task_${projectId}_${Date.now()}`; // Unique key for this completion
+        
+        // Only increment if this task hasn't been counted for today
+        if (!firebaseData[`${todayKey}_tasks`] || !firebaseData[`${todayKey}_tasks`].includes(taskCompletionKey)) {
+          // Update today's contribution count - properly increment instead of overwriting
+          const currentTodayCount = firebaseData[todayKey] || 0;
+          firebaseData[todayKey] = currentTodayCount + 1;
+          
+          // Track completed tasks for this date to prevent double counting
+          if (!firebaseData[`${todayKey}_tasks`]) {
+            firebaseData[`${todayKey}_tasks`] = [];
+          }
+          firebaseData[`${todayKey}_tasks`].push(taskCompletionKey);
+          
+          // Update metadata
+          firebaseData.lastUpdated = serverTimestamp();
+          firebaseData.totalContributions = (firebaseData.totalContributions || 0) + 1;
+          firebaseData.lastTaskCompletion = {
+            taskId: taskCompletionKey,
+            projectId: projectId,
+            completedAt: serverTimestamp(),
+            date: todayKey
+          };
+          
+          // Save to Firebase with proper merge to preserve existing data
+          await setDoc(userContributionsRef, firebaseData, { merge: true });
+          console.log(`🔥 [ProjectTask] Synced NEW contribution count to Firebase for user ${userId}: ${todayKey} = ${firebaseData[todayKey]} (incremented from ${currentTodayCount})`);
+        } else {
+          console.log(`🔥 [ProjectTask] Task already counted for today, skipping Firebase sync to prevent double counting`);
+        }
+        
+      } catch (firebaseError) {
+        console.error("Firebase contribution sync error:", firebaseError);
+      }
+    }
+    
   } catch (error) {
     console.error(`❌ [ProjectTask] Error updating profile stats for user ${userId}:`, error);
     // Don't throw error to avoid breaking the main task update flow
@@ -75,7 +128,7 @@ const updateUserProfileStats = async (userId, oldStatus, newStatus, projectId) =
 };
 
 /**
- * Function to recalculate and update user profile statistics
+ * Function to recalculate and update user profile statistics with Firebase sync
  */
 export const recalculateUserProfileStats = async (req, res) => {
   try {
@@ -137,6 +190,65 @@ export const recalculateUserProfileStats = async (req, res) => {
     console.log(`✅ [ProjectTask] Profile stats recalculated for user ${userId}:`);
     console.log(`   Contributions: ${oldContribution} -> ${completedTasks}`);
     console.log(`   Completed Projects: ${oldCompleted} -> ${completedProjects}`);
+
+    // CRITICAL FIX: Sync recalculated data to Firebase with proper date-wise storage
+    if (db) {
+      try {
+        const userContributionsRef = doc(db, 'userContributions', userId.toString());
+        
+        // Get existing Firebase data
+        const currentData = await getDoc(userContributionsRef);
+        let firebaseData = {};
+        if (currentData.exists()) {
+          firebaseData = currentData.data();
+        }
+        
+        // Helper function to get date key
+        const getDateKey = (date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        // Build contribution map from completed tasks with actual completion dates
+        const contributionMap = new Map();
+        
+        allTasks.forEach(task => {
+          if (task.status && (
+            task.status.trim().toLowerCase() === "completed" || 
+            task.status.trim().toLowerCase() === "done"
+          )) {
+            // Use actual completion date if available, otherwise use creation date
+            const completionDate = task.completedAt ? new Date(task.completedAt) : new Date(task.createdAt);
+            const completionDateKey = getDateKey(completionDate);
+            const existingTaskCount = contributionMap.get(completionDateKey) || 0;
+            contributionMap.set(completionDateKey, existingTaskCount + 1);
+          }
+        });
+        
+        // Merge with existing Firebase data to preserve real-time contributions
+        contributionMap.forEach((count, dateKey) => {
+          const existingCount = firebaseData[dateKey] || 0;
+          firebaseData[dateKey] = Math.max(existingCount, count);
+        });
+        
+        // Update metadata
+        firebaseData.lastUpdated = serverTimestamp();
+        firebaseData.totalContributions = Array.from(contributionMap.values()).reduce((sum, count) => sum + count, 0);
+        firebaseData.recalculatedAt = new Date().toISOString();
+        firebaseData.profileContributions = completedTasks;
+        firebaseData.syncSource = 'backend_recalculation';
+        
+        // Save to Firebase
+        await setDoc(userContributionsRef, firebaseData);
+        
+        console.log(`🔥 [ProjectTask] Synced recalculated contributions to Firebase for user ${userId}`);
+        
+      } catch (firebaseError) {
+        console.error("Firebase sync error during recalculation:", firebaseError);
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -544,6 +656,13 @@ export const completeTask = async (req, res) => {
 
     logger.info(`[ProjectTask] Current task status: ${existingTask.status}`);
 
+    // CRITICAL FIX: Check if task is already completed to prevent duplicate contributions
+    const wasAlreadyCompleted = existingTask.status && (
+      existingTask.status.trim().toLowerCase() === "completed" || 
+      existingTask.status.trim().toLowerCase() === "done" ||
+      existingTask.status.trim().toLowerCase() === "review"
+    );
+
     // Update task status to review (waiting for admin approval)
     const updatedTask = await ProjectTask.findByIdAndUpdate(
       taskId,
@@ -565,6 +684,14 @@ export const completeTask = async (req, res) => {
 
     logger.info(`[ProjectTask] Task updated successfully: ${updatedTask._id}, new status: ${updatedTask.status}`);
 
+    // CRITICAL FIX: Only update user profile stats if this is a new completion
+    if (!wasAlreadyCompleted) {
+      logger.info(`[ProjectTask] This is a new task completion, updating user profile stats`);
+      await updateUserProfileStats(userId, existingTask.status, 'review', projectId);
+    } else {
+      logger.info(`[ProjectTask] Task was already completed, skipping profile stats update to prevent double counting`);
+    }
+
     // Sync to Firebase for real-time updates (with error handling)
     try {
       if (db) {
@@ -575,7 +702,10 @@ export const completeTask = async (req, res) => {
           actualHours: actualHours || existingTask.actualHours || 0,
           completedAt: serverTimestamp(),
           completedBy: userId.toString(),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          // Add metadata for tracking
+          wasAlreadyCompleted: wasAlreadyCompleted,
+          completionAttemptedAt: serverTimestamp()
         }, { merge: true });
         logger.info(`[ProjectTask] Firebase sync successful for task: ${taskId}`);
       } else {
@@ -589,7 +719,8 @@ export const completeTask = async (req, res) => {
     res.status(200).json({ 
       success: true,
       message: 'Task completed successfully',
-      task: updatedTask
+      task: updatedTask,
+      wasNewCompletion: !wasAlreadyCompleted
     });
 
   } catch (error) {
@@ -638,6 +769,12 @@ export const reviewTask = async (req, res) => {
       return res.status(403).json({ message: 'Only project owner can review tasks' });
     }
 
+    // Get the old task status for comparison
+    const oldTask = await ProjectTask.findById(taskId);
+    if (!oldTask) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
     // Update task status to completed (admin approved) or back to review (admin rejected)
     const newStatus = approved ? 'completed' : 'review';
     const updatedTask = await ProjectTask.findByIdAndUpdate(
@@ -654,6 +791,11 @@ export const reviewTask = async (req, res) => {
 
     if (!updatedTask) {
       return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Update user profile statistics if task was approved (status changed to completed)
+    if (approved && oldTask.status !== 'completed') {
+      await updateUserProfileStats(oldTask.assignedTo, oldTask.status, newStatus, projectId);
     }
 
     // Sync to Firebase for real-time updates

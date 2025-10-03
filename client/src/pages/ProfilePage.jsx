@@ -1,11 +1,12 @@
 import Navbar from "../components/NavBar";
 import axios from "axios";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import userProjectsApi from "../utils/userProjectsApi";
 import ProjectStatsSection from "../components/ProjectStatsSection";
 import UserProjectCard from "../components/UserProjectCard";
 import PremiumBadge, { SubscriptionStatusBadge } from "../components/PremiumBadge";
 import { db } from "../Config/firebase";
+import { motion } from "framer-motion";  
 import { 
   doc, 
   setDoc, 
@@ -46,7 +47,7 @@ import {
 } from "react-icons/fa";
 
 import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 
 // Professional Skill Card Component
 const SkillCard = React.memo(({ skill, getSkillIcon }) => {
@@ -167,11 +168,17 @@ const SkillsSection = React.memo(
     analyticsData,
     getRealTimeData,
     fetchUserProfile,
+    fetchUserProjects,
+    fetchProjectStats,
+    immediateFetchData,
     loading,
     loadingProjects,
     isFirebaseConnected,
     syncAnalyticsToFirebase,
     loadingAnalytics,
+    syncAllContributionsToFirebase,
+    setContributionUpdateTrigger,
+    userProfile,
   }) => {
     const [showAllSkills, setShowAllSkills] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -445,19 +452,78 @@ const SkillsSection = React.memo(
               <p className="text-gray-400">
                 Your project activity over the past year
               </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Manual Sync Button - Only shown when needed */}
+              {(!isFirebaseConnected || (userProfile && userProfile.user_project_contribution > 0 && contributionData.length === 0)) && (
+                <button
+                  onClick={async () => {
+                    console.log("🔄 [ProfilePage] Manual syncing contributions...");
+                    try {
+                      // Call backend to recalculate and sync all contribution data
+                      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/user-projects/recalculate-stats`, {}, {
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                      });
+                      
+                      if (response.data.success) {
+                        console.log("✅ [ProfilePage] Contribution data recalculated successfully:", response.data.stats);
+                        
+                        // Refresh all data to show updated contributions
+                        fetchUserProfile();
+                        fetchUserProjects();
+                        fetchProjectStats();
+                        
+                        // Trigger contribution data recalculation
+                        setContributionUpdateTrigger(prev => prev + 1);
+                      }
+                    } catch (error) {
+                      console.error("Error manual syncing:", error);
+                    }
+                  }}
+                  disabled={loadingProjects}
+                  className="px-3 py-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-all duration-300 border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                  title="Manually sync contribution data (auto-sync is enabled)"
+                >
+                  Manual Sync
+                </button>
+              )}
+              
+              {/* Refresh Contribution Data Button */}
+              <button
+                onClick={async () => {
+                  console.log("🔄 [ProfilePage] Manual refresh of contribution data");
+                  if (immediateFetchData) {
+                    immediateFetchData();
+                  } else {
+                    fetchUserProfile();
+                    fetchUserProjects();
+                    fetchProjectStats();
+                  }
+                  // Also sync to Firebase
+                  try {
+                    await syncAllContributionsToFirebase();
+                  } catch (error) {
+                    console.error("Error syncing to Firebase:", error);
+                  }
+                }}
+                disabled={loadingProjects}
+                className="p-2 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 transition-all duration-300 border border-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh contribution data immediately and sync to Firebase"
+              >
+                <FaSync className={`text-sm ${loadingProjects ? "animate-spin" : ""}`} />
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between mb-6">
+            <div>
                              {!loadingProjects && (
                  <div className="flex items-center gap-2 mt-2">
-                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                   <span className="text-green-400 text-sm font-medium">
-                     Live Data from Projects
-                   </span>
-                 </div>
-               )}
-               {isFirebaseConnected && (
-                 <div className="flex items-center gap-2 mt-1">
-                   <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                   <span className="text-blue-400 text-sm font-medium">
-                     Firebase Real-time Sync
+                   <div className={`w-2 h-2 rounded-full animate-pulse ${isFirebaseConnected ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                   <span className={`text-sm font-medium ${isFirebaseConnected ? 'text-green-400' : 'text-yellow-400'}`}>
+                     {isFirebaseConnected ? 'Auto-sync Active' : 'Connecting to Auto-sync...'}
                    </span>
                  </div>
                )}
@@ -942,37 +1008,6 @@ const ProfilePage = () => {
   const [selectedProjectFilter, setSelectedProjectFilter] = useState("all");
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
 
-  // Function to fetch user profile - defined early to avoid scope issues
-  const fetchUserProfile = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      console.log("🔍 [ProfilePage] fetchUserProfile response:", response.data);
-      console.log("🔍 [ProfilePage] Profile data:", response.data.profile);
-      
-      if (response.data.profile) {
-        console.log(`📊 Profile stats: contributions = ${response.data.profile.user_project_contribution}, completed projects = ${response.data.profile.user_completed_projects}`);
-      }
-      
-      setUserProfile(response.data.profile);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUserProfile();
-  }, [fetchUserProfile]);
-
   // Function to fetch user projects
   const fetchUserProjects = useCallback(async () => {
     try {
@@ -1017,12 +1052,46 @@ const ProfilePage = () => {
     }
   }, []);
 
+  // Function to fetch user profile - defined early to avoid scope issues
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/profile`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      console.log("🔍 [ProfilePage] fetchUserProfile response:", response.data);
+      console.log("🔍 [ProfilePage] Profile data:", response.data.profile);
+      
+      if (response.data.profile) {
+        console.log(`📊 Profile stats: contributions = ${response.data.profile.user_project_contribution}, completed projects = ${response.data.profile.user_completed_projects}`);
+      }
+      
+      setUserProfile(response.data.profile);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]); // Include fetchUserProfile dependency
+
+  // Function to fetch user projects
+
   // Function to refresh project data (useful for debugging)
   const refreshProjectData = useCallback(async () => {
     console.log("🔄 Refreshing project data...");
+    await fetchUserProfile();
     await fetchUserProjects();
     await fetchProjectStats();
-  }, [fetchUserProjects, fetchProjectStats]);
+  }, [fetchUserProfile, fetchUserProjects, fetchProjectStats]);
 
   // Function to debug project tasks (for troubleshooting)
   const debugProjectTasks = useCallback(async (projectId) => {
@@ -1042,24 +1111,40 @@ const ProfilePage = () => {
       setActiveTab(tabId);
       // Refresh project data when switching to projects tab
       if (tabId === "projects") {
+        fetchUserProfile();
         fetchUserProjects();
         fetchProjectStats();
       }
     },
-    [fetchUserProjects, fetchProjectStats]
+    [fetchUserProfile, fetchUserProjects, fetchProjectStats]
   );
 
   // Refresh profile data when component comes into focus
   useEffect(() => {
     const handleFocus = () => {
+      console.log("🔄 [ProfilePage] Window focused - refreshing all data");
       fetchUserProfile();
       // Also refresh project data when window comes into focus
       fetchUserProjects();
       fetchProjectStats();
     };
 
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("🔄 [ProfilePage] Page became visible - refreshing all data");
+        fetchUserProfile();
+        fetchUserProjects();
+        fetchProjectStats();
+      }
+    };
+
     window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [fetchUserProfile, fetchUserProjects, fetchProjectStats]);
 
   // Fetch saved projects
@@ -1093,19 +1178,28 @@ const ProfilePage = () => {
     console.log("🔄 [ProfilePage] useEffect triggered - calling fetchUserProjects and fetchProjectStats");
     fetchUserProjects();
     fetchProjectStats();
-  }, [fetchUserProjects, fetchProjectStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Remove function dependencies to prevent infinite loops
 
-  // Auto-refresh project data every 2 minutes
+  // Unified auto-refresh system - single interval for all data
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (activeTab === "projects") {
-        fetchUserProjects();
-        fetchProjectStats();
-      }
-    }, 120000); // 2 minutes
+    const refreshData = () => {
+      console.log("🔄 [ProfilePage] Auto-refreshing all data");
+      fetchUserProfile();
+      fetchUserProjects();
+      fetchProjectStats();
+    };
+
+    // Refresh immediately when activeTab changes
+    refreshData();
+
+    // Set up interval based on active tab
+    const intervalTime = activeTab === "skills" ? 30000 : 120000; // 30s for skills, 2min for others
+    const interval = setInterval(refreshData, intervalTime);
 
     return () => clearInterval(interval);
-  }, [activeTab, fetchUserProjects, fetchProjectStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); // Remove function dependencies to prevent infinite loops
 
   // State for recent projects display
   const [showAllRecentProjects, setShowAllRecentProjects] = useState(false);
@@ -1308,41 +1402,347 @@ const ProfilePage = () => {
   // Firebase real-time contribution tracking
   const [firebaseContributionData, setFirebaseContributionData] = useState({});
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(false);
+  const [contributionUpdateTrigger, setContributionUpdateTrigger] = useState(0);
+  
+  // Ref to track current project IDs to prevent unnecessary listener recreation (temporarily unused)
+  // const currentProjectIdsRef = useRef([]);
+  
+  // Ref to track debounce timeout for data fetching
+  const fetchTimeoutRef = useRef(null);
 
-  // Initialize Firebase real-time listener for contribution data
+  // Debounced function to fetch user projects and stats (kept for future use)
+  // eslint-disable-next-line no-unused-vars
+  const debouncedFetchData = useCallback(() => {
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+    
+    fetchTimeoutRef.current = setTimeout(() => {
+      console.log("🔄 [Debounced] Fetching updated project data");
+      fetchUserProfile();
+      fetchUserProjects();
+      fetchProjectStats();
+    }, 500); // Reduced to 500ms for faster updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Immediate function to fetch data without debounce (for critical updates)
+  const immediateFetchData = useCallback(() => {
+    console.log("⚡ [Immediate] Fetching updated project data immediately");
+    fetchUserProfile(); // Fetch updated profile with new contribution count
+    fetchUserProjects();
+    fetchProjectStats();
+    // Trigger contribution data recalculation
+    setContributionUpdateTrigger(prev => prev + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Remove function dependencies to prevent infinite loops
+
+  // Function to sync all contributions to Firebase with proper date-wise storage (only when Firebase data is missing)
+  const syncAllContributionsToFirebase = useCallback(async () => {
+    if (!userProfile._id || !userProjects || userProjects.length === 0) return;
+
+    try {
+      const userId = userProfile._id;
+      const contributionRef = doc(db, 'userContributions', userId);
+      
+      // First, check if Firebase data already exists and is recent
+      const currentDoc = await getDoc(contributionRef);
+      let existingFirebaseData = {};
+      if (currentDoc.exists()) {
+        existingFirebaseData = currentDoc.data();
+        const lastUpdated = existingFirebaseData.lastUpdated;
+        
+        // Check for corrupted data (NaN dates)
+        const hasCorruptedData = Object.keys(existingFirebaseData).some(key => 
+          key.includes('NaN') || key === 'NaN-NaN-NaN'
+        );
+        
+        if (hasCorruptedData) {
+          console.log("📅 [Firebase] Detected corrupted data (NaN dates), will resync");
+        } else if (lastUpdated) {
+          const lastUpdatedTime = lastUpdated.toDate ? lastUpdated.toDate() : new Date(lastUpdated);
+          const timeDiff = new Date() - lastUpdatedTime;
+          const tenMinutes = 10 * 60 * 1000;
+          
+          if (timeDiff < tenMinutes && !hasCorruptedData) {
+            console.log("📅 [Firebase] Recent data exists, skipping sync to preserve real-time contributions");
+            return;
+          }
+        }
+      }
+      
+      // Helper function to get date key
+      const getDateKey = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      // Build contribution map from project data
+      const contributionMap = new Map();
+      
+      userProjects.forEach(project => {
+        // Add contributions for completed tasks ONLY (not project assignment)
+        if (project.tasks && project.tasks.length > 0) {
+          project.tasks.forEach(task => {
+            if (task.status && (
+              task.status.trim().toLowerCase() === "completed" || 
+              task.status.trim().toLowerCase() === "done"
+            )) {
+              // Use actual completion date if available, otherwise use creation date
+              const completionDate = task.completedAt ? new Date(task.completedAt) : new Date(task.createdAt);
+              const completionDateKey = getDateKey(completionDate);
+              const existingTaskCount = contributionMap.get(completionDateKey) || 0;
+              contributionMap.set(completionDateKey, existingTaskCount + 1);
+              
+              console.log(`📅 [Firebase] Task "${task.title}" completed on ${completionDateKey}`);
+            }
+          });
+        }
+      });
+      
+      // CRITICAL FIX: Merge with existing Firebase data instead of overwriting
+      // This preserves real-time contributions that may have been added by backend
+      const mergedContributionData = { ...existingFirebaseData };
+      
+      // Only update date contributions if we have new project data
+      contributionMap.forEach((count, dateKey) => {
+        // Preserve existing Firebase contributions and only update if we have more recent project data
+        const existingCount = mergedContributionData[dateKey] || 0;
+        // Use the higher count to preserve real-time contributions
+        mergedContributionData[dateKey] = Math.max(existingCount, count);
+      });
+      
+      // Update metadata
+      mergedContributionData.lastUpdated = serverTimestamp();
+      mergedContributionData.totalContributions = Object.keys(mergedContributionData)
+        .filter(key => key.match(/^\d{4}-\d{2}-\d{2}$/)) // Only count date keys
+        .reduce((sum, key) => sum + (mergedContributionData[key] || 0), 0);
+      mergedContributionData.syncedAt = new Date().toISOString();
+      mergedContributionData.profileContributions = userProfile.user_project_contribution || 0;
+      mergedContributionData.syncSource = 'frontend_bulk_sync';
+      
+      // Update Firebase with merged data to preserve existing contributions
+      await setDoc(contributionRef, mergedContributionData);
+      
+      console.log("📅 [Firebase] Synced contributions to Firebase with proper merging:", mergedContributionData);
+      console.log(`📊 [Firebase] Profile contributions: ${userProfile.user_project_contribution}, Firebase total: ${mergedContributionData.totalContributions}`);
+      setIsFirebaseConnected(true);
+      
+      // Trigger UI update
+      setContributionUpdateTrigger(prev => prev + 1);
+      
+    } catch (error) {
+      console.error("Error syncing all contributions to Firebase:", error);
+      setIsFirebaseConnected(false);
+    }
+  }, [userProfile._id, userProjects, userProfile.user_project_contribution]);
+
+  // Removed forceSyncContributions function - now handled by backend recalculation endpoint
+
+  // Removed syncContributionToFirebase function - now using syncAllContributionsToFirebase for better consistency
+
+  // Initialize Firebase real-time listener for contribution data with improved sync
   useEffect(() => {
-    if (!userProfile._id) return;
+    if (!userProfile._id || !db) {
+      console.log("🔥 [Firebase] Skipping contribution listener setup - missing userProfile._id or db");
+      return;
+    }
 
     const userId = userProfile._id;
     const contributionRef = doc(db, 'userContributions', userId);
     
-    // Set up real-time listener
-    const unsubscribe = onSnapshot(contributionRef, (doc) => {
-      if (doc.exists()) {
-        setFirebaseContributionData(doc.data());
-        setIsFirebaseConnected(true);
-      } else {
-        // Initialize empty contribution data if document doesn't exist
-        setFirebaseContributionData({});
+    console.log("🔥 [Firebase] Setting up enhanced contribution listener for user:", userId);
+    
+    let unsubscribe = null;
+    let syncTimeout = null;
+    
+    // Add a small delay to ensure Firebase is fully initialized
+    const setupListener = () => {
+      try {
+        // Set up real-time listener with proper error handling and debouncing
+        unsubscribe = onSnapshot(contributionRef, (docSnapshot) => {
+        try {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            console.log("📅 [Firebase] Real-time contribution data received:", data);
+            
+            // Check if this is actually new data to prevent unnecessary updates
+            const dataChanged = JSON.stringify(data) !== JSON.stringify(firebaseContributionData);
+            
+            if (dataChanged) {
+              setFirebaseContributionData(data);
+              setIsFirebaseConnected(true);
+              
+              // Debounce the refresh to avoid too many updates
+              if (syncTimeout) {
+                clearTimeout(syncTimeout);
+              }
+              
+              syncTimeout = setTimeout(() => {
+                console.log("⚡ [Real-time] Contribution data changed, refreshing profile data...");
+                if (immediateFetchData) {
+                  immediateFetchData();
+                }
+                
+                // Trigger contribution data recalculation when Firebase data changes
+                setContributionUpdateTrigger(prev => prev + 1);
+              }, 500); // 500ms debounce
+            } else {
+              console.log("📅 [Firebase] Contribution data unchanged, skipping refresh");
+            }
+          } else {
+            console.log("📅 [Firebase] No contribution document found, initializing empty data");
+            // Initialize empty contribution data if document doesn't exist
+            setFirebaseContributionData({});
+            setIsFirebaseConnected(false);
+            // Still trigger update to recalculate from project data
+            setContributionUpdateTrigger(prev => prev + 1);
+          }
+        } catch (innerError) {
+          console.error("Error processing Firebase contribution data:", innerError);
+          setIsFirebaseConnected(false);
+        }
+        }, (error) => {
+          console.error("Firebase contribution listener error:", error);
+          setIsFirebaseConnected(false);
+        });
+      } catch (error) {
+        console.error("Error setting up Firebase contribution listener:", error);
         setIsFirebaseConnected(false);
       }
-    }, (error) => {
-      console.error("Firebase contribution listener error:", error);
-      setIsFirebaseConnected(false);
-    });
+    };
+    
+    // Set up listener with a small delay to ensure Firebase is ready
+    const timeoutId = setTimeout(setupListener, 100);
 
-    return () => unsubscribe();
-  }, [userProfile._id]);
+    return () => {
+      console.log("🔥 [Firebase] Cleaning up enhanced contribution listener");
+      clearTimeout(timeoutId);
+      if (syncTimeout) {
+        clearTimeout(syncTimeout);
+      }
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.error("Error cleaning up Firebase listener:", error);
+        }
+      }
+    };
+  }, [userProfile._id, immediateFetchData, firebaseContributionData]);
+
+  // Auto-sync contributions to Firebase when userProjects data changes
+  useEffect(() => {
+    if (userProjects && userProjects.length > 0 && userProfile._id) {
+      // Check if Firebase data is recent (within last 5 minutes)
+      const firebaseDataExists = firebaseContributionData && Object.keys(firebaseContributionData).length > 0;
+      const firebaseDataRecent = firebaseContributionData?.lastUpdated && 
+        (new Date() - new Date(firebaseContributionData.lastUpdated.toDate ? firebaseContributionData.lastUpdated.toDate() : firebaseContributionData.lastUpdated)) < 5 * 60 * 1000;
+      
+      // Auto-sync if Firebase data is missing or not recent
+      if (!firebaseDataExists || !firebaseDataRecent) {
+        // Debounce the sync to avoid too many Firebase writes
+        const syncTimeout = setTimeout(() => {
+          console.log("📅 [Firebase] Auto-syncing contributions (Firebase data missing or outdated)");
+          syncAllContributionsToFirebase();
+        }, 3000); // Wait 3 seconds after data changes
+
+        return () => clearTimeout(syncTimeout);
+      } else {
+        console.log("📅 [Firebase] Firebase data is recent, skipping auto-sync");
+      }
+    }
+  }, [userProjects, userProfile._id, syncAllContributionsToFirebase, firebaseContributionData]);
+
+  // Check for contribution mismatch and auto-sync if needed
+  useEffect(() => {
+    if (userProfile._id && firebaseContributionData && userProfile.user_project_contribution) {
+      // Calculate Firebase total
+      const firebaseTotal = Object.entries(firebaseContributionData).reduce((sum, [key, value]) => {
+        if (key !== 'lastUpdated' && key !== 'totalContributions' && key !== 'syncedAt' && key !== 'profileContributions' && typeof value === 'number') {
+          return sum + value;
+        }
+        return sum;
+      }, 0);
+      
+      const profileTotal = userProfile.user_project_contribution;
+      
+      console.log(`📊 [Firebase] Checking mismatch - Profile: ${profileTotal}, Firebase: ${firebaseTotal}`);
+      
+      // If there's a significant mismatch, auto-sync after a delay
+      if (Math.abs(profileTotal - firebaseTotal) > 1) {
+        console.log("📅 [Firebase] Mismatch detected, auto-syncing in 5 seconds...");
+        const autoSyncTimeout = setTimeout(() => {
+          syncAllContributionsToFirebase();
+        }, 5000);
+        
+        return () => clearTimeout(autoSyncTimeout);
+      }
+    }
+  }, [userProfile._id, userProfile.user_project_contribution, firebaseContributionData, syncAllContributionsToFirebase]);
+
+  // Initialize Firebase real-time listener for task completion events (simplified)
+  useEffect(() => {
+    if (!userProfile._id || !userProjects || userProjects.length === 0 || !db) return;
+
+    // Temporarily simplified to prevent Firebase conflicts
+    console.log("🔥 [Firebase] Task completion listeners temporarily simplified to prevent Firebase conflicts");
+    
+    // Use periodic refresh instead of real-time listeners for now
+    const interval = setInterval(() => {
+      console.log("🔄 [Periodic] Refreshing data for task completion detection");
+      if (immediateFetchData) {
+        immediateFetchData();
+      }
+    }, 10000); // 10 seconds
+
+    return () => {
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile._id, userProjects]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Periodic refresh as fallback for real-time updates (every 30 seconds)
+  useEffect(() => {
+    if (!userProfile._id) return;
+
+    const interval = setInterval(() => {
+      console.log("🔄 [Periodic] Refreshing data as fallback for real-time updates");
+      immediateFetchData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [userProfile._id, immediateFetchData]);
+
+  // Listen for real-time events from backend (temporarily disabled to fix Firebase error)
+  useEffect(() => {
+    // Temporarily disabled to prevent Firebase conflicts
+    console.log("🔥 [Real-time Events] Temporarily disabled to prevent Firebase conflicts");
+    return () => {};
+  }, []);
 
 
-  // Calculate real contribution data based on user projects and Firebase data
+  // Calculate contribution data based on Firebase data as primary source with proper date synchronization
   const contributionData = useMemo(() => {
     const data = [];
     const today = new Date();
     const startDate = new Date(today.getFullYear(), 0, 1); // Start of year
 
-    // Create a map of dates with contribution counts from real project data
+    // Create a map of dates with contribution counts
     const contributionMap = new Map();
+    
+    console.log(`🔍 [Contribution] Calculating contribution data for ${userProjects?.length || 0} projects`);
     
     // Helper function to get consistent date key (YYYY-MM-DD format)
     const getDateKey = (date) => {
@@ -1352,58 +1752,67 @@ const ProfilePage = () => {
       return `${year}-${month}-${day}`;
     };
     
-    // Add contributions from Firebase real-time data
-    if (firebaseContributionData && Object.keys(firebaseContributionData).length > 0) {
-      Object.entries(firebaseContributionData).forEach(([dateKey, count]) => {
-        if (dateKey !== 'lastUpdated' && typeof count === 'number') {
-          contributionMap.set(dateKey, count);
-        }
-      });
-    }
+    // CRITICAL FIX: Use Firebase data as primary source since it has real-time updates
+    const firebaseDataExists = firebaseContributionData && Object.keys(firebaseContributionData).length > 0;
+    const firebaseDataRecent = firebaseContributionData?.lastUpdated && 
+      (new Date() - new Date(firebaseContributionData.lastUpdated.toDate ? firebaseContributionData.lastUpdated.toDate() : firebaseContributionData.lastUpdated)) < 10 * 60 * 1000;
     
-    // Add contributions from completed tasks in projects (fallback)
-    if (userProjects && userProjects.length > 0) {
-      userProjects.forEach(project => {
-        // Add contribution for project assignment date
-        const assignedDate = new Date(project.assignedDate);
-        const assignedDateKey = getDateKey(assignedDate);
-        const existingCount = contributionMap.get(assignedDateKey) || 0;
-        contributionMap.set(assignedDateKey, existingCount + 1);
-        
-        // Add contributions for completed tasks
-        if (project.completedTasks > 0) {
-          const projectStart = new Date(project.assignedDate);
-          const projectEnd = new Date();
-          
-          // Distribute completed tasks across project timeline
-          for (let i = 0; i < project.completedTasks; i++) {
-            const taskDate = new Date(projectStart.getTime() + Math.random() * (projectEnd.getTime() - projectStart.getTime()));
-            const taskDateKey = getDateKey(taskDate);
-            const existingTaskCount = contributionMap.get(taskDateKey) || 0;
-            contributionMap.set(taskDateKey, existingTaskCount + 1);
-          }
+    if (firebaseDataExists && firebaseDataRecent) {
+      console.log(`📅 [Contribution] Using Firebase data as primary source (real-time)`);
+      // Use Firebase data as the primary source for real-time accuracy
+      Object.entries(firebaseContributionData).forEach(([dateKey, count]) => {
+        // Only process date keys (YYYY-MM-DD format) and numeric values
+        if (dateKey.match(/^\d{4}-\d{2}-\d{2}$/) && typeof count === 'number' && count > 0) {
+          contributionMap.set(dateKey, count);
+          console.log(`📅 [Contribution] Firebase: ${dateKey} = ${count} contributions`);
         }
       });
+    } else {
+      console.log(`📅 [Contribution] Firebase data not available or outdated, using project task data as fallback`);
+      
+      // Fallback to project task data if Firebase is not available
+      if (userProjects && userProjects.length > 0) {
+        userProjects.forEach(project => {
+          // Add contributions for completed tasks using real completion dates
+          if (project.tasks && project.tasks.length > 0) {
+            project.tasks.forEach(task => {
+              // Only count tasks that are actually completed
+              if (task.status && (
+                task.status.trim().toLowerCase() === "completed" || 
+                task.status.trim().toLowerCase() === "done"
+              )) {
+                // Use the actual completion date if available, otherwise use creation date
+                const completionDate = task.completedAt ? new Date(task.completedAt) : new Date(task.createdAt);
+                const completionDateKey = getDateKey(completionDate);
+                const existingTaskCount = contributionMap.get(completionDateKey) || 0;
+                contributionMap.set(completionDateKey, existingTaskCount + 1);
+                
+                console.log(`📅 [Contribution] Task "${task.title}" completed on ${completionDateKey}`);
+              }
+            });
+          }
+        });
+      }
     }
 
-    // Generate data for 52 weeks (364 days)
+    // Generate data for 52 weeks (364 days) with proper date synchronization
     for (let i = 0; i < 364; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
       const dateKey = getDateKey(date);
       
-      // Get real contribution count for this date
+      // Get real contribution count for this date from the map
       const realContributions = contributionMap.get(dateKey) || 0;
       
-      // Calculate contribution level based on real data
+      // Calculate contribution level based on real data with better distribution
       let contributionLevel;
       if (realContributions === 0) {
         contributionLevel = 0;
-      } else if (realContributions <= 2) {
+      } else if (realContributions === 1) {
         contributionLevel = 1;
-      } else if (realContributions <= 4) {
+      } else if (realContributions <= 3) {
         contributionLevel = 2;
-      } else if (realContributions <= 6) {
+      } else if (realContributions <= 5) {
         contributionLevel = 3;
       } else {
         contributionLevel = 4;
@@ -1417,8 +1826,16 @@ const ProfilePage = () => {
       });
     }
 
+    // Debug: Log contribution summary
+    const totalContributions = Array.from(contributionMap.values()).reduce((sum, count) => sum + count, 0);
+    const contributionDates = Array.from(contributionMap.keys()).sort();
+    console.log(`📊 [Contribution] Summary: ${totalContributions} total contributions across ${contributionDates.length} dates`);
+    console.log(`📅 [Contribution] Recent contribution dates:`, contributionDates.slice(-10));
+    console.log(`📅 [Contribution] Data source: ${firebaseDataExists && firebaseDataRecent ? 'Firebase (real-time)' : 'Project tasks (fallback)'}`);
+    
     return data;
-  }, [userProjects, firebaseContributionData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProjects, firebaseContributionData, contributionUpdateTrigger]);
 
   // Calculate real contribution statistics
   const contributionStats = useMemo(() => {
@@ -1645,6 +2062,7 @@ const ProfilePage = () => {
     };
   }, [userProjects, skills, contributionData, firebaseAnalyticsData]);
 
+
   // Function to sync current analytics to Firebase (defined after analyticsData)
   const syncAnalyticsToFirebase = useCallback(async () => {
     if (!userProfile._id) return;
@@ -1768,6 +2186,12 @@ const ProfilePage = () => {
      return () => document.head.removeChild(style);
    }, [isPrintMode]);
 
+  // Add debugging for loading and error states
+  console.log("🔍 [ProfilePage] Render state - loading:", loading, "error:", error, "userProfile:", !!userProfile._id);
+  console.log("🔍 [ProfilePage] Contribution data length:", contributionData?.length || 0);
+  console.log("🔍 [ProfilePage] User projects length:", userProjects?.length || 0);
+  console.log("🔍 [ProfilePage] Firebase connected:", isFirebaseConnected);
+
   if (loading)
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#1a1a2e] flex items-center justify-center">
@@ -1782,12 +2206,16 @@ const ProfilePage = () => {
       </div>
     );
 
-  if (!userProfile || !userProfile._id)
+  // Add fallback for empty userProfile
+  if (!userProfile || !userProfile._id) {
+    console.log("⚠️ [ProfilePage] No user profile data, showing fallback");
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#0f0f0f] to-[#1a1a2e] flex items-center justify-center">
-        <div className="text-white text-xl">No user data found.</div>
+        <div className="text-white text-xl">No profile data available. Please refresh the page.</div>
       </div>
     );
+  }
+
 
   const tabs = [
     { id: "overview", label: "Overview", icon: FaCode },
@@ -1795,9 +2223,23 @@ const ProfilePage = () => {
     { id: "skills", label: "Skills", icon: FaTrophy },
   ];
 
+
   return (
     <>
       <Navbar />
+      
+      {/* Debug Panel - Remove this after fixing */}
+      <div className="fixed top-20 right-4 bg-black/80 text-white p-4 rounded-lg text-xs z-50 max-w-xs">
+        <div className="font-bold mb-2">Debug Info:</div>
+        <div>Loading: {loading ? 'Yes' : 'No'}</div>
+        <div>Error: {error || 'None'}</div>
+        <div>Profile ID: {userProfile?._id ? 'Yes' : 'No'}</div>
+        <div>Projects: {userProjects?.length || 0}</div>
+        <div>Contributions: {contributionData?.length || 0}</div>
+        <div>Firebase: {isFirebaseConnected ? 'Connected' : 'Disconnected'}</div>
+        <div>Today's Key: {new Date().toISOString().split('T')[0]}</div>
+        <div>Profile Contributions: {userProfile?.user_project_contribution || 0}</div>
+      </div>
       <main className={`min-h-screen bg-gradient-to-b ${themes[theme].bg}`}>
         {/* Hero Section */}
         <motion.section
@@ -2401,6 +2843,7 @@ const ProfilePage = () => {
                       </div>
                       <button
                         onClick={() => {
+                          fetchUserProfile();
                           fetchUserProjects();
                           fetchProjectStats();
                         }}
@@ -2487,11 +2930,17 @@ const ProfilePage = () => {
                  analyticsData={analyticsData}
                  getRealTimeData={getRealTimeData}
                  fetchUserProfile={fetchUserProfile}
+                 fetchUserProjects={fetchUserProjects}
+                 fetchProjectStats={fetchProjectStats}
+                 immediateFetchData={immediateFetchData}
                  loading={loading}
                  loadingProjects={loadingProjects}
                  isFirebaseConnected={isFirebaseConnected}
                  syncAnalyticsToFirebase={syncAnalyticsToFirebase}
                  loadingAnalytics={loadingAnalytics}
+                 syncAllContributionsToFirebase={syncAllContributionsToFirebase}
+                 setContributionUpdateTrigger={setContributionUpdateTrigger}
+                 userProfile={userProfile}
                />
              )}
 

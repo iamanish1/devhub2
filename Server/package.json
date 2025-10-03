@@ -10,7 +10,8 @@
   "test": "echo \"Error: no test specified\" && exit 1",
   "test:api": "node -r dotenv/config test-api-endpoints.js",
   "test:categories": "node -r dotenv/config test-project-categories.js",
-  "test:all": "npm run test:api && npm run test:categories"
+  "test:contributions": "node -r dotenv/config test-contribution-basic.js",
+  "test:all": "npm run test:api && npm run test:categories && npm run test:contributions"
 },
   "keywords": [],
   "author": "",

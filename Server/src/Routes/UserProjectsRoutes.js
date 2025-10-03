@@ -8,7 +8,9 @@ import {
   refreshProjectStatus,
   debugProjectTasks,
   createTestInProgressTask,
-  recalculateUserProfileStats
+  recalculateUserProfileStats,
+  debugUserContributions,
+  manualSyncContributions
 } from '../controller/UserProjectsController.js';
 
 const userProjectsRoutes = express.Router();
@@ -30,6 +32,12 @@ userProjectsRoutes.get('/refresh-status/:projectId', authMiddleware, refreshProj
 
 // Debug project tasks (for troubleshooting)
 userProjectsRoutes.get('/debug-tasks/:projectId', authMiddleware, debugProjectTasks);
+
+// Debug user contributions (for troubleshooting)
+userProjectsRoutes.get('/debug-contributions', authMiddleware, debugUserContributions);
+
+// Manual sync contributions to Firebase
+userProjectsRoutes.post('/manual-sync', authMiddleware, manualSyncContributions);
 
 // Test endpoint to create In Progress task
 userProjectsRoutes.post('/test-in-progress/:projectId', authMiddleware, createTestInProgressTask);
